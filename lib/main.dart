@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'screens/connection_screen.dart';
 import 'screens/test_mode_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const PatikaApp());
@@ -15,7 +16,7 @@ class PatikaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Patika Companion',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal)),
+      theme: buildAppTheme(),
       home: const HomePage(),
     );
   }

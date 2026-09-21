@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'accessibility/a11y_announcer.dart' as a11y;
 import 'ble/ble_connection_state.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
@@ -40,7 +41,17 @@ class AppState extends ChangeNotifier {
 
   void _subscribe() {
     _connectionSub = bleService.connectionState.listen((state) {
+      final previous = connectionState;
       connectionState = state;
+      // Sadece kalıcı/anlamlı geçişler duyuruluyor - "taranıyor"/"bağlanıyor"
+      // gibi ara durumlar sessiz kalıyor (bkz. a11y_announcer.dart).
+      if (state != previous) {
+        if (state == BleConnectionState.connected) {
+          a11y.announce('Gözlük bağlandı');
+        } else if (state == BleConnectionState.disconnected) {
+          a11y.announce('Gözlük bağlantısı koptu');
+        }
+      }
       notifyListeners();
     });
     _devicesSub = bleService.discoveredDevices.listen((found) {
@@ -58,6 +69,11 @@ class AppState extends ChangeNotifier {
           result: result,
         ),
       );
+      // result.message zaten "kullanıcıya seslendirilecek yanıt metni"
+      // olarak tasarlandı (bkz. action_result.dart) - hem komutun
+      // algılandığını hem sonucunu (başarılı/başarısız) tek, doğal bir
+      // cümlede taşıyor.
+      a11y.announce(result.message);
       notifyListeners();
     });
   }
