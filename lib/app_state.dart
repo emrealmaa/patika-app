@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'accessibility/a11y_announcer.dart' as a11y;
+import 'ble/ble_command.dart';
 import 'ble/ble_connection_state.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
@@ -58,24 +59,28 @@ class AppState extends ChangeNotifier {
       devices = found;
       notifyListeners();
     });
-    _commandSub = bleService.commands.listen((command) async {
-      final result = await router.route(command);
-      log.insert(
-        0,
-        LogEntry(
-          time: DateTime.now(),
-          intent: command.intent,
-          entity: command.entity,
-          result: result,
-        ),
-      );
-      // result.message zaten "kullanıcıya seslendirilecek yanıt metni"
-      // olarak tasarlandı (bkz. action_result.dart) - hem komutun
-      // algılandığını hem sonucunu (başarılı/başarısız) tek, doğal bir
-      // cümlede taşıyor.
-      a11y.announce(result.message);
-      notifyListeners();
-    });
+    _commandSub = bleService.commands.listen(_process);
+  }
+
+  /// Kaynağı ne olursa olsun (gözlük BLE'si, simülasyon, telefon mikrofonu)
+  /// her komutun geçtiği tek yol: route -> log -> sesli sonuç.
+  Future<void> _process(BleCommand command) async {
+    final result = await router.route(command);
+    log.insert(
+      0,
+      LogEntry(
+        time: DateTime.now(),
+        intent: command.intent,
+        entity: command.entity,
+        result: result,
+      ),
+    );
+    // result.message zaten "kullanıcıya seslendirilecek yanıt metni"
+    // olarak tasarlandı (bkz. action_result.dart) - hem komutun
+    // algılandığını hem sonucunu (başarılı/başarısız) tek, doğal bir
+    // cümlede taşıyor.
+    a11y.announce(result.message);
+    notifyListeners();
   }
 
   Future<void> _unsubscribe() async {
@@ -111,6 +116,11 @@ class AppState extends ChangeNotifier {
     if (!isSimulated) return;
     _simulated.injectCommand(intentRaw, entity: entity);
   }
+
+  /// Telefonun kendi mikrofonundan tanınan komut. BLE servisinden bağımsız
+  /// olduğu için hem simülasyon hem gerçek modda çalışır - gözlük donanımı
+  /// gerekmez.
+  Future<void> submitVoiceCommand(BleCommand command) => _process(command);
 
   @override
   void dispose() {

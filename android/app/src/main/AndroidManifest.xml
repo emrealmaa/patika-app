@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
     <!-- ARA/MESAJ niyetlerinde isim -> numara çözümlemesi için (bkz. contact_resolver.dart). -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Test modundaki "Sesli Komut Ver" butonu için telefon mikrofonu (bkz. speech_input_service.dart). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
@@ -69,6 +71,10 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
+        </intent>
+        <!-- speech_to_text'in cihazdaki konuşma tanıma motorunu bulabilmesi için. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

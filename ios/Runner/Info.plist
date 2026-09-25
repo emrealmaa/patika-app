@@ -32,6 +32,10 @@
 	<string>Patika gözlüğüne bağlanmak ve komutları almak için Bluetooth erişimi gerekiyor.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Arama/mesaj komutlarında söylediğiniz ismi rehberinizdeki numarayla eşleştirmek için kişilere erişim gerekiyor.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sesli komutlarınızı telefonun mikrofonuyla dinlemek için mikrofon erişimi gerekiyor.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Söylediğiniz komutu metne çevirip anlamak için konuşma tanıma erişimi gerekiyor.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
