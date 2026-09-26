@@ -119,13 +119,34 @@ void main() {
     expect(queue.current, isNull);
   });
 
-  test('add() duyuru bitince tamamlanır', () async {
-    var done = false;
-    queue.add('açıklama').then((_) => done = true);
+  test('add() sonuna kadar okununca true ile tamamlanır', () async {
+    bool? result;
+    queue.add('açıklama').then((r) => result = r);
     await settle();
-    expect(done, isFalse);
+    expect(result, isNull);
     await finish();
-    expect(done, isTrue);
+    expect(result, isTrue);
+  });
+
+  test('kesilen duyuru false döner ve tekrar eklenebilir (birleştirilmez)', () async {
+    bool? result;
+    queue.add('adım 1').then((r) => result = r);
+    await settle();
+    queue.add('engel', priority: AnnouncementPriority.critical);
+    await settle();
+    expect(result, isFalse);
+    await finish();
+    queue.add('adım 1');
+    await settle();
+    expect(tts.spoken, ['adım 1', 'engel', 'adım 1']);
+  });
+
+  test('remember:false duyuru "tekrar et" için hatırlanmaz', () async {
+    queue.add('sonuç');
+    await finish();
+    queue.add('Dinliyorum', remember: false);
+    await finish();
+    expect(queue.lastSpoken, 'sonuç');
   });
 
   test('add() kesilince ve stopAll ile de tamamlanır (bekleyen takılmaz)', () async {

@@ -8,11 +8,9 @@ import '../app_state.dart';
 import '../ble/glasses_protocol.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
-import '../commands/voice_intent_classifier.dart';
 import '../l10n/strings_tr.dart';
-import '../settings/settings.dart';
 import '../theme/app_theme.dart';
-import '../voice/speech_input_service.dart';
+import 'listen_screen.dart';
 
 /// Gözlük donanımı olmadan komut akışını (parse -> route -> handler -> log)
 /// uçtan uca test etmek için sahte komut enjekte eden ekran. Sadece
@@ -57,7 +55,7 @@ class _TestModeScreenState extends State<TestModeScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _VoiceCommandButton(state: state),
+        CompactVoiceButton(controller: state.voice),
         const SizedBox(height: 24),
         if (!state.isSimulated)
           Card(
@@ -134,173 +132,6 @@ class _TestModeScreenState extends State<TestModeScreen> {
           const Text(Tr.noCommands)
         else
           ...state.log.map((e) => _LogCard(entry: e)),
-      ],
-    );
-  }
-}
-
-enum _VoicePhase { idle, preparing, listening, processing }
-
-/// Telefonun kendi mikrofonuyla komut verme butonu - girdi kaynağı klavye
-/// yerine ses; tanınan metin [classifyVoiceCommand] ile BleCommand'e
-/// çevrilip diğer kaynaklarla aynı yoldan (AppState -> CommandRouter)
-/// işleniyor.
-///
-/// Basılı tutma yerine dokunarak aç/kapat: TalkBack/VoiceOver açıkken
-/// basılı tutmak "çift dokun ve tut" gerektirir, görme engelli kullanıcı
-/// için zahmetli. Motor, kullanıcı susunca dinlemeyi kendisi bitirir.
-class _VoiceCommandButton extends StatefulWidget {
-  final AppState state;
-
-  const _VoiceCommandButton({required this.state});
-
-  @override
-  State<_VoiceCommandButton> createState() => _VoiceCommandButtonState();
-}
-
-class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
-  /// Duyuru ile sonraki adım arasındaki bekleme. TTS'in bitişi burada
-  /// beklenmiyor; bu olmadan "Dinliyorum" sesi mikrofona komut olarak
-  /// girebilir ya da "Şunu anladım" duyurusu komut sonucunun duyurusuyla
-  /// kesilebilir. "Sadece kısa ses" modunda kısa ses ~0,2 sn sürdüğü için
-  /// bekleme de kısa.
-  static const _speechGap = Duration(milliseconds: 1200);
-  static const _earconGap = Duration(milliseconds: 400);
-
-  final _speech = SpeechInputService();
-  _VoicePhase _phase = _VoicePhase.idle;
-  String? _lastHeard;
-
-  FeedbackHub get _feedback => widget.state.feedback;
-
-  Duration get _gap => _feedback.settings.feedbackMode == FeedbackMode.speech
-      ? _speechGap
-      : _earconGap;
-
-  @override
-  void dispose() {
-    _speech.cancel();
-    super.dispose();
-  }
-
-  void _setPhase(_VoicePhase phase) {
-    if (mounted) setState(() => _phase = phase);
-  }
-
-  Future<void> _onTap() async {
-    switch (_phase) {
-      case _VoicePhase.processing:
-        return;
-      case _VoicePhase.preparing:
-      case _VoicePhase.listening:
-        await _speech.cancel();
-        _setPhase(_VoicePhase.idle);
-        _feedback.signal(FeedbackEvent.listenEnded, statusText: Tr.listenCancelled);
-        return;
-      case _VoicePhase.idle:
-        break;
-    }
-
-    _setPhase(_VoicePhase.preparing);
-    final ready = await _speech.init();
-    if (_phase != _VoicePhase.preparing) return;
-    if (!ready) {
-      _setPhase(_VoicePhase.idle);
-      _feedback.signal(FeedbackEvent.error, text: Tr.speechUnavailable);
-      return;
-    }
-
-    _feedback.signal(FeedbackEvent.listening, statusText: Tr.listening);
-    await Future.delayed(_gap);
-    // Beklerken iptal edildiyse ya da ekrandan çıkıldıysa dinlemeye başlama.
-    if (!mounted || _phase != _VoicePhase.preparing) return;
-
-    _setPhase(_VoicePhase.listening);
-    await _speech.listen(
-      onFinal: _onFinal,
-      onError: _onError,
-      onDone: () => _onError(Tr.didNotHear),
-      silenceTimeout: _feedback.settings.silenceTimeout,
-    );
-  }
-
-  Future<void> _onFinal(String text) async {
-    if (_phase != _VoicePhase.listening) return;
-    if (text.isEmpty) {
-      _onError(Tr.didNotHear);
-      return;
-    }
-
-    setState(() {
-      _phase = _VoicePhase.processing;
-      _lastHeard = text;
-    });
-    _feedback.signal(FeedbackEvent.understood, text: Tr.heard(text));
-    await Future.delayed(_speechGap);
-
-    // Komut anlaşıldı - kullanıcı bu arada sekmeden çıksa bile işleniyor.
-    // Sonuç duyurusunu AppState yapıyor (diğer kaynaklarla aynı).
-    await widget.state.submitVoiceCommand(classifyVoiceCommand(text));
-    _setPhase(_VoicePhase.idle);
-  }
-
-  void _onError(String message) {
-    if (_phase != _VoicePhase.listening) return;
-    _setPhase(_VoicePhase.idle);
-    _feedback.signal(FeedbackEvent.notUnderstood, text: message);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, text, semanticLabel) = switch (_phase) {
-      _VoicePhase.idle => (Icons.mic, Tr.voiceButton, Tr.voiceButtonLabel),
-      _VoicePhase.preparing || _VoicePhase.listening => (
-          Icons.stop_circle_outlined,
-          Tr.voiceListeningButton,
-          Tr.voiceListeningLabel,
-        ),
-      _VoicePhase.processing => (
-          Icons.hourglass_top,
-          Tr.voiceProcessingButton,
-          Tr.voiceProcessingLabel,
-        ),
-    };
-    // Durum renkle değil metin+ikonla anlatılıyor; renk yardımcı işaret.
-    final active = _phase != _VoicePhase.idle;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ElevatedButton(
-          onPressed: _onTap,
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 120),
-            backgroundColor: active ? AppColors.warning : AppColors.info,
-            foregroundColor: Colors.black,
-            textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          // Buton kendi alt ağacının etiketini birleştiriyor; ikon ve kısa
-          // görsel metin yerine tek, açıklayıcı bir etiket okunsun.
-          child: Semantics(
-            label: semanticLabel,
-            excludeSemantics: true,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 48),
-                  const SizedBox(height: 8),
-                  Text(text, textAlign: TextAlign.center),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_lastHeard != null) ...[
-          const SizedBox(height: 8),
-          Text(Tr.lastHeard(_lastHeard!)),
-        ],
       ],
     );
   }

@@ -111,6 +111,42 @@ abstract final class Tr {
   static const voiceProcessingLabel = 'Komut işleniyor, lütfen bekleyin.';
   static String lastHeard(String text) => 'Son duyulan: "$text"';
 
+  static const micPermissionWhy =
+      'Komutlarınızı dinleyebilmem için mikrofon izni isteyeceğim.';
+
+  // --- Konuş sekmesi -------------------------------------------------------
+  static const tabListen = 'Konuş';
+  static String glassesStatusLine(bool connected) =>
+      connected ? 'Gözlük bağlı' : 'Gözlük bağlı değil';
+
+  // --- Evrensel komutlar ---------------------------------------------------
+  static const helpShort = 'Şunları söyleyebilirsiniz: bir kişiyi ara, mesaj gönder, '
+      'bir yere götür, saat kaç, daha hızlı konuş, tekrar et, dur ve eğitimi başlat.';
+  static const helpDetail = 'Örneğin: Ahmet\'i ara. Ayşe\'ye mesaj gönder. '
+      'Kadıköy iskelesine götür. Konuşmamı kesmek için dur, '
+      'son söylediğimi duymak için tekrar et deyin ya da gözlük butonuna iki kez dokunun.';
+  static const nothingToRepeat = 'Tekrar edilecek bir şey yok';
+  static const sosNotReady = 'Acil durum özelliği henüz hazır değil. '
+      'Komutları duymak için ne yapabilirim deyin.';
+
+  // --- Sesli eğitim --------------------------------------------------------
+  static const tutorialSteps = [
+    'Patika\'ya hoş geldiniz. Size uygulamayı kısaca tanıtacağım. '
+        'Durdurmak için gözlük butonuna ya da ekrandaki Konuş alanına dokunun.',
+    'Gözlüğünüzü açtığınızda telefon onu kendisi bulur ve bağlanır. '
+        'Bağlantı kurulunca gözlük bağlandı, koparsa gözlük bağlantısı koptu diye haber veririm.',
+    'Komut vermek için gözlüğün butonuna bir kez dokunun ya da uygulamadaki '
+        'Konuş alanına dokunun. Kısa bir ses duyunca komutunuzu söyleyin.',
+    'Örneğin Ahmet\'i ara, Ayşe\'ye mesaj gönder, Kadıköy iskelesine götür '
+        'ya da saat kaç diyebilirsiniz.',
+    'Konuşmamı kesmek için dur deyin. Son söylediğimi tekrar duymak için tekrar et deyin '
+        'ya da gözlük butonuna iki kez dokunun. Tüm komutlar için ne yapabilirim deyin.',
+    'Konuşma hızımı daha hızlı konuş ya da daha yavaş konuş diyerek değiştirebilirsiniz.',
+  ];
+  static const tutorialDone =
+      'Eğitim bitti. Tekrar dinlemek için eğitimi başlat deyin.';
+  static const startTutorial = 'Sesli eğitimi başlat';
+
   // --- Test modu -----------------------------------------------------------
   static const manualOnlySimulated =
       'Elle komut gönderme sadece simülasyon modundayken çalışır. '
@@ -183,6 +219,9 @@ abstract final class Tr {
   static const verbosity = 'Ayrıntı seviyesi';
   static const hapticStrength = 'Titreşim şiddeti';
   static const feedbackMode = 'Bildirim türü';
+  static const nodToListen = 'Baş sallayarak dinlet';
+  static const nodToListenHint =
+      'Başınızı iki kez sallayınca dinleme başlar. Yanlışlıkla tetiklenebileceği için varsayılan olarak kapalı.';
   static const resetSettings = 'Varsayılan ayarlara dön';
   static const settingsReset = 'Ayarlar varsayılana döndü';
   static String seconds(int s) => '$s saniye';

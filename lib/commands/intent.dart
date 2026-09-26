@@ -14,7 +14,22 @@ enum PatikaIntent {
   /// Telefon tarafı ayarları ("daha hızlı konuş") - Python tarafında yok,
   /// sadece telefon mikrofonundan gelir. Entity: [SettingAction] adı.
   ayar,
+
+  /// Evrensel konuşma kontrolü (Faz 2) - telefon tarafına özgü. Bunlar
+  /// "Şunu anladım" teyidi olmadan hemen uygulanır.
+  dur,
+  tekrar,
+  komutlar,
+  egitim,
+
+  /// "Yardım", "imdat", "acil durum" - Faz 7'de SOS akışı; o zamana kadar
+  /// hazır olmadığını söyler. Diğer tüm niyetlerden önce denetlenir.
+  sos,
   bilinmiyor;
+
+  /// "Şunu anladım: ..." teyidi olmadan anında uygulanan kontrol niyetleri.
+  bool get isControl =>
+      this == dur || this == tekrar || this == komutlar || this == egitim || this == sos;
 
   /// Python tarafındaki niyet string'ini (örn. "ARA", "GECIS_MODU") enum'a
   /// çevirir. Eşleşmeyen/bilinmeyen bir değer sessizce [bilinmiyor]'a düşer -
@@ -43,6 +58,17 @@ enum PatikaIntent {
         return PatikaIntent.navigasyon;
       case 'AYAR':
         return PatikaIntent.ayar;
+      case 'DUR':
+        return PatikaIntent.dur;
+      case 'TEKRAR':
+        return PatikaIntent.tekrar;
+      case 'KOMUTLAR':
+        return PatikaIntent.komutlar;
+      case 'EĞİTİM':
+      case 'EGITIM':
+        return PatikaIntent.egitim;
+      case 'SOS':
+        return PatikaIntent.sos;
       default:
         return PatikaIntent.bilinmiyor;
     }

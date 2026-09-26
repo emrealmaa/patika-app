@@ -26,10 +26,23 @@ flutter run --dart-define-from-file=dart_defines.json
 
 Kısa sesleri yeniden üretmek için: `dart run tool/generate_earcons.dart`
 
-## Sesli komutlar
+## Dinlemeyi başlatma
 
-Test Modu'ndaki **Sesli Komut Ver** butonu telefonun mikrofonunu kullanır.
-Gözlük gerekmez.
+Hepsi aynı yere gider; dinlerken tekrar tetiklemek dinlemeyi iptal eder,
+süren konuşmayı da hemen susturur.
+
+| Tetikleyici | Davranış |
+|---|---|
+| **Konuş** sekmesi (ilk sekme) | Büyük buton. TalkBack açıkken ekranın tamamı tek buton |
+| Gözlük butonu: tek dokunuş | Dinlemeyi başlatır |
+| Gözlük butonu: çift dokunuş | Son söyleneni tekrarlar |
+| Gözlük butonu: uzun basış | Acil durum (Faz 7; şimdilik hazır değil der) |
+| Çift baş sallama | Ayarlardan açılırsa dinlemeyi başlatır (varsayılan kapalı) |
+
+Dinleme başlarken "Dinliyorum" yerine kısa bir ses çalar (Ayarlar'dan
+değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
+
+## Sesli komutlar
 
 | Niyet | Örnek | Durum |
 |---|---|---|
@@ -38,7 +51,16 @@ Gözlük gerekmez.
 | NAVİGASYON | "Kadıköy iskelesine götür" | Google Maps yürüyüş yönlendirmesi |
 | SAAT | "Saat kaç" | ✅ |
 | AYAR | "Daha hızlı konuş", "kısa anlat", "titreşimi azalt" | ✅ |
+| DUR | "Dur", "sus", "iptal", "vazgeç" | ✅ Konuşmayı keser (her an) |
+| TEKRAR | "Tekrar et", "ne dedin" | ✅ Son söyleneni tekrarlar |
+| KOMUTLAR | "Ne yapabilirim", "komutlar" | ✅ Komut listesini okur |
+| EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
+| SOS | "Yardım", "imdat", "acil durum" | Faz 7 (şimdilik hazır değil der) |
 | HAVA / HABER / MÜZİK / OKU / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (Faz 5, 8) |
+
+"Dur", "tekrar et" gibi kontrol komutları "Şunu anladım" teyidi olmadan
+hemen uygulanır. "Yardım" kelimesi acil durum için ayrılmıştır; komut
+listesi "ne yapabilirim" ile açılır.
 
 ## Dokümanlar
 

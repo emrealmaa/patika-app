@@ -21,15 +21,19 @@ class Announcement {
   final String text;
   final AnnouncementPriority priority;
   final DateTime createdAt;
-  final _done = Completer<void>();
 
-  Announcement(this.text, this.priority, this.createdAt);
+  /// false: "tekrar et" için hatırlanmaz (örn. "Dinliyorum" gibi durum sözleri).
+  final bool remember;
+  final _done = Completer<bool>();
 
-  /// Konuşma bitince, kesilince ya da atılınca tamamlanır.
-  Future<void> get done => _done.future;
+  Announcement(this.text, this.priority, this.createdAt, {this.remember = true});
 
-  void _finish() {
-    if (!_done.isCompleted) _done.complete();
+  /// Konuşma sonuna kadar okununca true, kesilince/atılınca false ile
+  /// tamamlanır.
+  Future<bool> get done => _done.future;
+
+  void _finish(bool spokenFully) {
+    if (!_done.isCompleted) _done.complete(spokenFully);
   }
 }
 
@@ -40,7 +44,8 @@ class Announcement {
 ///   [lastSpoken]); aksi halde engel uyarısından sonra eski bilgi
 ///   araya girerdi.
 /// - Aynı metin konuşulurken/sıradayken ya da [dedupeWindow] içinde
-///   yeniden gelirse birleştirilir (tekrar okunmaz).
+///   yeniden gelirse birleştirilir (tekrar okunmaz). Kesilen duyuru bu
+///   kurala takılmaz - sonuna kadar duyulmamıştı.
 /// - [AnnouncementPriority.low] duyurular [lowMaxAge]'den uzun beklediyse
 ///   atılır - bayat bilgi okunmaz.
 class AnnouncementQueue {
@@ -68,14 +73,22 @@ class AnnouncementQueue {
   /// Şu an konuşulan duyuru (yoksa null).
   Announcement? get current => _current;
 
-  /// Dönen Future duyuru konuşulup bitince, kesilince ya da (tekrar/bayat
-  /// olduğu için) atılınca tamamlanır - "önce açıkla, sonra sor" akışları
-  /// (bkz. PermissionExplainer) bunu bekleyebilir.
-  Future<void> add(String text, {AnnouncementPriority priority = AnnouncementPriority.normal}) {
+  /// Dönen Future duyuru sonuna kadar okununca true, kesilince ya da
+  /// (tekrar/bayat olduğu için) atılınca false ile tamamlanır - "önce
+  /// açıkla, sonra sor" (PermissionExplainer) ve "kesilen adımı tekrarla"
+  /// (Tutorial) akışları bunu bekliyor.
+  ///
+  /// [remember] false ise duyuru "tekrar et" ile tekrarlanacak son duyuru
+  /// olarak hatırlanmaz.
+  Future<bool> add(
+    String text, {
+    AnnouncementPriority priority = AnnouncementPriority.normal,
+    bool remember = true,
+  }) {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isDuplicate(trimmed)) return Future.value();
+    if (trimmed.isEmpty || _isDuplicate(trimmed)) return Future.value(false);
 
-    final item = Announcement(trimmed, priority, _now());
+    final item = Announcement(trimmed, priority, _now(), remember: remember);
     _insertByPriority(item);
 
     final current = _current;
@@ -88,27 +101,34 @@ class AnnouncementQueue {
   }
 
   /// Son duyuruyu tekrar okur (tekrar birleştirme kuralına takılmadan).
-  void repeatLast() {
+  /// Tekrar edilecek bir şey yoksa false döner.
+  bool repeatLast() {
     final last = _lastSpoken;
-    if (last == null) return;
+    if (last == null) return false;
     _recent.remove(last);
     add(last);
+    return true;
   }
 
   /// Konuşmayı keser ve sırayı boşaltır ("dur" komutu).
   void stopAll() {
     for (final a in _pending) {
-      a._finish();
+      a._finish(false);
     }
     _pending.clear();
     final current = _current;
     if (current != null) {
       _generation++;
       _current = null;
-      current._finish();
+      _forgetUnheard(current);
+      current._finish(false);
       _output.stop();
     }
   }
+
+  /// Kesilen duyuru kullanıcıya ulaşmadı: tekrar eklenirse (eğitimin
+  /// kesilen adımı gibi) "yakında okundu" sayılıp atlanmasın.
+  void _forgetUnheard(Announcement a) => _recent.remove(a.text);
 
   bool _isDuplicate(String text) {
     if (_current?.text == text) return true;
@@ -130,7 +150,11 @@ class AnnouncementQueue {
 
   void _interrupt() {
     _generation++;
-    _current?._finish();
+    final current = _current;
+    if (current != null) {
+      _forgetUnheard(current);
+      current._finish(false);
+    }
     _current = null;
     _output.stop();
     _pump();
@@ -143,12 +167,12 @@ class AnnouncementQueue {
       final now = _now();
       if (next.priority == AnnouncementPriority.low &&
           now.difference(next.createdAt) > lowMaxAge) {
-        next._finish();
+        next._finish(false);
         continue;
       }
 
       _current = next;
-      _lastSpoken = next.text;
+      if (next.remember) _lastSpoken = next.text;
       _recent[next.text] = now;
       final generation = ++_generation;
 
@@ -157,7 +181,8 @@ class AnnouncementQueue {
       } catch (_) {
         // Seslendirme hatası kuyruğu asla kilitlememeli.
       }
-      next._finish();
+      // Bu sırada kesildiyse _interrupt/stopAll zaten false ile bitirdi.
+      next._finish(true);
       // Bu sırada daha öncelikli bir duyuru araya girdiyse, kuyruğu artık
       // o turun _pump'ı yürütüyor.
       if (generation != _generation) return;

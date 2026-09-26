@@ -13,7 +13,8 @@ void main() {
       expect(s.speechRate, 0.5);
       expect(s.silenceTimeout, const Duration(seconds: 3));
       expect(s.verbosity, Verbosity.long);
-      expect(s.feedbackMode, FeedbackMode.speech);
+      expect(s.feedbackMode, FeedbackMode.earconOnly, reason: 'Faz 2: "Dinliyorum" yerine kısa ses');
+      expect(s.nodToListen, isFalse);
     });
 
     test('sınırlar dışına çıkılamaz', () {
@@ -37,7 +38,8 @@ void main() {
         silenceTimeoutSeconds: 5,
         verbosity: Verbosity.short,
         hapticLevel: 1,
-        feedbackMode: FeedbackMode.earconOnly,
+        feedbackMode: FeedbackMode.speech,
+        nodToListen: true,
       );
       expect(Settings.fromJson(jsonDecode(jsonEncode(s.toJson()))), s);
     });

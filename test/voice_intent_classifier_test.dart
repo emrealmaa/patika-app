@@ -57,6 +57,54 @@ void main() {
     test('diğer niyetleri bozmaz', () => expectCommand("Ahmet'i ara", PatikaIntent.ara, 'Ahmet'));
   });
 
+  group('evrensel komutlar', () {
+    test('dur ve eşanlamlıları', () {
+      for (final t in ['dur', 'Dur.', 'sus', 'iptal', 'iptal et', 'vazgeç', 'yeter',
+          'lütfen dur', 'tamam dur', 'durdur']) {
+        expectCommand(t, PatikaIntent.dur);
+      }
+    });
+    test('"durum" ve içinde "dur" geçen cümleler DUR değil', () {
+      expect(classifyVoiceCommand('durum').intent, isNot(PatikaIntent.dur));
+      expect(classifyVoiceCommand("Ahmet'i ara dur").intent, isNot(PatikaIntent.dur));
+      expect(classifyVoiceCommand('mesajı iptal etme').intent, isNot(PatikaIntent.dur));
+    });
+    test('tekrar et', () {
+      for (final t in ['tekrar et', 'tekrarla', 'tekrar söyle', 'bir daha söyle',
+          'ne dedin', 'lütfen tekrar et']) {
+        expectCommand(t, PatikaIntent.tekrar);
+      }
+    });
+    test('"tekrar ara" TEKRAR değil', () {
+      expect(classifyVoiceCommand("Ahmet'i tekrar ara").intent, isNot(PatikaIntent.tekrar));
+    });
+    test('komut listesi', () {
+      expectCommand('ne yapabilirim', PatikaIntent.komutlar);
+      expectCommand('neler yapabilirsin', PatikaIntent.komutlar);
+      expectCommand('komutları söyle', PatikaIntent.komutlar);
+    });
+    test('eğitim', () {
+      expectCommand('eğitimi başlat', PatikaIntent.egitim);
+      expectCommand('eğitimi tekrarla', PatikaIntent.egitim);
+    });
+    test('SOS her şeyden önce ve cümlenin her yerinde', () {
+      expectCommand('yardım', PatikaIntent.sos);
+      expectCommand('İmdat!', PatikaIntent.sos);
+      expectCommand('acil durum', PatikaIntent.sos);
+      expectCommand("yardım edin Ahmet'i ara", PatikaIntent.sos);
+    });
+    test('"yardımcı" ya da "yardımseverlik" SOS değil', () {
+      expect(classifyVoiceCommand('yardımcı ol').intent, isNot(PatikaIntent.sos));
+    });
+    test('kontrol niyetleri teyitsiz uygulanır', () {
+      for (final i in [PatikaIntent.dur, PatikaIntent.tekrar, PatikaIntent.komutlar,
+          PatikaIntent.egitim, PatikaIntent.sos]) {
+        expect(i.isControl, isTrue, reason: '$i');
+      }
+      expect(PatikaIntent.ara.isControl, isFalse);
+    });
+  });
+
   group('BİLİNMİYOR', () {
     test('anlamsız metin', () => expectCommand('merhaba nasılsın', PatikaIntent.bilinmiyor));
     test('boş metin', () => expectCommand('', PatikaIntent.bilinmiyor));

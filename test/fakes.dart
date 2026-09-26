@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
+import 'package:patika_app/voice/speech_input_service.dart';
 
 /// Konuşmayı test kontrol etsin diye her speak() açık bir Completer döner;
 /// [finishCurrent] ile "konuşma bitti" denir. stop() mevcut konuşmayı da
@@ -37,6 +38,57 @@ class FakeSpeechOutput implements SpeechOutput {
   Future<void> configure({required double rate, required double pitch}) async {
     this.rate = rate;
     this.pitch = pitch;
+  }
+}
+
+/// Konuşma tanıma: test "kullanıcı şunu söyledi" ([say]) ya da hata/sessizlik
+/// ([fail], [done]) taklit eder.
+class FakeSpeechInput implements SpeechInput {
+  bool ready = true;
+  int initCalls = 0;
+  int cancelCalls = 0;
+  bool listening = false;
+  Duration? lastSilenceTimeout;
+  void Function(String)? _onFinal;
+  void Function(String)? _onError;
+  void Function()? _onDone;
+
+  @override
+  Future<bool> init() async {
+    initCalls++;
+    return ready;
+  }
+
+  @override
+  Future<void> listen({
+    required void Function(String text) onFinal,
+    required void Function(String message) onError,
+    required void Function() onDone,
+    Duration silenceTimeout = const Duration(seconds: 3),
+  }) async {
+    listening = true;
+    lastSilenceTimeout = silenceTimeout;
+    _onFinal = onFinal;
+    _onError = onError;
+    _onDone = onDone;
+  }
+
+  void say(String text) {
+    listening = false;
+    _onFinal?.call(text);
+    _onDone?.call();
+  }
+
+  void fail(String message) {
+    listening = false;
+    _onError?.call(message);
+    _onDone?.call();
+  }
+
+  @override
+  Future<void> cancel() async {
+    cancelCalls++;
+    listening = false;
   }
 }
 

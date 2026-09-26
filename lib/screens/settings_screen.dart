@@ -17,8 +17,14 @@ import '../settings/settings_store.dart';
 class SettingsScreen extends StatelessWidget {
   final SettingsStore store;
   final FeedbackHub feedback;
+  final VoidCallback onStartTutorial;
 
-  const SettingsScreen({super.key, required this.store, required this.feedback});
+  const SettingsScreen({
+    super.key,
+    required this.store,
+    required this.feedback,
+    required this.onStartTutorial,
+  });
 
   Settings get _s => store.value;
 
@@ -76,6 +82,12 @@ class SettingsScreen extends StatelessWidget {
           ],
           onChanged: (v) => _update(s.copyWith(silenceTimeoutSeconds: v)),
         ),
+        SwitchListTile(
+          title: const Text(Tr.nodToListen),
+          subtitle: const Text(Tr.nodToListenHint),
+          value: s.nodToListen,
+          onChanged: (v) => _update(s.copyWith(nodToListen: v)),
+        ),
         _Header(Tr.settingsFeedback),
         _Choice<FeedbackMode>(
           title: Tr.feedbackMode,
@@ -97,6 +109,14 @@ class SettingsScreen extends StatelessWidget {
             _update(next);
             feedback.haptics.play(HapticPatternId.understood, scale: next.hapticScale);
           },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: OutlinedButton.icon(
+            onPressed: onStartTutorial,
+            icon: const Icon(Icons.school),
+            label: const Text(Tr.startTutorial),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.all(16),

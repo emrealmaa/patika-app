@@ -7,12 +7,14 @@ göre veriliyor.
 ## Akış
 
 ```
- Gözlük (BLE)        Telefon mikrofonu        Test Modu (elle)
-      │                      │                        │
- RealBleService /      SpeechInputService             │
- SimulatedBleService          │                        │
-      │  GlassesProtocol  classifyVoiceCommand         │
-      ▼                      ▼                        ▼
+ Gözlük butonu / jest   Konuş sekmesi   (Faz 2b: QS karosu)
+             └──────────────┼──────────────┘
+                   VoiceController.startListening()
+                            │  SpeechInputService
+                            │  classifyVoiceCommand
+ Gözlük (BLE cmd)           │                      Test Modu (elle)
+      │                     │                            │
+      ▼                     ▼                            ▼
                BleCommand (intent + entity)
                            │
                   AppState._process()
@@ -29,6 +31,9 @@ göre veriliyor.
 
 | Modül | Dosya | Görevi |
 |---|---|---|
+| **VoiceController** | `lib/voice/voice_controller.dart` | Tüm tetikleyicilerin tek dinleme kapısı. Aç/kapat; dinlemeden önce TTS'i susturur (tetikleyiciyle araya girme); mikrofon iznini sesli açıklamayla ister; kontrol komutlarını ("dur", "tekrar et") teyitsiz uygular. |
+| **Tutorial** | `lib/tutorial/tutorial.dart` | Sesli eğitim. Yüksek öncelikli bir duyuruyla kesilen adımı tekrar okur (`AnnouncementQueue.add` → `Future<bool>`). "Dinlendi" bilgisi ayarlardan ayrı saklanır. |
+| **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
 | **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları; titreşim gönderme. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
 | **GlassesProtocol** | `lib/ble/glasses_protocol.dart` | JSON mesaj ayrıştırma ve kodlama. Bkz. [ble_protocol.md](ble_protocol.md). |
 | **ConnectionSupervisor** | `lib/ble/connection_supervisor.dart` | Açılışta otomatik bağlanma (son cihaz, yoksa tek bulunan gözlük), heartbeat izleme (6 sn), üstel geri çekilmeli yeniden bağlanma, 3 başarısızlıktan sonra tek uyarı. "Bağlı" ile "sağlıklı" ayrı tutulur. |

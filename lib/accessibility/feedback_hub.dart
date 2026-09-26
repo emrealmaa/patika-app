@@ -41,8 +41,9 @@ class FeedbackHub {
 
   Settings get settings => _settings();
 
-  /// Sadece konuşma (titreşim/kısa ses yok). Konuşma bitince tamamlanır.
-  Future<void> say(String text,
+  /// Sadece konuşma (titreşim/kısa ses yok). Sonuna kadar okununca true,
+  /// kesilince false ile tamamlanır.
+  Future<bool> say(String text,
       {AnnouncementPriority priority = AnnouncementPriority.normal}) {
     return queue.add(text, priority: priority);
   }
@@ -64,8 +65,13 @@ class FeedbackHub {
     if (earcon != null) earcons.play(earcon);
 
     final skipStatus = s.feedbackMode == FeedbackMode.earconOnly && earcon != null;
-    final spoken = text ?? (skipStatus ? null : statusText);
-    if (spoken != null) queue.add(spoken, priority: priority);
+    if (text != null) {
+      queue.add(text, priority: priority);
+    } else if (statusText != null && !skipStatus) {
+      // Durum sözleri "tekrar et" ile tekrarlanmasın: kullanıcı son sonucu
+      // duymak isterken "Dinliyorum" duymasın.
+      queue.add(statusText, priority: priority, remember: false);
+    }
   }
 
   /// Komut sonucunu sesle + titreşimle (+ kısa sesle) bildirir. Uzun ayrıntı
@@ -73,7 +79,7 @@ class FeedbackHub {
   void result(ActionResult result) {
     signal(
       result.success ? FeedbackEvent.success : FeedbackEvent.error,
-      text: spokenResult(result, settings.verbosity),
+      text: result.silent ? null : spokenResult(result, settings.verbosity),
     );
   }
 

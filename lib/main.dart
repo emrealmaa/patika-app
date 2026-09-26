@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_state.dart';
 import 'l10n/strings_tr.dart';
 import 'screens/connection_screen.dart';
+import 'screens/listen_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'theme/app_theme.dart';
@@ -66,9 +67,14 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final screens = [
+      ListenScreen(state: _appState),
       ConnectionScreen(state: _appState),
       TestModeScreen(state: _appState),
-      SettingsScreen(store: _appState.settings, feedback: _appState.feedback),
+      SettingsScreen(
+        store: _appState.settings,
+        feedback: _appState.feedback,
+        onStartTutorial: _appState.startTutorial,
+      ),
     ];
 
     return Scaffold(
@@ -78,6 +84,7 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),
         destinations: const [
+          NavigationDestination(icon: Icon(Icons.mic), label: Tr.tabListen),
           NavigationDestination(icon: Icon(Icons.bluetooth), label: Tr.tabConnection),
           NavigationDestination(icon: Icon(Icons.science), label: Tr.tabTestMode),
           NavigationDestination(icon: Icon(Icons.settings), label: Tr.tabSettings),

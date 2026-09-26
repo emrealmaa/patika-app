@@ -66,9 +66,28 @@ void main() {
   });
 
   test('sesli bildirim modunda durum sözü okunur', () async {
+    settings = const Settings(feedbackMode: FeedbackMode.speech);
     hub.signal(FeedbackEvent.listening, statusText: 'Dinliyorum');
     await settle();
     expect(tts.spoken, ['Dinliyorum']);
+  });
+
+  test('sessiz sonuç okunmaz ama titreşimle bildirilir', () async {
+    hub.result(ActionResult.silentOk('Durduruldu'));
+    await settle();
+    expect(tts.spoken, isEmpty);
+    expect(haptics.played.single.$1, HapticPatternId.understood);
+  });
+
+  test('durum sözü "tekrar et" ile tekrarlanacak son duyuru sayılmaz', () async {
+    settings = const Settings(feedbackMode: FeedbackMode.speech);
+    hub.say('Saat 14:05');
+    await settle();
+    tts.finishCurrent();
+    await settle();
+    hub.signal(FeedbackEvent.listening, statusText: 'Dinliyorum');
+    await settle();
+    expect(hub.queue.lastSpoken, 'Saat 14:05');
   });
 
   test('kısa sesi olmayan olayın durum sözü kısa ses modunda da okunur', () async {

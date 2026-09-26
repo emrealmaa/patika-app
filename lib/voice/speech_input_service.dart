@@ -4,6 +4,19 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import '../l10n/strings_tr.dart';
 
+/// Konuşma tanıma soyutlaması - VoiceController bunu kullanıyor, testlerde
+/// sahte bir uygulama veriliyor.
+abstract class SpeechInput {
+  Future<bool> init();
+  Future<void> listen({
+    required void Function(String text) onFinal,
+    required void Function(String message) onError,
+    required void Function() onDone,
+    Duration silenceTimeout,
+  });
+  Future<void> cancel();
+}
+
 /// Telefonun yerleşik konuşma tanıma motoru (Android SpeechRecognizer / iOS
 /// SFSpeechRecognizer) üzerinde ince bir sarmalayıcı. Ekranlar
 /// `speech_to_text` paketini doğrudan bilmiyor - BLE servislerindeki
@@ -12,7 +25,7 @@ import '../l10n/strings_tr.dart';
 /// Gizlilik notu: Android'de varsayılan olarak ses Google sunucularında
 /// işlenir. `onDevice: true` tamamen cihazda çalışır ama Türkçe çevrimdışı
 /// paket kurulu değilse dinleme başarısız olur - bu yüzden kapalı.
-class SpeechInputService {
+class SpeechInputService implements SpeechInput {
   static const localeId = 'tr_TR';
 
   final SpeechToText _speech = SpeechToText();
@@ -21,6 +34,7 @@ class SpeechInputService {
 
   /// Motoru hazırlar ve (ilk seferde) mikrofon/konuşma tanıma iznini ister.
   /// İzin reddedildiyse ya da cihazda tanıma motoru yoksa false döner.
+  @override
   Future<bool> init() {
     return _speech.initialize(
       onError: (SpeechRecognitionError e) =>
@@ -37,6 +51,7 @@ class SpeechInputService {
   /// [onDone] her dinleme oturumunun sonunda (sonuç/hata sonrasında da)
   /// çağrılır - ikisi de gelmediyse çağıranın takılı kalmaması için.
   /// [silenceTimeout]: kullanıcı bu kadar susunca dinleme biter (ayarlardan).
+  @override
   Future<void> listen({
     required void Function(String text) onFinal,
     required void Function(String message) onError,
@@ -61,6 +76,7 @@ class SpeechInputService {
   }
 
   /// Sonuç üretmeden dinlemeyi iptal eder.
+  @override
   Future<void> cancel() {
     _onError = null;
     _onDone = null;

@@ -24,6 +24,10 @@ BleCommand classifyVoiceCommand(String text) {
   // indeksler güvenilmez, entity küçük harfli metinden alınır.
   final source = lowered.length == original.length ? original : lowered;
 
+  for (final (pattern, intent) in _controlRules) {
+    if (pattern.hasMatch(lowered)) return BleCommand.fromWire(intent, null);
+  }
+
   for (final (pattern, action) in _settingRules) {
     if (pattern.hasMatch(lowered)) {
       return BleCommand.fromWire('AYAR', action.name);
@@ -88,6 +92,28 @@ final _rules = [
     '^(.+?)$_dative\\s*(?:git|götür)$_e',
   ]),
 ];
+
+// Kısa kontrol komutlarının başına/sonuna eklenebilen nezaket sözcükleri.
+const _polite = r'(?:lütfen\s+|tamam\s+)?';
+const _politeEnd = r'(?:\s+lütfen)?';
+
+/// Evrensel kontrol komutları - her şeyden ÖNCE denetleniyor.
+///
+/// SOS ilk sırada ve cümlenin HERHANGİ bir yerinde eşleşiyor: acil durumdaki
+/// birinin yanlışlıkla başka bir komuta düşmesi, yardım isteyen birinin
+/// (Faz 7'de iptal edilebilir geri sayımlı) SOS'a düşmesinden çok daha kötü.
+///
+/// DUR/TEKRAR ise yalnızca TÜM cümle o komutsa eşleşiyor: "durum", "Ahmet'e
+/// dur de" ya da "tekrar ara" gibi cümleler konuşmayı kesmesin.
+final _controlRules = [
+  ('$_s(?:yardım|imdat)$_e|acil\\s+durum', 'SOS'),
+  ('^$_polite(?:dur|durdur|sus|kes|iptal(?:\\s+et)?|vazgeç|yeter)$_politeEnd\$', 'DUR'),
+  ('^$_polite(?:tekrar\\s+(?:et|söyle|oku)|tekrarla|bir\\s+daha\\s+söyle|ne\\s+dedin)$_politeEnd\$',
+      'TEKRAR'),
+  (r'ne\s+yapabilir(?:im|sin)|neler\s+yapabilir(?:im|sin)|komutlar|nasıl\s+kullanılır',
+      'KOMUTLAR'),
+  (r'eğitim\p{L}*\s+(?:başlat|aç|tekrarla|dinle)', 'EĞİTİM'),
+].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
 /// Telefon ayarları (AYAR niyeti) - entity metinden değil kalıptan geliyor.
 /// Diğer kurallardan ÖNCE denetleniyor; hiçbiriyle çakışmıyorlar.

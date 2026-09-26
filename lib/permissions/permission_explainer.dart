@@ -37,7 +37,7 @@ class PermissionExplainer {
         }
       }
 
-      await _feedback.say(explanation).timeout(_explainTimeout, onTimeout: () {});
+      await _feedback.say(explanation).timeout(_explainTimeout, onTimeout: () => false);
       final results = await missing.request();
       final granted = results.values.every(_ok);
       if (!granted) _feedback.say(Tr.permissionDenied);

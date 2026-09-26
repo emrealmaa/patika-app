@@ -40,7 +40,14 @@ class Settings {
   final int silenceTimeoutSeconds;
   final Verbosity verbosity;
   final int hapticLevel;
+
+  /// Varsayılan earconOnly: dinleme başlarken "Dinliyorum" sözü yerine
+  /// kısa ses çalar (daha hızlı, konuşmayı bölmez).
   final FeedbackMode feedbackMode;
+
+  /// Çift baş sallama dinlemeyi başlatsın mı (yanlış tetiklenebildiği için
+  /// varsayılan kapalı).
+  final bool nodToListen;
 
   const Settings({
     this.speechRateLevel = 2,
@@ -48,7 +55,8 @@ class Settings {
     this.silenceTimeoutSeconds = 3,
     this.verbosity = Verbosity.long,
     this.hapticLevel = 2,
-    this.feedbackMode = FeedbackMode.speech,
+    this.feedbackMode = FeedbackMode.earconOnly,
+    this.nodToListen = false,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -69,6 +77,7 @@ class Settings {
     Verbosity? verbosity,
     int? hapticLevel,
     FeedbackMode? feedbackMode,
+    bool? nodToListen,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -78,6 +87,7 @@ class Settings {
       verbosity: verbosity ?? this.verbosity,
       hapticLevel: _clamp(hapticLevel ?? this.hapticLevel, hapticScales.length),
       feedbackMode: feedbackMode ?? this.feedbackMode,
+      nodToListen: nodToListen ?? this.nodToListen,
     );
   }
 
@@ -103,6 +113,7 @@ class Settings {
         'verbosity': verbosity.name,
         'hapticLevel': hapticLevel,
         'feedbackMode': feedbackMode.name,
+        'nodToListen': nodToListen,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -121,6 +132,7 @@ class Settings {
       verbosity: readEnum('verbosity', Verbosity.values, d.verbosity),
       hapticLevel: readInt('hapticLevel', d.hapticLevel),
       feedbackMode: readEnum('feedbackMode', FeedbackMode.values, d.feedbackMode),
+      nodToListen: json['nodToListen'] is bool ? json['nodToListen'] as bool : d.nodToListen,
     );
   }
 
@@ -132,11 +144,12 @@ class Settings {
       other.silenceTimeoutSeconds == silenceTimeoutSeconds &&
       other.verbosity == verbosity &&
       other.hapticLevel == hapticLevel &&
-      other.feedbackMode == feedbackMode;
+      other.feedbackMode == feedbackMode &&
+      other.nodToListen == nodToListen;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
-      silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode);
+      silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

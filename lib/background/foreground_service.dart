@@ -20,6 +20,7 @@ class BackgroundService {
 
   bool _initialized = false;
   bool _running = false;
+  bool _withMicrophone = false;
   String? _lastText;
 
   void _init() {
@@ -71,11 +72,31 @@ class BackgroundService {
         callback: startCallback,
       );
       _running = result is ServiceRequestSuccess;
+      _withMicrophone = _running && micGranted;
       _lastText = text;
       if (!_running) debugPrint('[Background] başlatılamadı: $result');
     } catch (e) {
       // Plugin yok (testler) ya da platform desteklemiyor.
       debugPrint('[Background] başlatılamadı: $e');
+    }
+  }
+
+  /// Mikrofon izni servis başladıktan SONRA verildiyse servisi mikrofon
+  /// türüyle yeniden başlatır - aksi halde ekran kilitliyken (gözlük
+  /// butonuyla) dinleme Android 14+'ta mikrofona erişemez. Tür çalışırken
+  /// değiştirilemediği için durdurup yeniden başlatıyor; bu çağrı izin yeni
+  /// alındığında, yani uygulama ön plandayken yapılır.
+  Future<void> ensureMicrophoneType() async {
+    if (!_running || _withMicrophone) return;
+    try {
+      if (!await Permission.microphone.isGranted) return;
+      final text = _lastText ?? Tr.notificationSearching;
+      await FlutterForegroundTask.stopService();
+      _running = false;
+      _lastText = null;
+      await start(text);
+    } catch (e) {
+      debugPrint('[Background] mikrofon türü eklenemedi: $e');
     }
   }
 

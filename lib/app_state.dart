@@ -20,11 +20,15 @@ import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
 import 'ble/simulated_ble_service.dart';
 import 'commands/command_router.dart';
+import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
 import 'commands/log_entry.dart';
 import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
 import 'settings/settings_store.dart';
+import 'tutorial/tutorial.dart';
+import 'voice/speech_input_service.dart';
+import 'voice/voice_controller.dart';
 
 /// Uygulamanın tek merkezi durumu. BLE servisi (gerçek/simüle), bağlantı
 /// denetçisi, komut yönlendirici ve geri bildirim merkezini birbirine
@@ -34,7 +38,7 @@ import 'settings/settings_store.dart';
 /// Donanım henüz olmadığı için varsayılan mod SİMÜLASYON - gerçek moda
 /// geçmek (RealBleService) ekrandaki bir switch ile mümkün, ama gerçek
 /// donanım gelene kadar cihaz bulunamayacaktır (beklenen davranış).
-class AppState extends ChangeNotifier {
+class AppState extends ChangeNotifier implements ControlActions {
   /// İşlem geçmişi bu kadar kayıtla sınırlı (bellek sınırsız büyümesin).
   static const maxLogEntries = 100;
 
@@ -45,6 +49,8 @@ class AppState extends ChangeNotifier {
   late final FeedbackHub feedback;
   late final CommandRouter router;
   late final PermissionExplainer permissions;
+  late final VoiceController voice;
+  late final Tutorial tutorial;
 
   late PatikaBleService bleService;
   late ConnectionSupervisor _supervisor;
@@ -72,6 +78,9 @@ class AppState extends ChangeNotifier {
     EarconPlayer? earcons,
     BackgroundService? background,
     DeviceMemory Function(bool simulated)? deviceMemory,
+    SpeechInput? speechInput,
+    Future<bool> Function()? ensureMicPermission,
+    TutorialProgress? tutorialProgress,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -90,7 +99,21 @@ class AppState extends ChangeNotifier {
     );
     a11y.attachFeedbackHub(feedback);
     permissions = PermissionExplainer(feedback);
-    router = CommandRouter(settings: SettingsHandler(this.settings));
+    router = CommandRouter(
+      settings: SettingsHandler(this.settings),
+      control: ControlHandler(this),
+    );
+    tutorial = Tutorial(feedback, tutorialProgress ?? SharedPrefsTutorialProgress());
+    voice = VoiceController(
+      speech: speechInput ?? SpeechInputService(),
+      feedback: feedback,
+      ensureMicPermission: ensureMicPermission ??
+          () => permissions.ensure(Permission.microphone, Tr.micPermissionWhy),
+      submit: _process,
+      // Dinleme başlayınca süren eğitim de susar (tetikleyiciyle araya girme).
+      onListenStart: tutorial.stop,
+      onMicrophoneGranted: _background.ensureMicrophoneType,
+    );
     this.settings.addListener(_applySettings);
     this.settings.load();
     _applySettings();
@@ -100,11 +123,12 @@ class AppState extends ChangeNotifier {
   }
 
   /// Açılış: bildirim izni (arka plan servisi için) -> arka plan servisi ->
-  /// son gözlüğe otomatik bağlanma.
+  /// son gözlüğe otomatik bağlanma -> (ilk açılışsa) sesli eğitim.
   Future<void> start() async {
     await permissions.ensure(Permission.notification, Tr.notificationPermissionWhy);
     await _background.start(_notificationText);
     await _supervisor.start();
+    await tutorial.startIfFirstRun();
   }
 
   void _applySettings() {
@@ -154,8 +178,8 @@ class AppState extends ChangeNotifier {
         glassesBattery = percent;
         notifyListeners();
       }))
-      ..add(service.buttonEvents.listen((b) => _onGlassesEvent(_buttonName(b))))
-      ..add(service.gestureEvents.listen((g) => _onGlassesEvent(_gestureName(g))));
+      ..add(service.buttonEvents.listen(_onButton))
+      ..add(service.gestureEvents.listen(_onGesture));
   }
 
   Future<void> _detach() async {
@@ -182,14 +206,46 @@ class AppState extends ChangeNotifier {
     return Tr.notificationSearching;
   }
 
-  /// Faz 1b: gözlük olayları henüz bir eyleme bağlı değil (Faz 2'de
-  /// dokunuş dinlemeyi başlatacak, uzun basış SOS olacak) - şimdilik
-  /// alındığı kısaca duyuruluyor.
-  void _onGlassesEvent(String name) {
-    lastGlassesEvent = name;
-    feedback.say(Tr.glassesEvent(name), priority: AnnouncementPriority.low);
+  /// Gözlük butonu: tek dokunuş dinler (dinlerken iptal eder), çift dokunuş
+  /// son duyuruyu tekrarlar, uzun basış SOS (Faz 7'ye kadar yer tutucu).
+  void _onButton(GlassesButton button) {
+    lastGlassesEvent = _buttonName(button);
+    switch (button) {
+      case GlassesButton.tap:
+        voice.startListening(ListenSource.glasses);
+      case GlassesButton.doubleTap:
+        if (!repeatLast()) feedback.signal(FeedbackEvent.error, text: Tr.nothingToRepeat);
+      case GlassesButton.longPress:
+        feedback.signal(FeedbackEvent.error,
+            text: Tr.sosNotReady, priority: AnnouncementPriority.high);
+    }
     notifyListeners();
   }
+
+  /// Çift baş sallama yalnızca ayar açıksa dinlemeyi başlatır (yanlışlıkla
+  /// tetiklenebildiği için varsayılan kapalı); kapalıyken sessizce yok sayılır.
+  void _onGesture(GlassesGesture gesture) {
+    lastGlassesEvent = _gestureName(gesture);
+    if (gesture == GlassesGesture.doubleNod && settings.value.nodToListen) {
+      voice.startListening(ListenSource.gesture);
+    }
+    notifyListeners();
+  }
+
+  // --- ControlActions (DUR / TEKRAR / EĞİTİM komutları) ---------------------
+
+  @override
+  void stopEverything() {
+    tutorial.stop();
+    voice.cancel();
+    feedback.queue.stopAll();
+  }
+
+  @override
+  bool repeatLast() => feedback.queue.repeatLast();
+
+  @override
+  void startTutorial() => tutorial.start();
 
   static String _buttonName(GlassesButton b) => switch (b) {
         GlassesButton.tap => Tr.buttonTap,
@@ -260,6 +316,8 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    voice.dispose();
+    tutorial.dispose();
     settings.removeListener(_applySettings);
     feedback.queue.stopAll();
     feedback.updateObstacle(null);
