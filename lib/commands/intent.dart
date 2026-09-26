@@ -18,6 +18,9 @@ enum PatikaIntent {
   /// "Mehmet'in numarasını söyle" - kişinin numarasını okur.
   numara,
 
+  /// "gönderdiğim son mesajı oku" (Faz 4a).
+  sonMesaj,
+
   /// "annemi Fatma Yılmaz olarak kaydet", "takma adları oku", "annem takma
   /// adını sil". Entity: "kaydet|A|B", "oku", "sil|A" (bkz. AliasHandler).
   takmaAd,
@@ -79,6 +82,8 @@ enum PatikaIntent {
         return PatikaIntent.numara;
       case 'TAKMA_AD':
         return PatikaIntent.takmaAd;
+      case 'SON_MESAJ':
+        return PatikaIntent.sonMesaj;
       case 'DUR':
         return PatikaIntent.dur;
       case 'TEKRAR':

@@ -30,10 +30,12 @@ import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
 import 'commands/intent.dart';
 import 'commands/log_entry.dart';
+import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
+import 'platform/direct_actions.dart';
 import 'settings/settings_store.dart';
 import 'tutorial/tutorial.dart';
 import 'voice/dialog_manager.dart';
@@ -94,6 +96,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     TutorialProgress? tutorialProgress,
     ContactResolver? contacts,
     UrlOpener? openUrl,
+    DirectActions? direct,
+    Future<bool> Function()? ensureCallPermission,
+    Future<bool> Function()? ensureSmsPermission,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -128,9 +133,29 @@ class AppState extends ChangeNotifier implements ControlActions {
       listen: ({required bool dictation}) => voice.listenForReply(dictation: dictation),
       onFinished: _onDialogFinished,
     );
+    // Doğrudan arama/SMS yalnızca "direct" derleme türünde; izinler ilk
+    // kullanımda sesli açıklamayla isteniyor.
+    final directActions = direct ?? MethodChannelDirectActions();
+    final sentMessages = SentMessageLog();
     router = CommandRouter(
-      call: CallHandler(contacts: resolver, dialogs: dialogs, openUrl: openUrl),
-      message: MessageHandler(contacts: resolver, dialogs: dialogs, openUrl: openUrl),
+      call: CallHandler(
+        contacts: resolver,
+        dialogs: dialogs,
+        openUrl: openUrl,
+        direct: directActions,
+        ensureCallPermission: ensureCallPermission ??
+            () => permissions.ensure(Permission.phone, Tr.callPermissionWhy),
+      ),
+      message: MessageHandler(
+        contacts: resolver,
+        dialogs: dialogs,
+        openUrl: openUrl,
+        direct: directActions,
+        ensureSmsPermission: ensureSmsPermission ??
+            () => permissions.ensure(Permission.sms, Tr.smsPermissionWhy),
+        sent: sentMessages,
+      ),
+      lastMessage: LastMessageHandler(sentMessages),
       number: NumberHandler(contacts: resolver),
       alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),

@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- YALNIZCA "direct" derleme türü (bkz. app/build.gradle.kts). Google Play
+         bu iki izni kısıtlıyor; Play sürümü ("play" türü) bu dosyayı hiç
+         içermez ve onaydan sonra arama/SMS ekranını açmakla yetinir. -->
+
+    <!-- Onaydan sonra doğrudan arama (TelecomManager.placeCall). -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- Onaydan sonra doğrudan SMS (SmsManager). -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+</manifest>

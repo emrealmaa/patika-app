@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
+import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/voice/speech_input_service.dart';
 
 /// Konuşmayı test kontrol etsin diye her speak() açık bir Completer döner;
@@ -97,6 +98,30 @@ class FakeSpeechInput implements SpeechInput {
   Future<void> cancel() async {
     cancelCalls++;
     listening = false;
+  }
+}
+
+/// "direct" derleme türünün sahte hali: aramalar/SMS'ler kaydedilir.
+class FakeDirectActions implements DirectActions {
+  bool available = true;
+  bool callSucceeds = true;
+  SmsSendStatus smsResult = SmsSendStatus.sent;
+  final calls = <String>[];
+  final sms = <(String, String)>[];
+
+  @override
+  Future<bool> isAvailable() async => available;
+
+  @override
+  Future<bool> call(String number) async {
+    calls.add(number);
+    return callSucceeds;
+  }
+
+  @override
+  Future<SmsSendStatus> sendSms(String number, String body) async {
+    sms.add((number, body));
+    return smsResult;
   }
 }
 

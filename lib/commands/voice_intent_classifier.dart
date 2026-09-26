@@ -43,6 +43,8 @@ BleCommand classifyVoiceCommand(String text) {
     }
   }
 
+  if (_lastSentMessage.hasMatch(lowered)) return BleCommand.fromWire('SON_MESAJ', null);
+
   final alias = _aliasCommand(lowered, source);
   if (alias != null) return BleCommand.fromWire('TAKMA_AD', alias);
 
@@ -87,6 +89,12 @@ final _settingRules = [
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
 // --- Takma ad komutları (katı, puanlamadan önce) -------------------------------
+
+/// "gönderdiğim son mesajı oku", "son gönderdiğim mesaj ne". Gelen
+/// mesajları okumak ("mesajlarımı oku") Faz 4b'de ayrı bir niyet.
+final _lastSentMessage = RegExp(
+    r'gönderdiğim\s+(?:son\s+)?mesaj|son\s+gönder(?:diğim|ilen)\s+mesaj',
+    unicode: true);
 
 final _aliasList = RegExp(r'takma\s+ad\p{L}*\s+(?:oku|söyle|listele|neler)|takma\s+adlarım',
     unicode: true);

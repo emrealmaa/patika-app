@@ -5,6 +5,7 @@ import '../l10n/strings_tr.dart';
 import '../settings/settings_store.dart';
 import 'action_result.dart';
 import 'intent.dart';
+import 'sent_messages.dart';
 import 'handlers/alias_handler.dart';
 import 'handlers/call_handler.dart';
 import 'handlers/control_handler.dart';
@@ -39,6 +40,7 @@ class CommandRouter {
   final ControlHandler _control;
   final NumberHandler _number;
   final AliasHandler _alias;
+  final LastMessageHandler _lastMessage;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -55,6 +57,7 @@ class CommandRouter {
     ControlHandler? control,
     NumberHandler? number,
     AliasHandler? alias,
+    LastMessageHandler? lastMessage,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
@@ -70,6 +73,7 @@ class CommandRouter {
         _control = control ?? ControlHandler(),
         _number = number ?? NumberHandler(),
         _alias = alias ?? AliasHandler(),
+        _lastMessage = lastMessage ?? LastMessageHandler(SentMessageLog()),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -105,6 +109,8 @@ class CommandRouter {
           return await _number.handle(command.entity);
         case PatikaIntent.takmaAd:
           return await _alias.handle(command.entity);
+        case PatikaIntent.sonMesaj:
+          return await _lastMessage.handle();
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

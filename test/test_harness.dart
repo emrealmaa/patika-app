@@ -4,6 +4,7 @@ import 'package:patika_app/app_state.dart';
 import 'package:patika_app/commands/contact_resolver.dart';
 import 'package:patika_app/contacts/alias_store.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
+import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
@@ -40,7 +41,8 @@ class Harness {
   final opened = <Uri>[];
   late final AppState app;
 
-  Harness({Settings initial = const Settings()})
+  /// Varsayılan "play" türü (doğrudan eylem yok); "direct" için sahte ver.
+  Harness({Settings initial = const Settings(), DirectActions direct = const NoDirectActions()})
       : settings = SettingsStore(MemorySettingsPersistence()) {
     settings.update(initial);
     app = AppState(
@@ -62,6 +64,9 @@ class Harness {
         opened.add(uri);
         return true;
       },
+      direct: direct,
+      ensureCallPermission: () async => true,
+      ensureSmsPermission: () async => true,
     );
   }
 

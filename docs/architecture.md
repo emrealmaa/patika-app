@@ -47,7 +47,7 @@ göre veriliyor.
 | **PermissionExplainer** | `lib/permissions/permission_explainer.dart` | "Önce sesli açıkla, sonra sor": izin penceresinden önce neden gerektiği TTS ile söylenir. |
 | **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü. Ayarlar sesle de değişir (AYAR niyeti). |
 | **Tr** | `lib/l10n/strings_tr.dart` | Kullanıcıya giden tüm Türkçe metinler. |
-| **FeatureFlags** | `lib/config/feature_flags.dart` | `--dart-define-from-file` ile verilen bayraklar (Play kısıtlı `CALL_PHONE`/`SEND_SMS` için). |
+| **DirectActions** | `lib/platform/direct_actions.dart`, `android/.../DirectActions.kt` | Onaydan sonra doğrudan arama (`TelecomManager.placeCall` - ekran başlatmaz, kilitli ekranda da çalışır) ve SMS (tüm parçalar operatöre ulaşınca "gönderildi"). Yalnızca `direct` derleme türünde; `play` türünde arama/SMS ekranı açılır. |
 
 ## İlkeler
 

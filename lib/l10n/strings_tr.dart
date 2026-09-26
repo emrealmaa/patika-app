@@ -112,6 +112,27 @@ abstract final class Tr {
   static const dialogReviewHint =
       'Göndermek için evet, değiştirmek için düzelt, iptal için hayır deyin.';
   static String smsReady(String name) => '$name için mesaj hazır';
+
+  // --- Doğrudan arama / SMS (Faz 4a, "direct" derleme türü) -----------------
+  static String calling(String name) => '$name aranıyor';
+  static const callPermissionWhy =
+      'Onayladığınız kişiyi doğrudan arayabilmem için arama izni isteyeceğim.';
+  static const smsPermissionWhy =
+      'Onayladığınız mesajı sizin yerinize gönderebilmem için SMS izni isteyeceğim.';
+  static const directPermissionFallback =
+      'İzin olmadığı için ekranı açtım, tuşa sizin basmanız gerekiyor.';
+  static String smsSent(String nameDative) => '$nameDative mesaj gönderildi';
+  static const smsSendFailed = 'Mesaj gönderilemedi';
+  static const smsSendFailedDetail = 'Şebeke olmayabilir. Biraz sonra tekrar deneyin.';
+  static const smsSendTimeout = 'Mesajın gidip gitmediğini doğrulayamadım';
+  static const smsSendTimeoutDetail = 'Mesajlar uygulamasından kontrol edin.';
+  static const lastSentNone = 'Henüz bir mesaj göndermedim';
+  static String lastSent(String nameDative, String body) =>
+      '$nameDative gönderilen son mesaj: $body';
+  static String lastPrepared(String name, String body) =>
+      '$name için hazırlanan son mesaj: $body';
+  static const lastPreparedDetail =
+      'Bu sürümde mesajın gönderilip gönderilmediğini bilemiyorum.';
   static const smsReadyDetail = 'Göndermek için ekrandaki gönder tuşuna basın.';
   static String numberIs(String name, String spokenDigits) => '$name: $spokenDigits';
   static const aliasNotUnderstood =

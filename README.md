@@ -12,12 +12,20 @@ Gözlük donanımı henüz yok: her şey **Simülasyon modunda** çalışır ve
 
 ```bash
 flutter pub get
-flutter run                     # varsayılan: simülasyon modu
+flutter run --flavor play       # mağaza sürümü (varsayılan seçim)
+flutter run --flavor direct     # doğrudan arama/SMS (kendi cihazlar)
 flutter test                    # birim + widget testleri
 flutter analyze
 ```
 
-Özellik bayrakları ve (ileride) API anahtarları koda gömülmez:
+İki derleme türü var (Android, `app/build.gradle.kts`):
+
+| Tür | Onaydan sonra | Neden |
+|---|---|---|
+| `play` | Arama / SMS ekranı açılır, kullanıcı tuşa basar | Google Play `CALL_PHONE`/`SEND_SMS` izinlerini kısıtlıyor; bu türde izinler hiç yok |
+| `direct` | Doğrudan arar / gönderir | Kendi cihazlar ya da mağaza dışı dağıtım |
+
+API anahtarları (ileride) koda gömülmez:
 
 ```bash
 cp dart_defines.example.json dart_defines.json   # git'e girmez

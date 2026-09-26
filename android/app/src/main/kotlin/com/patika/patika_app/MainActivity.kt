@@ -81,6 +81,9 @@ class MainActivity : FlutterActivity() {
      */
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // applicationContext: motor etkinlikten uzun yaşıyor; arama/SMS arka
+        // planda da (ekran kilitliyken) çalışabilmeli.
+        DirectActions(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
