@@ -54,6 +54,24 @@ göre veriliyor.
 - **Sessiz kopma yok:** Bağlantı kaybı `high` öncelikle duyurulur. Engel
   uyarısı ise gözlükte, telefondan bağımsız çalışır (bkz. protokol §5).
 
+## Dart motorunun ömrü
+
+Dart motoru (BLE, bağlantı denetçisi, duyurular) **etkinlikten bağımsız**
+yaşar (`android/.../MainActivity.kt`). Varsayılan `FlutterActivity` motoru
+etkinlikle birlikte yok eder; geri tuşu Dart mantığını öldürüyor ama
+arka plan servisi "Patika gözlüğe bağlı" demeye devam ediyordu.
+
+| Olay | Davranış |
+|---|---|
+| Geri tuşu | Uygulama arka plana alınır (`popSystemNavigator` → `moveTaskToBack`), her şey sürer |
+| Sistem etkinliği yok eder (bellek, "Etkinlikleri tutma") | Motor önbellekte yaşar; etkinlik geri gelince aynı motora bağlanır, durum korunur |
+| Son uygulamalardan kaydırma | Motor bilerek yok edilir ve servis durdurulur: bildirim asla ölü bir motor için "bağlı" demez |
+
+Motor `Application.onCreate`'te değil, ilk etkinlik açılışında oluşturulur.
+Süreç ekransız başlarsa (örn. Hızlı Ayarlar karosu bağlanırken) uygulama
+kendi kendine bağlanıp konuşmaya başlamaz. Dart kodu etkinlik bağlandıktan
+sonra başlatılır; bu yüzden açılıştaki izin istekleri etkinliği bulabilir.
+
 ## Bilinen sınırlar
 
 - Kullanıcı uygulamayı son uygulamalardan kaydırırsa servis de kapanır
