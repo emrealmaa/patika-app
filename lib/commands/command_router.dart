@@ -1,4 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 import '../ble/ble_command.dart';
+import '../l10n/strings_tr.dart';
+import '../settings/settings_store.dart';
 import 'action_result.dart';
 import 'intent.dart';
 import 'handlers/call_handler.dart';
@@ -8,6 +12,7 @@ import 'handlers/music_handler.dart';
 import 'handlers/navigation_handler.dart';
 import 'handlers/news_handler.dart';
 import 'handlers/ocr_handler.dart';
+import 'handlers/settings_handler.dart';
 import 'handlers/time_handler.dart';
 import 'handlers/unknown_handler.dart';
 import 'handlers/weather_handler.dart';
@@ -27,6 +32,7 @@ class CommandRouter {
   final WeatherHandler _weather;
   final OcrHandler _ocr;
   final CrossingModeHandler _crossingMode;
+  final SettingsHandler _settings;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -39,6 +45,7 @@ class CommandRouter {
     WeatherHandler? weather,
     OcrHandler? ocr,
     CrossingModeHandler? crossingMode,
+    SettingsHandler? settings,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
@@ -49,6 +56,8 @@ class CommandRouter {
         _weather = weather ?? WeatherHandler(),
         _ocr = ocr ?? OcrHandler(),
         _crossingMode = crossingMode ?? CrossingModeHandler(),
+        _settings = settings ??
+            SettingsHandler(SettingsStore(MemorySettingsPersistence())),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -78,12 +87,14 @@ class CommandRouter {
           return await _ocr.handle(command.entity);
         case PatikaIntent.gecisModu:
           return await _crossingMode.handle(command.entity);
+        case PatikaIntent.ayar:
+          return await _settings.handle(command.entity);
         case PatikaIntent.bilinmiyor:
           return await _unknown.handle(command.entity);
       }
     } catch (e) {
-      return ActionResult.fail(
-          '${command.intent.name}: beklenmeyen bir hata oluştu (${e.runtimeType})');
+      debugPrint('[CommandRouter] ${command.intent.name} başarısız: $e');
+      return ActionResult.fail(Tr.unexpectedError);
     }
   }
 }

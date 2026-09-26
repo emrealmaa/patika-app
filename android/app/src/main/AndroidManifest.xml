@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Test modundaki "Sesli Komut Ver" butonu için telefon mikrofonu (bkz. speech_input_service.dart). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Titreşim dili (bkz. haptic_patterns.dart). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application

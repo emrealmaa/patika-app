@@ -33,7 +33,7 @@ void main() {
     test('ARA entity olmadan güvenli şekilde başarısız olur', () async {
       final result = await router.route(BleCommand.fromWire('ARA', null));
       expect(result.success, isFalse);
-      expect(result.message, contains('kimin aranacağı belirtilmedi'));
+      expect(result.message, 'Kimi arayacağımı anlayamadım');
     });
 
     // Bu test ortamında flutter_contacts'ın platform kanalı hiç
@@ -72,6 +72,7 @@ void main() {
       expect(PatikaIntent.fromWireName('OKU'), PatikaIntent.oku);
       expect(PatikaIntent.fromWireName('GECIS_MODU'), PatikaIntent.gecisModu);
       expect(PatikaIntent.fromWireName('NAVİGASYON'), PatikaIntent.navigasyon);
+      expect(PatikaIntent.fromWireName('AYAR'), PatikaIntent.ayar);
       expect(PatikaIntent.fromWireName('BİLİNMİYOR'), PatikaIntent.bilinmiyor);
     });
   });

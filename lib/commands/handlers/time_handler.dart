@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// SAAT niyeti. Python main.py'de zaten phone_bridge'e hiç uğramadan yerel
@@ -8,6 +9,6 @@ class TimeHandler {
     final now = DateTime.now();
     final saat = now.hour.toString().padLeft(2, '0');
     final dakika = now.minute.toString().padLeft(2, '0');
-    return ActionResult.ok('Saat $saat:$dakika');
+    return ActionResult.ok(Tr.time('$saat:$dakika'));
   }
 }

@@ -1,14 +1,18 @@
-/// Bir komutun işlenmesi sonucu. `message`, test ekranında log olarak
-/// gösteriliyor - ileride TTS ile seslendirmek için de aynı alan kullanılabilir.
+/// Bir komutun işlenmesi sonucu. [message] hem test ekranında log olarak
+/// gösteriliyor hem kullanıcıya seslendiriliyor (bkz. FeedbackHub.result).
 class ActionResult {
   final bool success;
   final String message;
 
-  const ActionResult({required this.success, required this.message});
+  /// Sadece "uzun" ayrıntı seviyesinde okunan ek açıklama - genelde
+  /// kullanıcının sonraki adımda ne yapması gerektiği.
+  final String? detail;
 
-  factory ActionResult.ok(String message) =>
-      ActionResult(success: true, message: message);
+  const ActionResult({required this.success, required this.message, this.detail});
 
-  factory ActionResult.fail(String message) =>
-      ActionResult(success: false, message: message);
+  factory ActionResult.ok(String message, {String? detail}) =>
+      ActionResult(success: true, message: message, detail: detail);
+
+  factory ActionResult.fail(String message, {String? detail}) =>
+      ActionResult(success: false, message: message, detail: detail);
 }

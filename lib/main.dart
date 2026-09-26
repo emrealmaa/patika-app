@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_state.dart';
+import 'l10n/strings_tr.dart';
 import 'screens/connection_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -15,8 +18,13 @@ class PatikaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Patika Companion',
+      title: Tr.appTitle,
       theme: buildAppTheme(),
+      // Material'in hazır erişilebilirlik metinleri ("Sekme 1/3", "Geri",
+      // "seçili" vb.) Türkçe okunsun - yoksa TalkBack bunları İngilizce söyler.
+      locale: const Locale('tr', 'TR'),
+      supportedLocales: const [Locale('tr', 'TR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const HomePage(),
     );
   }
@@ -54,17 +62,19 @@ class _HomePageState extends State<HomePage> {
     final screens = [
       ConnectionScreen(state: _appState),
       TestModeScreen(state: _appState),
+      SettingsScreen(store: _appState.settings, feedback: _appState.feedback),
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Patika Companion')),
+      appBar: AppBar(title: const Text(Tr.appTitle)),
       body: screens[_tabIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.bluetooth), label: 'Bağlantı'),
-          NavigationDestination(icon: Icon(Icons.science), label: 'Test Modu'),
+          NavigationDestination(icon: Icon(Icons.bluetooth), label: Tr.tabConnection),
+          NavigationDestination(icon: Icon(Icons.science), label: Tr.tabTestMode),
+          NavigationDestination(icon: Icon(Icons.settings), label: Tr.tabSettings),
         ],
       ),
     );

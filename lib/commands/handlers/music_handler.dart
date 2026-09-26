@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// MÜZİK niyeti. phone_bridge.py'deki simüle "PLAY_MUSIC" eyleminin
@@ -9,7 +10,6 @@ import '../action_result.dart';
 /// sonuç döndürüyor, çökmüyor.
 class MusicHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(
-        'MÜZİK: henüz uygulanmadı (hangi servis kullanılacak netleşmedi, bkz. TODO.md)');
+    return ActionResult.fail(Tr.musicNotReady);
   }
 }

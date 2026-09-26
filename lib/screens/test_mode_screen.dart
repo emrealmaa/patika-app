@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../accessibility/a11y_announcer.dart' as a11y;
+import '../accessibility/announcement_queue.dart';
+import '../accessibility/earcons.dart';
+import '../accessibility/feedback_hub.dart';
+import '../accessibility/haptic_patterns.dart';
 import '../app_state.dart';
 import '../commands/log_entry.dart';
 import '../commands/voice_intent_classifier.dart';
+import '../l10n/strings_tr.dart';
+import '../settings/settings.dart';
 import '../theme/app_theme.dart';
 import '../voice/speech_input_service.dart';
 
@@ -33,6 +38,7 @@ class _TestModeScreenState extends State<TestModeScreen> {
     'OKU',
     'GECIS_MODU',
     'NAVİGASYON',
+    'AYAR',
     'BİLİNMİYOR',
   ];
 
@@ -70,9 +76,7 @@ class _TestModeScreenState extends State<TestModeScreen> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Elle komut gönderme sadece simülasyon modundayken '
-                      'çalışır. Bağlantı ekranından "Simülasyon modu"nu '
-                      'açın. Sesli komut her iki modda da çalışır.',
+                      Tr.manualOnlySimulated,
                       style: TextStyle(color: AppColors.onSurface),
                     ),
                   ),
@@ -83,7 +87,7 @@ class _TestModeScreenState extends State<TestModeScreen> {
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _selectedIntent,
-          decoration: const InputDecoration(labelText: 'Niyet (intent)'),
+          decoration: const InputDecoration(labelText: Tr.intentLabel),
           items: _intents
               .map((i) => DropdownMenuItem(value: i, child: Text(i)))
               .toList(),
@@ -93,8 +97,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
         TextField(
           controller: _entityController,
           decoration: const InputDecoration(
-            labelText: 'Entity (isim/yer, opsiyonel)',
-            hintText: 'örn. Emre, Kadıköy iskelesi',
+            labelText: Tr.entityLabel,
+            hintText: Tr.entityHint,
           ),
         ),
         const SizedBox(height: 16),
@@ -109,13 +113,18 @@ class _TestModeScreenState extends State<TestModeScreen> {
                 }
               : null,
           icon: const Icon(Icons.send),
-          label: const Text('Komutu gönder'),
+          label: const Text(Tr.sendCommand),
         ),
         const SizedBox(height: 24),
-        Text('İşlem geçmişi', style: Theme.of(context).textTheme.titleMedium),
+        _FeedbackTestSection(feedback: state.feedback),
+        const SizedBox(height: 24),
+        Semantics(
+          header: true,
+          child: Text(Tr.commandHistory, style: Theme.of(context).textTheme.titleMedium),
+        ),
         const SizedBox(height: 8),
         if (state.log.isEmpty)
-          const Text('Henüz işlenen bir komut yok.')
+          const Text(Tr.noCommands)
         else
           ...state.log.map((e) => _LogCard(entry: e)),
       ],
@@ -143,15 +152,23 @@ class _VoiceCommandButton extends StatefulWidget {
 }
 
 class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
-  /// Duyuru ile sonraki adım arasındaki bekleme. `announce` bitişini
-  /// bildirmiyor; bu olmadan ekran okuyucunun "Dinliyorum" sesi mikrofona
-  /// komut olarak girebilir ya da "Şunu anladım" duyurusu komut sonucunun
-  /// duyurusuyla kesilebilir.
-  static const _announceGap = Duration(milliseconds: 1200);
+  /// Duyuru ile sonraki adım arasındaki bekleme. TTS'in bitişi burada
+  /// beklenmiyor; bu olmadan "Dinliyorum" sesi mikrofona komut olarak
+  /// girebilir ya da "Şunu anladım" duyurusu komut sonucunun duyurusuyla
+  /// kesilebilir. "Sadece kısa ses" modunda kısa ses ~0,2 sn sürdüğü için
+  /// bekleme de kısa.
+  static const _speechGap = Duration(milliseconds: 1200);
+  static const _earconGap = Duration(milliseconds: 400);
 
   final _speech = SpeechInputService();
   _VoicePhase _phase = _VoicePhase.idle;
   String? _lastHeard;
+
+  FeedbackHub get _feedback => widget.state.feedback;
+
+  Duration get _gap => _feedback.settings.feedbackMode == FeedbackMode.speech
+      ? _speechGap
+      : _earconGap;
 
   @override
   void dispose() {
@@ -171,7 +188,7 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
       case _VoicePhase.listening:
         await _speech.cancel();
         _setPhase(_VoicePhase.idle);
-        a11y.announce('Dinleme iptal edildi');
+        _feedback.signal(FeedbackEvent.listenEnded, statusText: Tr.listenCancelled);
         return;
       case _VoicePhase.idle:
         break;
@@ -182,13 +199,12 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
     if (_phase != _VoicePhase.preparing) return;
     if (!ready) {
       _setPhase(_VoicePhase.idle);
-      a11y.announce(
-          'Mikrofon izni verilmedi ya da konuşma tanıma bu cihazda kullanılamıyor');
+      _feedback.signal(FeedbackEvent.error, text: Tr.speechUnavailable);
       return;
     }
 
-    a11y.announce('Dinliyorum');
-    await Future.delayed(_announceGap);
+    _feedback.signal(FeedbackEvent.listening, statusText: Tr.listening);
+    await Future.delayed(_gap);
     // Beklerken iptal edildiyse ya da ekrandan çıkıldıysa dinlemeye başlama.
     if (!mounted || _phase != _VoicePhase.preparing) return;
 
@@ -196,14 +212,15 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
     await _speech.listen(
       onFinal: _onFinal,
       onError: _onError,
-      onDone: () => _onError('Sizi duyamadım, tekrar deneyin'),
+      onDone: () => _onError(Tr.didNotHear),
+      silenceTimeout: _feedback.settings.silenceTimeout,
     );
   }
 
   Future<void> _onFinal(String text) async {
     if (_phase != _VoicePhase.listening) return;
     if (text.isEmpty) {
-      _onError('Sizi duyamadım, tekrar deneyin');
+      _onError(Tr.didNotHear);
       return;
     }
 
@@ -211,8 +228,8 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
       _phase = _VoicePhase.processing;
       _lastHeard = text;
     });
-    a11y.announce('Şunu anladım: $text');
-    await Future.delayed(_announceGap);
+    _feedback.signal(FeedbackEvent.understood, text: Tr.heard(text));
+    await Future.delayed(_speechGap);
 
     // Komut anlaşıldı - kullanıcı bu arada sekmeden çıksa bile işleniyor.
     // Sonuç duyurusunu AppState yapıyor (diğer kaynaklarla aynı).
@@ -223,26 +240,22 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
   void _onError(String message) {
     if (_phase != _VoicePhase.listening) return;
     _setPhase(_VoicePhase.idle);
-    a11y.announce(message);
+    _feedback.signal(FeedbackEvent.notUnderstood, text: message);
   }
 
   @override
   Widget build(BuildContext context) {
     final (icon, text, semanticLabel) = switch (_phase) {
-      _VoicePhase.idle => (
-          Icons.mic,
-          'Sesli Komut Ver',
-          'Sesli komut ver. Dokunun ve komutunuzu söyleyin.',
-        ),
+      _VoicePhase.idle => (Icons.mic, Tr.voiceButton, Tr.voiceButtonLabel),
       _VoicePhase.preparing || _VoicePhase.listening => (
           Icons.stop_circle_outlined,
-          'Dinleniyor… Durdurmak için dokunun',
-          'Dinleniyor. Durdurmak için dokunun.',
+          Tr.voiceListeningButton,
+          Tr.voiceListeningLabel,
         ),
       _VoicePhase.processing => (
           Icons.hourglass_top,
-          'Komut işleniyor…',
-          'Komut işleniyor, lütfen bekleyin.',
+          Tr.voiceProcessingButton,
+          Tr.voiceProcessingLabel,
         ),
     };
     // Durum renkle değil metin+ikonla anlatılıyor; renk yardımcı işaret.
@@ -279,8 +292,130 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
         ),
         if (_lastHeard != null) ...[
           const SizedBox(height: 8),
-          Text('Son duyulan: "$_lastHeard"'),
+          Text(Tr.lastHeard(_lastHeard!)),
         ],
+      ],
+    );
+  }
+}
+
+/// Titreşim dili, kısa sesler, duyuru önceliği ve engel titreşimini
+/// donanımsız denemek için. Hepsi FeedbackHub üzerinden gidiyor - ayarlar
+/// (titreşim şiddeti, bildirim türü) burada da geçerli.
+class _FeedbackTestSection extends StatefulWidget {
+  final FeedbackHub feedback;
+
+  const _FeedbackTestSection({required this.feedback});
+
+  @override
+  State<_FeedbackTestSection> createState() => _FeedbackTestSectionState();
+}
+
+class _FeedbackTestSectionState extends State<_FeedbackTestSection> {
+  HapticPatternId _pattern = HapticPatternId.connected;
+  Earcon _earcon = Earcon.listenStart;
+  bool _obstacleOn = false;
+  double _obstacleMeters = 1.5;
+
+  FeedbackHub get _feedback => widget.feedback;
+
+  @override
+  void dispose() {
+    // Ekrandan çıkınca test titreşimi sürmesin.
+    _feedback.updateObstacle(null);
+    super.dispose();
+  }
+
+  void _updateObstacle() =>
+      _feedback.updateObstacle(_obstacleOn ? _obstacleMeters : null);
+
+  void _runPriorityTest() {
+    _feedback.say(Tr.priorityTestLow, priority: AnnouncementPriority.low);
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      _feedback.say(Tr.priorityTestCritical, priority: AnnouncementPriority.critical);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final interval = HapticPatterns.obstacleInterval(_obstacleMeters);
+    final distanceText =
+        interval == null ? Tr.obstacleNone : Tr.meters(_obstacleMeters);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(Tr.feedbackTest, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<HapticPatternId>(
+          initialValue: _pattern,
+          decoration: const InputDecoration(labelText: Tr.hapticPatternLabel),
+          items: HapticPatternId.values
+              .map((p) => DropdownMenuItem(value: p, child: Text(Tr.hapticName(p.name))))
+              .toList(),
+          onChanged: (v) => setState(() => _pattern = v ?? _pattern),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _feedback.haptics
+              .play(_pattern, scale: _feedback.settings.hapticScale),
+          icon: const Icon(Icons.vibration),
+          label: const Text(Tr.playHaptic),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<Earcon>(
+          initialValue: _earcon,
+          decoration: const InputDecoration(labelText: Tr.earconLabel),
+          items: Earcon.values
+              .map((e) => DropdownMenuItem(value: e, child: Text(Tr.earconName(e.name))))
+              .toList(),
+          onChanged: (v) => setState(() => _earcon = v ?? _earcon),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _feedback.earcons.play(_earcon),
+          icon: const Icon(Icons.music_note),
+          label: const Text(Tr.playEarcon),
+        ),
+        const SizedBox(height: 16),
+        Semantics(
+          button: true,
+          label: Tr.priorityTestLabel,
+          excludeSemantics: true,
+          child: OutlinedButton.icon(
+            onPressed: _runPriorityTest,
+            icon: const Icon(Icons.low_priority),
+            label: const Text(Tr.priorityTest),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text(Tr.obstacleSimulation),
+          subtitle: Text(distanceText),
+          value: _obstacleOn,
+          onChanged: (v) {
+            setState(() => _obstacleOn = v);
+            _updateObstacle();
+          },
+        ),
+        Semantics(
+          label: Tr.obstacleDistance,
+          child: Slider(
+            min: 0.2,
+            max: 3.0,
+            divisions: 28,
+            value: _obstacleMeters,
+            label: distanceText,
+            semanticFormatterCallback: (v) => Tr.meters(v),
+            onChanged: (v) {
+              setState(() => _obstacleMeters = v);
+              _updateObstacle();
+            },
+          ),
+        ),
       ],
     );
   }
@@ -298,25 +433,25 @@ class _LogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = entry.result.success ? 'başarılı' : 'başarısız';
+    final ok = entry.result.success;
     final baslik = '${entry.intent.name}${entry.entity != null ? " (${entry.entity})" : ""}';
     final saat = '${entry.time.hour.toString().padLeft(2, '0')}:'
         '${entry.time.minute.toString().padLeft(2, '0')}:'
         '${entry.time.second.toString().padLeft(2, '0')}';
 
     return Semantics(
-      label: '$baslik, $durum: ${entry.result.message}. İşlem saati $saat',
+      label: '${Tr.logEntryLabel(baslik, ok, entry.result.message)}. ${Tr.logEntryTime(saat)}',
       excludeSemantics: true,
       child: Card(
         child: ListTile(
           leading: ExcludeSemantics(
             child: Icon(
-              entry.result.success ? Icons.check_circle : Icons.error_outline,
-              color: entry.result.success ? AppColors.success : AppColors.warning,
+              ok ? Icons.check_circle : Icons.error_outline,
+              color: ok ? AppColors.success : AppColors.warning,
             ),
           ),
           title: Text(baslik),
-          subtitle: Text('${entry.result.success ? "Başarılı" : "Başarısız"}: ${entry.result.message}'),
+          subtitle: Text('${ok ? Tr.success : Tr.failure}: ${entry.result.message}'),
           trailing: Text(saat),
         ),
       ),

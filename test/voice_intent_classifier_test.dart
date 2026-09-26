@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:patika_app/commands/intent.dart';
 import 'package:patika_app/commands/voice_intent_classifier.dart';
+import 'package:patika_app/settings/settings.dart';
 
 void main() {
   void expectCommand(String text, PatikaIntent intent, [String? entity]) {
@@ -40,6 +41,20 @@ void main() {
     test('HABER', () => expectCommand('haberleri oku', PatikaIntent.haber));
     test('OKU', () => expectCommand('önümdeki yazıyı oku', PatikaIntent.oku));
     test('GECIS_MODU', () => expectCommand('karşıya geçmek istiyorum', PatikaIntent.gecisModu));
+  });
+
+  group('AYAR', () {
+    void expectSetting(String text, SettingAction action) =>
+        expectCommand(text, PatikaIntent.ayar, action.name);
+
+    test('daha hızlı konuş', () => expectSetting('Daha hızlı konuş', SettingAction.speechFaster));
+    test('yavaş konuş', () => expectSetting('biraz yavaş konuş lütfen', SettingAction.speechSlower));
+    test('kısa anlat', () => expectSetting('daha kısa anlat', SettingAction.shorter));
+    test('ayrıntılı anlat', () => expectSetting('ayrıntılı anlat', SettingAction.longer));
+    test('titreşimi artır', () => expectSetting('titreşimi artır', SettingAction.hapticStronger));
+    test('titreşimi azalt', () => expectSetting('Titreşimi azalt', SettingAction.hapticWeaker));
+    test('titreşimi kapat', () => expectSetting('titreşimi kapat', SettingAction.hapticOff));
+    test('diğer niyetleri bozmaz', () => expectCommand("Ahmet'i ara", PatikaIntent.ara, 'Ahmet'));
   });
 
   group('BİLİNMİYOR', () {

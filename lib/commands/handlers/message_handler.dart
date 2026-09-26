@@ -1,5 +1,6 @@
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
 
@@ -21,27 +22,26 @@ class MessageHandler {
 
   Future<ActionResult> handle(String? entity) async {
     if (entity == null) {
-      return ActionResult.fail('MESAJ: kime gönderileceği belirtilmedi');
+      return ActionResult.fail(Tr.messageNoTarget);
     }
 
     final contact = await _contacts.findByName(entity);
     if (contact == null) {
-      return ActionResult.fail(
-          'MESAJ: "$entity" rehberde bulunamadı (izin verilmemiş olabilir)');
+      return ActionResult.fail(Tr.contactNotFound(entity),
+          detail: Tr.contactNotFoundDetail);
     }
     final phones = contact.phones;
     if (phones.isEmpty) {
-      return ActionResult.fail(
-          'MESAJ: ${contact.displayName} için kayıtlı numara yok');
+      return ActionResult.fail(Tr.contactNoNumber(contact.displayName ?? entity));
     }
 
     final number = phones.first.number;
     final uri = Uri(scheme: 'sms', path: number);
     final launched = await launchUrl(uri);
     if (!launched) {
-      return ActionResult.fail('MESAJ: mesaj uygulaması açılamadı');
+      return ActionResult.fail(Tr.smsFailed);
     }
-    return ActionResult.ok(
-        '${contact.displayName} için mesaj uygulaması açıldı ($number)');
+    return ActionResult.ok(Tr.smsOpened(contact.displayName ?? entity),
+        detail: Tr.smsOpenedDetail);
   }
 }

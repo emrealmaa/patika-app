@@ -1,5 +1,6 @@
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
 
@@ -18,26 +19,26 @@ class CallHandler {
 
   Future<ActionResult> handle(String? entity) async {
     if (entity == null) {
-      return ActionResult.fail('ARA: kimin aranacağı belirtilmedi');
+      return ActionResult.fail(Tr.callNoTarget);
     }
 
     final contact = await _contacts.findByName(entity);
     if (contact == null) {
-      return ActionResult.fail(
-          'ARA: "$entity" rehberde bulunamadı (izin verilmemiş olabilir)');
+      return ActionResult.fail(Tr.contactNotFound(entity),
+          detail: Tr.contactNotFoundDetail);
     }
     final phones = contact.phones;
     if (phones.isEmpty) {
-      return ActionResult.fail(
-          'ARA: ${contact.displayName} için kayıtlı numara yok');
+      return ActionResult.fail(Tr.contactNoNumber(contact.displayName ?? entity));
     }
 
     final number = phones.first.number;
     final uri = Uri(scheme: 'tel', path: number);
     final launched = await launchUrl(uri);
     if (!launched) {
-      return ActionResult.fail('ARA: arama uygulaması açılamadı');
+      return ActionResult.fail(Tr.dialerFailed);
     }
-    return ActionResult.ok('${contact.displayName} aranıyor ($number)');
+    return ActionResult.ok(Tr.dialerOpened(contact.displayName ?? entity),
+        detail: Tr.dialerOpenedDetail);
   }
 }

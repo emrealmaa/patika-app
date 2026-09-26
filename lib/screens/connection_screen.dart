@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../ble/ble_connection_state.dart';
 import '../ble/patika_ble_service.dart';
 import '../commands/log_entry.dart';
+import '../l10n/strings_tr.dart';
 import '../theme/app_theme.dart';
 
 /// Bağlantı durumu ekranı: gerçek/simülasyon mod seçimi, tarama, cihaza
@@ -25,10 +26,8 @@ class ConnectionScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         SwitchListTile(
-          title: const Text('Simülasyon modu'),
-          subtitle: Text(state.isSimulated
-              ? 'Gözlük donanımı simüle ediliyor'
-              : 'Gerçek BLE ile taranıyor (donanım gerekir)'),
+          title: const Text(Tr.simulationMode),
+          subtitle: Text(state.isSimulated ? Tr.simulationOn : Tr.simulationOff),
           value: state.isSimulated,
           onChanged: (v) => state.toggleMode(v),
         ),
@@ -39,7 +38,7 @@ class ConnectionScreen extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () => state.startScan(),
           icon: const Icon(Icons.search),
-          label: const Text('Tara'),
+          label: const Text(Tr.scan),
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
@@ -47,20 +46,26 @@ class ConnectionScreen extends StatelessWidget {
               ? () => state.disconnect()
               : null,
           icon: const Icon(Icons.link_off),
-          label: const Text('Bağlantıyı kes'),
+          label: const Text(Tr.disconnect),
         ),
         const SizedBox(height: 16),
-        Text('Bulunan cihazlar', style: Theme.of(context).textTheme.titleMedium),
+        Semantics(
+          header: true,
+          child: Text(Tr.foundDevices, style: Theme.of(context).textTheme.titleMedium),
+        ),
         const SizedBox(height: 8),
         if (state.devices.isEmpty)
-          const Text('Henüz cihaz bulunamadı.')
+          const Text(Tr.noDevices)
         else
           ...state.devices.map((d) => _DeviceCard(device: d, onConnect: () => state.connect(d.id))),
         const SizedBox(height: 24),
-        Text('Son komutlar', style: Theme.of(context).textTheme.titleMedium),
+        Semantics(
+          header: true,
+          child: Text(Tr.recentCommands, style: Theme.of(context).textTheme.titleMedium),
+        ),
         const SizedBox(height: 8),
         if (state.log.isEmpty)
-          const Text('Henüz işlenen bir komut yok.')
+          const Text(Tr.noCommands)
         else
           ...state.log.take(10).map((e) => _LogTile(entry: e)),
       ],
@@ -100,11 +105,11 @@ class _DeviceCard extends StatelessWidget {
             const SizedBox(height: 12),
             Semantics(
               button: true,
-              label: '${device.name} cihazına bağlan',
+              label: Tr.connectTo(device.name),
               excludeSemantics: true,
               child: ElevatedButton(
                 onPressed: onConnect,
-                child: const Text('Bağlan'),
+                child: const Text(Tr.connect),
               ),
             ),
           ],
@@ -126,22 +131,22 @@ class _LogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = entry.result.success ? 'başarılı' : 'başarısız';
+    final ok = entry.result.success;
     final baslik = '${entry.intent.name}${entry.entity != null ? " (${entry.entity})" : ""}';
 
     return Semantics(
-      label: '$baslik, $durum: ${entry.result.message}',
+      label: Tr.logEntryLabel(baslik, ok, entry.result.message),
       excludeSemantics: true,
       child: ListTile(
         dense: true,
         leading: ExcludeSemantics(
           child: Icon(
-            entry.result.success ? Icons.check_circle : Icons.error_outline,
-            color: entry.result.success ? AppColors.success : AppColors.warning,
+            ok ? Icons.check_circle : Icons.error_outline,
+            color: ok ? AppColors.success : AppColors.warning,
           ),
         ),
         title: Text(baslik),
-        subtitle: Text('${entry.result.success ? "Başarılı" : "Başarısız"}: ${entry.result.message}'),
+        subtitle: Text('${ok ? Tr.success : Tr.failure}: ${entry.result.message}'),
       ),
     );
   }
@@ -155,14 +160,14 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (connectionState) {
-      BleConnectionState.disconnected => ('Bağlı değil', AppColors.neutral),
-      BleConnectionState.scanning => ('Taranıyor…', AppColors.info),
-      BleConnectionState.connecting => ('Bağlanıyor…', AppColors.warning),
-      BleConnectionState.connected => ('Bağlı', AppColors.success),
+      BleConnectionState.disconnected => (Tr.stateDisconnected, AppColors.neutral),
+      BleConnectionState.scanning => (Tr.stateScanning, AppColors.info),
+      BleConnectionState.connecting => (Tr.stateConnecting, AppColors.warning),
+      BleConnectionState.connected => (Tr.stateConnected, AppColors.success),
     };
 
     return Semantics(
-      label: 'Bağlantı durumu: $label',
+      label: Tr.connectionStatus(label),
       excludeSemantics: true,
       child: Card(
         child: ListTile(

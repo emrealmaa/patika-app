@@ -10,6 +10,10 @@ enum PatikaIntent {
   oku,
   gecisModu,
   navigasyon,
+
+  /// Telefon tarafı ayarları ("daha hızlı konuş") - Python tarafında yok,
+  /// sadece telefon mikrofonundan gelir. Entity: [SettingAction] adı.
+  ayar,
   bilinmiyor;
 
   /// Python tarafındaki niyet string'ini (örn. "ARA", "GECIS_MODU") enum'a
@@ -37,6 +41,8 @@ enum PatikaIntent {
       case 'NAVİGASYON':
       case 'NAVIGASYON':
         return PatikaIntent.navigasyon;
+      case 'AYAR':
+        return PatikaIntent.ayar;
       default:
         return PatikaIntent.bilinmiyor;
     }

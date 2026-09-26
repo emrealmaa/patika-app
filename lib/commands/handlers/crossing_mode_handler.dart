@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// GECIS_MODU niyeti. Python tarafında bu, crossing_mode.py'deki ağır
@@ -12,7 +13,6 @@ import '../action_result.dart';
 /// sonuç döndürüyor, çökmüyor.
 class CrossingModeHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(
-        'GECIS_MODU: henüz uygulanmadı (crossing_mode.py -> Dart portu ayrı, büyük görev, bkz. TODO.md)');
+    return ActionResult.fail(Tr.crossingNotReady);
   }
 }

@@ -3,13 +3,21 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'accessibility/a11y_announcer.dart' as a11y;
+import 'accessibility/announcement_queue.dart';
+import 'accessibility/earcons.dart';
+import 'accessibility/feedback_hub.dart';
+import 'accessibility/haptic_patterns.dart';
+import 'accessibility/speech_output.dart';
 import 'ble/ble_command.dart';
 import 'ble/ble_connection_state.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
 import 'ble/simulated_ble_service.dart';
 import 'commands/command_router.dart';
+import 'commands/handlers/settings_handler.dart';
 import 'commands/log_entry.dart';
+import 'l10n/strings_tr.dart';
+import 'settings/settings_store.dart';
 
 /// Uygulamanın tek merkezi durumu. BLE servisi (gerçek/simüle) ile komut
 /// yönlendiriciyi (CommandRouter) birbirine bağlar, ekranlar (ConnectionScreen/
@@ -20,7 +28,13 @@ import 'commands/log_entry.dart';
 /// geçmek (RealBleService) ekrandaki bir switch ile mümkün, ama gerçek
 /// donanım gelene kadar cihaz bulunamayacaktır (beklenen davranış).
 class AppState extends ChangeNotifier {
-  final CommandRouter router = CommandRouter();
+  /// İşlem geçmişi bu kadar kayıtla sınırlı (bellek sınırsız büyümesin).
+  static const maxLogEntries = 100;
+
+  final SettingsStore settings;
+  final SpeechOutput _speech;
+  late final FeedbackHub feedback;
+  late final CommandRouter router;
 
   late PatikaBleService bleService;
   bool isSimulated = true;
@@ -33,9 +47,35 @@ class AppState extends ChangeNotifier {
   StreamSubscription? _commandSub;
   StreamSubscription<List<DiscoveredDevice>>? _devicesSub;
 
-  AppState() {
+  /// Parametreler testlerde sahte uygulamalar vermek için; uygulamada
+  /// hepsi gerçek platform uygulamalarına düşer.
+  AppState({
+    SettingsStore? settings,
+    SpeechOutput? speech,
+    HapticOutput? haptics,
+    EarconPlayer? earcons,
+  })  : settings = settings ?? SettingsStore(),
+        _speech = speech ?? FlutterTtsOutput() {
+    feedback = FeedbackHub(
+      queue: AnnouncementQueue(_speech),
+      haptics: haptics ?? PhoneHaptics(),
+      earcons: earcons ?? AudioplayersEarconPlayer(),
+      settings: () => this.settings.value,
+    );
+    a11y.attachFeedbackHub(feedback);
+    router = CommandRouter(settings: SettingsHandler(this.settings));
+    this.settings.addListener(_applySettings);
+    this.settings.load();
+    _applySettings();
+
     bleService = SimulatedBleService();
     _subscribe();
+  }
+
+  void _applySettings() {
+    final s = settings.value;
+    _speech.configure(rate: s.speechRate, pitch: s.pitch);
+    notifyListeners();
   }
 
   SimulatedBleService get _simulated => bleService as SimulatedBleService;
@@ -45,13 +85,16 @@ class AppState extends ChangeNotifier {
       final previous = connectionState;
       connectionState = state;
       // Sadece kalıcı/anlamlı geçişler duyuruluyor - "taranıyor"/"bağlanıyor"
-      // gibi ara durumlar sessiz kalıyor (bkz. a11y_announcer.dart).
-      if (state != previous) {
-        if (state == BleConnectionState.connected) {
-          a11y.announce('Gözlük bağlandı');
-        } else if (state == BleConnectionState.disconnected) {
-          a11y.announce('Gözlük bağlantısı koptu');
-        }
+      // gibi ara durumlar sessiz kalıyor. "Koptu" sadece gerçekten bağlıyken
+      // söyleniyor (tarama bitince disconnected'a dönmek kopma değil).
+      if (state == BleConnectionState.connected &&
+          previous != BleConnectionState.connected) {
+        feedback.signal(FeedbackEvent.connected,
+            text: Tr.glassesConnected, priority: AnnouncementPriority.high);
+      } else if (state == BleConnectionState.disconnected &&
+          previous == BleConnectionState.connected) {
+        feedback.signal(FeedbackEvent.disconnected,
+            text: Tr.glassesDisconnected, priority: AnnouncementPriority.high);
       }
       notifyListeners();
     });
@@ -75,11 +118,10 @@ class AppState extends ChangeNotifier {
         result: result,
       ),
     );
-    // result.message zaten "kullanıcıya seslendirilecek yanıt metni"
-    // olarak tasarlandı (bkz. action_result.dart) - hem komutun
-    // algılandığını hem sonucunu (başarılı/başarısız) tek, doğal bir
-    // cümlede taşıyor.
-    a11y.announce(result.message);
+    if (log.length > maxLogEntries) log.removeRange(maxLogEntries, log.length);
+    // Sonuç hem sesle hem titreşimle (+ kısa sesle) bildiriliyor; uzun
+    // ayrıntı modunda sonucun açıklaması da okunuyor.
+    feedback.result(result);
     notifyListeners();
   }
 
@@ -124,6 +166,10 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    settings.removeListener(_applySettings);
+    feedback.queue.stopAll();
+    feedback.updateObstacle(null);
+    a11y.attachFeedbackHub(null);
     _unsubscribe();
     bleService.dispose();
     super.dispose();

@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// HABER niyeti. phone_bridge.py'deki simüle "NEWS" eyleminin gerçek
@@ -8,7 +9,6 @@ import '../action_result.dart';
 /// sadece niyeti tanıyıp bilgilendirici bir sonuç döndürüyor, çökmüyor.
 class NewsHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(
-        'HABER: henüz uygulanmadı (hangi kaynak kullanılacak netleşmedi, bkz. TODO.md)');
+    return ActionResult.fail(Tr.newsNotReady);
   }
 }

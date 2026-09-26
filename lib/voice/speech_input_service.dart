@@ -2,6 +2,8 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../l10n/strings_tr.dart';
+
 /// Telefonun yerleşik konuşma tanıma motoru (Android SpeechRecognizer / iOS
 /// SFSpeechRecognizer) üzerinde ince bir sarmalayıcı. Ekranlar
 /// `speech_to_text` paketini doğrudan bilmiyor - BLE servislerindeki
@@ -34,10 +36,12 @@ class SpeechInputService {
   /// hata olursa (sessizlik, ağ yok vb.) onun yerine [onError] çağrılır.
   /// [onDone] her dinleme oturumunun sonunda (sonuç/hata sonrasında da)
   /// çağrılır - ikisi de gelmediyse çağıranın takılı kalmaması için.
+  /// [silenceTimeout]: kullanıcı bu kadar susunca dinleme biter (ayarlardan).
   Future<void> listen({
     required void Function(String text) onFinal,
     required void Function(String message) onError,
     required void Function() onDone,
+    Duration silenceTimeout = const Duration(seconds: 3),
   }) async {
     _onError = onError;
     _onDone = onDone;
@@ -51,7 +55,7 @@ class SpeechInputService {
         partialResults: false,
         cancelOnError: true,
         listenFor: const Duration(seconds: 15),
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: silenceTimeout,
       ),
     );
   }
@@ -69,21 +73,21 @@ class SpeechInputService {
     switch (code) {
       case 'error_no_match':
       case 'error_speech_timeout':
-        return 'Sizi duyamadım, tekrar deneyin';
+        return Tr.didNotHear;
       case 'error_network':
       case 'error_network_timeout':
       case 'error_server':
-        return 'Konuşma tanıma için internet bağlantısı gerekiyor';
+        return Tr.speechNeedsInternet;
       case 'error_insufficient_permissions':
       case 'error_permission':
-        return 'Mikrofon izni verilmedi';
+        return Tr.micPermissionDenied;
       case 'error_language_not_supported':
       case 'error_language_unavailable':
-        return 'Türkçe konuşma tanıma bu cihazda kullanılamıyor';
+        return Tr.turkishUnavailable;
       case 'error_busy':
-        return 'Konuşma tanıma meşgul, biraz sonra tekrar deneyin';
+        return Tr.recognizerBusy;
       default:
-        return 'Konuşma tanınamadı, tekrar deneyin';
+        return Tr.recognitionFailed;
     }
   }
 }

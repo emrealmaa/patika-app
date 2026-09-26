@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:patika_app/main.dart';
@@ -25,8 +26,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Varsayılan seçili niyet ARA, entity boş bırakıldığı için handler
-    // "kimin aranacağı belirtilmedi" ile başarısız sonuç döner - komutun
-    // gerçekten router'a ulaşıp işlendiğinin kanıtı bu log satırı.
-    expect(find.textContaining('kimin aranacağı belirtilmedi'), findsOneWidget);
+    // "Kimi arayacağımı anlayamadım" ile başarısız sonuç döner - komutun
+    // gerçekten router'a ulaşıp işlendiğinin kanıtı bu log satırı. Geçmiş,
+    // geri bildirim test bölümünün altında - görünene kadar kaydırılıyor.
+    final logLine = find.textContaining('Kimi arayacağımı anlayamadım');
+    await tester.scrollUntilVisible(logLine, 300,
+        scrollable: find.byType(Scrollable).first);
+    expect(logLine, findsOneWidget);
   });
 }

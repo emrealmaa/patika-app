@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// BİLİNMİYOR niyeti (ya da hiçbir kategoriye eşleşmeyen, bilinmeyen bir
@@ -5,6 +6,6 @@ import '../action_result.dart';
 /// "Bu komutu anlayamadım" davranışının karşılığı.
 class UnknownHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail('Bu komutu anlayamadım');
+    return ActionResult.fail(Tr.unknownCommand);
   }
 }

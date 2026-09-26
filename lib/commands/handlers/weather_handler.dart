@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// HAVA niyeti. Python tarafında bu, phone_bridge'e hiç uğramadan
@@ -11,7 +12,6 @@ import '../action_result.dart';
 /// tanıyıp bilgilendirici bir sonuç döndürüyor, çökmüyor.
 class WeatherHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(
-        'HAVA: henüz uygulanmadı (Python hava_durumu.py -> Dart portu ayrı görev, bkz. TODO.md)');
+    return ActionResult.fail(Tr.weatherNotReady);
   }
 }

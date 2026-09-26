@@ -1,3 +1,4 @@
+import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 
 /// OKU niyeti. Python tarafında kamera + easyocr ile gerçek bir görüntü
@@ -10,7 +11,6 @@ import '../action_result.dart';
 /// niyeti tanıyıp bilgilendirici bir sonuç döndürüyor, çökmüyor.
 class OcrHandler {
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(
-        'OKU: henüz uygulanmadı (kamera+OCR entegrasyonu ayrı görev, bkz. TODO.md)');
+    return ActionResult.fail(Tr.ocrNotReady);
   }
 }

@@ -1,4 +1,5 @@
 import '../ble/ble_command.dart';
+import '../settings/settings.dart';
 
 /// Telefon mikrofonundan gelen serbest metni (örn. "Ahmet'i ara") niyet +
 /// entity'ye çeviren basit, tamamen yerel regex sınıflandırıcı - Python
@@ -22,6 +23,12 @@ BleCommand classifyVoiceCommand(String text) {
   // Bilinen tek istisna dışında dönüşüm uzunluğu koruyor; korumadıysa
   // indeksler güvenilmez, entity küçük harfli metinden alınır.
   final source = lowered.length == original.length ? original : lowered;
+
+  for (final (pattern, action) in _settingRules) {
+    if (pattern.hasMatch(lowered)) {
+      return BleCommand.fromWire('AYAR', action.name);
+    }
+  }
 
   for (final rule in _rules) {
     for (final pattern in rule.patterns) {
@@ -81,6 +88,18 @@ final _rules = [
     '^(.+?)$_dative\\s*(?:git|götür)$_e',
   ]),
 ];
+
+/// Telefon ayarları (AYAR niyeti) - entity metinden değil kalıptan geliyor.
+/// Diğer kurallardan ÖNCE denetleniyor; hiçbiriyle çakışmıyorlar.
+final _settingRules = [
+  (r'(?:daha\s+)?hızlı\s+(?:konuş|oku)|konuşmayı\s+hızlandır', SettingAction.speechFaster),
+  (r'(?:daha\s+)?yavaş\s+(?:konuş|oku)|konuşmayı\s+yavaşlat', SettingAction.speechSlower),
+  (r'(?:daha\s+)?kısa\s+(?:anlat|konuş|söyle)', SettingAction.shorter),
+  (r'(?:daha\s+)?(?:uzun|ayrıntılı|detaylı)\s+(?:anlat|konuş|söyle)', SettingAction.longer),
+  (r'titreşim\p{L}*\s+kapat', SettingAction.hapticOff),
+  (r'titreşim\p{L}*\s+(?:artır|arttır|güçlendir|yükselt)', SettingAction.hapticStronger),
+  (r'titreşim\p{L}*\s+(?:azalt|hafiflet|düşür)', SettingAction.hapticWeaker),
+].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
 /// Tüm entity grupları kalıplarda ya eşleşmenin başında ya sonunda duruyor;
 /// konumu buradan bulunup orijinal (büyük/küçük harfi korunmuş) metinden
