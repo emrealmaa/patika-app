@@ -44,8 +44,8 @@ class FeedbackHub {
   /// Sadece konuşma (titreşim/kısa ses yok). Sonuna kadar okununca true,
   /// kesilince false ile tamamlanır.
   Future<bool> say(String text,
-      {AnnouncementPriority priority = AnnouncementPriority.normal}) {
-    return queue.add(text, priority: priority);
+      {AnnouncementPriority priority = AnnouncementPriority.normal, bool dedupe = true}) {
+    return queue.add(text, priority: priority, dedupe: dedupe);
   }
 
   /// Bir durum olayını bildirir.
@@ -77,6 +77,7 @@ class FeedbackHub {
   /// Komut sonucunu sesle + titreşimle (+ kısa sesle) bildirir. Uzun ayrıntı
   /// modunda sonucun açıklaması da okunur.
   void result(ActionResult result) {
+    if (result.handedOff) return;
     signal(
       result.success ? FeedbackEvent.success : FeedbackEvent.error,
       text: result.silent ? null : spokenResult(result, settings.verbosity),

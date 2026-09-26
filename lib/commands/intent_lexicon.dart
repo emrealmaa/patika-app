@@ -130,6 +130,8 @@ const entityFillers = {
   'mısınız', 'misiniz', 'musunuz', 'müsünüz',
   // nezaket, zamir, bağlaç
   'lütfen', 'bana', 'beni', 'benim', 'benimle', 'için', 'bir', 'ile', 've',
+  'biri', 'birini', 'birine', 'birisi', 'birisini', 'birisine', 'birinden',
+  'sen', 'siz', 'sana', 'size', 'bize', 'onu', 'ona',
   'şimdi', 'hemen', 'acaba', 'artık', 'de', 'da',
   // soru kelimeleri
   'ne', 'nasıl', 'nerede', 'nereye', 'kaç', 'kaçta', 'hangi', 'kim',
@@ -140,5 +142,9 @@ const entityFillers = {
   'istiyorum', 'isterim', 'ister', 'lazım', 'gerek',
 };
 
-/// Tek başına bir niyet için gereken en düşük puan.
+/// Anahtar kelime gibi görünen ama o anlamda olmayan kelimeler:
+/// "görüşürüz" bir veda, arama isteği değil.
+const keywordExceptions = {'görüşürüz', 'görüşmek üzere'};
+
+/// Tek başına bir niyet için gereken en düşük anahtar kelime puanı.
 const minIntentScore = 2;

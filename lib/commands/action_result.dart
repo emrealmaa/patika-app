@@ -12,12 +12,20 @@ class ActionResult {
   /// istenen sessizlik; "tekrar et": konuşmayı eylemin kendisi yapıyor).
   final bool silent;
 
+  /// İş çok adımlı bir diyaloğa devredildi: şimdi ne ses ne titreşim ne
+  /// kayıt - sonucu diyalog bitince AppState kaydedip duyuruyor.
+  final bool handedOff;
+
   const ActionResult({
     required this.success,
     required this.message,
     this.detail,
     this.silent = false,
+    this.handedOff = false,
   });
+
+  factory ActionResult.handedOff(String message) =>
+      ActionResult(success: true, message: message, handedOff: true);
 
   factory ActionResult.ok(String message, {String? detail}) =>
       ActionResult(success: true, message: message, detail: detail);

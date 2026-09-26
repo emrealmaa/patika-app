@@ -86,8 +86,10 @@ class ContactResolver {
     }
     if (!await _ensurePermission()) return null;
     try {
+      final watch = Stopwatch()..start();
       _cache = await _source.loadAll();
       _cachedAt = _now();
+      debugPrint('[Contacts] rehber okundu: ${_cache!.length} kişi, ${watch.elapsedMilliseconds} ms');
       return _cache;
     } catch (e) {
       debugPrint('[Contacts] rehber okunamadı: $e');

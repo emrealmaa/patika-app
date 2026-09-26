@@ -19,6 +19,7 @@ import 'ble/glasses_protocol.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
 import 'ble/simulated_ble_service.dart';
+import 'commands/action_result.dart';
 import 'commands/command_router.dart';
 import 'commands/contact_resolver.dart';
 import 'commands/handlers/alias_handler.dart';
@@ -27,12 +28,15 @@ import 'commands/handlers/message_handler.dart';
 import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
+import 'commands/intent.dart';
 import 'commands/log_entry.dart';
+import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
 import 'settings/settings_store.dart';
 import 'tutorial/tutorial.dart';
+import 'voice/dialog_manager.dart';
 import 'voice/speech_input_service.dart';
 import 'voice/voice_controller.dart';
 
@@ -56,6 +60,7 @@ class AppState extends ChangeNotifier implements ControlActions {
   late final CommandRouter router;
   late final PermissionExplainer permissions;
   late final VoiceController voice;
+  late final DialogManager dialogs;
   late final Tutorial tutorial;
 
   late PatikaBleService bleService;
@@ -88,6 +93,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     Future<bool> Function()? ensureMicPermission,
     TutorialProgress? tutorialProgress,
     ContactResolver? contacts,
+    UrlOpener? openUrl,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -115,9 +121,16 @@ class AppState extends ChangeNotifier implements ControlActions {
           ensurePermission: () =>
               permissions.ensure(Permission.contacts, Tr.contactsPermissionWhy),
         );
+    // Çok adımlı sesli akışlar (ARA, MESAJ): soru bitince dinlemeyi kendisi
+    // açar; bitince sonuç işlem geçmişine yazılıp duyurulur.
+    dialogs = DialogManager(
+      feedback: feedback,
+      listen: ({required bool dictation}) => voice.listenForReply(dictation: dictation),
+      onFinished: _onDialogFinished,
+    );
     router = CommandRouter(
-      call: CallHandler(contacts: resolver),
-      message: MessageHandler(contacts: resolver),
+      call: CallHandler(contacts: resolver, dialogs: dialogs, openUrl: openUrl),
+      message: MessageHandler(contacts: resolver, dialogs: dialogs, openUrl: openUrl),
       number: NumberHandler(contacts: resolver),
       alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),
@@ -133,7 +146,7 @@ class AppState extends ChangeNotifier implements ControlActions {
       // Dinleme başlayınca süren eğitim de susar (tetikleyiciyle araya girme).
       onListenStart: tutorial.stop,
       onMicrophoneGranted: _background.ensureMicrophoneType,
-    );
+    )..dialog = dialogs;
     this.settings.addListener(_applySettings);
     this.settings.load();
     _applySettings();
@@ -258,6 +271,7 @@ class AppState extends ChangeNotifier implements ControlActions {
   void stopEverything() {
     tutorial.stop();
     voice.cancel();
+    dialogs.cancel(null);
     feedback.queue.stopAll();
   }
 
@@ -281,14 +295,18 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// her komutun geçtiği tek yol: route -> log -> sesli sonuç.
   Future<void> _process(BleCommand command) async {
     final result = await router.route(command);
+    // İş bir diyaloğa devredildiyse sonuç diyalog bitince gelecek.
+    if (result.handedOff) return;
+    _record(command.intent, command.entity, result);
+  }
+
+  void _onDialogFinished(DialogFlow flow, ActionResult result) =>
+      _record(flow.intent, flow.entityLabel, result);
+
+  void _record(PatikaIntent intent, String? entity, ActionResult result) {
     log.insert(
       0,
-      LogEntry(
-        time: DateTime.now(),
-        intent: command.intent,
-        entity: command.entity,
-        result: result,
-      ),
+      LogEntry(time: DateTime.now(), intent: intent, entity: entity, result: result),
     );
     if (log.length > maxLogEntries) log.removeRange(maxLogEntries, log.length);
     // Sonuç hem sesle hem titreşimle (+ kısa sesle) bildiriliyor; uzun
@@ -338,6 +356,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   void dispose() {
     voice.dispose();
     tutorial.dispose();
+    dialogs.cancel(null);
+    dialogs.dispose();
     settings.removeListener(_applySettings);
     feedback.queue.stopAll();
     feedback.updateObstacle(null);

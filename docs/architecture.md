@@ -34,6 +34,7 @@ göre veriliyor.
 | **VoiceController** | `lib/voice/voice_controller.dart` | Tüm tetikleyicilerin tek dinleme kapısı. Aç/kapat; dinlemeden önce TTS'i susturur (tetikleyiciyle araya girme); mikrofon iznini sesli açıklamayla ister; kontrol komutlarını ("dur", "tekrar et") teyitsiz uygular. |
 | **Tutorial** | `lib/tutorial/tutorial.dart` | Sesli eğitim. Yüksek öncelikli bir duyuruyla kesilen adımı tekrar okur (`AnnouncementQueue.add` → `Future<bool>`). "Dinlendi" bilgisi ayarlardan ayrı saklanır. |
 | **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
+| **DialogManager** | `lib/voice/dialog_manager.dart`, `lib/voice/dialogs/` | Çok adımlı sesli akışlar (ARA, MESAJ): kişi eksikse sorar, "iki Ahmet var, hangisi?", onay ("Ahmet Kaya'yı arayayım mı?"), mesaj dikte + geri okuma + düzelt. Soru bitince tetikleyici beklemeden dinler; "dur"/"tekrar et" her adımda; cevapsız soru bir kez tekrarlanır, sonra iptal. SOS diyaloğu keser. |
 | **Kişi eşleştirme** | `lib/contacts/` | Söylenen adı rehberdeki kişiye çözer (ARA/MESAJ/NUMARA). Bkz. aşağıdaki bölüm. |
 | **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları; titreşim gönderme. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
 | **GlassesProtocol** | `lib/ble/glasses_protocol.dart` | JSON mesaj ayrıştırma ve kodlama. Bkz. [ble_protocol.md](ble_protocol.md). |

@@ -83,25 +83,20 @@ void main() {
     expect(find.bySemanticsLabel('Dinleniyor. Durdurmak için dokunun.'), findsOneWidget);
   });
 
-  testWidgets('Test modunda sahte komut gönderilince log listeye eklenir',
+  testWidgets('Test modunda kişisiz ARA gönderilince arama diyaloğu başlar',
       (WidgetTester tester) async {
-    await tester.pumpWidget(testApp());
+    final tts = FakeSpeechOutput();
+    await tester.pumpWidget(testApp(tts: tts));
     await tester.pump();
 
     await tester.tap(find.text('Test Modu'));
     await tester.pumpAndSettle();
 
+    // Varsayılan seçili niyet ARA, entity boş: komut router'a ulaşıp
+    // diyaloğa devredildi, diyalog kimi arayacağını soruyor.
     await tester.tap(find.text('Komutu gönder'));
     await tester.pumpAndSettle();
-
-    // Varsayılan seçili niyet ARA, entity boş bırakıldığı için handler
-    // "Kimi arayacağımı anlayamadım" ile başarısız sonuç döner - komutun
-    // gerçekten router'a ulaşıp işlendiğinin kanıtı bu log satırı. Geçmiş,
-    // test bölümlerinin altında - görünene kadar kaydırılıyor.
-    final logLine = find.textContaining('Kimi arayacağımı anlayamadım');
-    await tester.scrollUntilVisible(logLine, 300,
-        scrollable: find.byType(Scrollable).first);
-    expect(logLine, findsOneWidget);
+    expect(tts.spoken, contains('Kimi arayayım?'));
   });
 
   // Koruma testi: bir butonu dışarıdan Semantics(excludeSemantics: true) ile

@@ -49,6 +49,7 @@ class FakeSpeechInput implements SpeechInput {
   int cancelCalls = 0;
   bool listening = false;
   Duration? lastSilenceTimeout;
+  bool lastDictation = false;
   void Function(String)? _onFinal;
   void Function(String)? _onError;
   void Function()? _onDone;
@@ -65,24 +66,31 @@ class FakeSpeechInput implements SpeechInput {
     required void Function(String message) onError,
     required void Function() onDone,
     Duration silenceTimeout = const Duration(seconds: 3),
+    bool dictation = false,
   }) async {
     listening = true;
     lastSilenceTimeout = silenceTimeout;
+    lastDictation = dictation;
     _onFinal = onFinal;
     _onError = onError;
     _onDone = onDone;
   }
 
+  /// Oturumun geri çağırmaları önce yerele alınıyor: onFinal yeni bir
+  /// dinleme başlatırsa (diyalogdaki sıradaki soru), eski oturumun "bitti"
+  /// sinyali yeni oturuma gitmesin - gerçek tanıyıcıdaki gibi.
   void say(String text) {
+    final onFinal = _onFinal, onDone = _onDone;
     listening = false;
-    _onFinal?.call(text);
-    _onDone?.call();
+    onFinal?.call(text);
+    onDone?.call();
   }
 
   void fail(String message) {
+    final onError = _onError, onDone = _onDone;
     listening = false;
-    _onError?.call(message);
-    _onDone?.call();
+    onError?.call(message);
+    onDone?.call();
   }
 
   @override

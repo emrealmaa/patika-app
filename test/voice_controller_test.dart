@@ -63,21 +63,21 @@ void main() {
       });
     });
 
-    test('telefon eylemi teyitli: önce "Şunu anladım", beklemeden sonra eylem', () {
+    test('navigasyon teyitli: önce "Şunu anladım", beklemeden sonra eylem', () {
       fakeAsync((async) {
         final h = Harness();
         h.app.voice.startListening(ListenSource.screen);
         async.elapse(listenDelay);
 
-        h.speech.say("Ahmet'i ara");
+        h.speech.say('Kadıköy iskelesine götür');
         async.flushMicrotasks();
-        expect(h.tts.spoken, ["Şunu anladım: Ahmet'i ara"]);
+        expect(h.tts.spoken, ['Şunu anladım: Kadıköy iskelesine götür']);
         expect(h.app.voice.phase, VoicePhase.processing);
         expect(h.app.log, isEmpty, reason: 'teyit bitmeden eylem başlamaz');
 
         async.elapse(VoiceController.confirmGap);
         h.speakAll(async);
-        expect(h.app.log.first.intent, PatikaIntent.ara);
+        expect(h.app.log.first.intent, PatikaIntent.navigasyon);
         expect(h.app.voice.phase, VoicePhase.idle);
         h.dispose();
       });
@@ -159,7 +159,7 @@ void main() {
         h.app.voice.startListening(ListenSource.screen);
         async.elapse(listenDelay);
         // Teyitli komut: teyit beklenirken "işleniyor" durumunda kalır.
-        h.speech.say("Ahmet'i ara");
+        h.speech.say('Kadıköy iskelesine götür');
         async.flushMicrotasks();
 
         h.app.voice.startListening(ListenSource.glasses);

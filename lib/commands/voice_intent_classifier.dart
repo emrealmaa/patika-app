@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../ble/ble_command.dart';
 import '../settings/settings.dart';
+import 'intent.dart';
 import 'intent_lexicon.dart';
 
 /// Telefon mikrofonundan gelen serbest metni (örn. "Ahmet'i arar mısın")
@@ -33,9 +34,8 @@ BleCommand classifyVoiceCommand(String text) {
   // indeksler güvenilmez, entity küçük harfli metinden alınır.
   final source = lowered.length == original.length ? original : lowered;
 
-  for (final (pattern, intent) in _controlRules) {
-    if (pattern.hasMatch(lowered)) return BleCommand.fromWire(intent, null);
-  }
+  final control = _controlIntent(lowered);
+  if (control != null) return BleCommand.fromWire(control, null);
 
   for (final (pattern, action) in _settingRules) {
     if (pattern.hasMatch(lowered)) {
@@ -141,6 +141,21 @@ String? _aliasCommand(String lowered, String source) {
 
 // --- Anahtar kelime motoru ----------------------------------------------------
 
+/// Yalnızca evrensel kontrol katmanı (SOS, DUR, TEKRAR, KOMUTLAR, EĞİTİM):
+/// diyalog cevaplarında "dur"/"tekrar et"/SOS'u yakalamak için - cevap
+/// ("Ahmet", "evet") niyet sınıflandırıcısına gitmez.
+PatikaIntent? classifyControl(String text) {
+  final intent = _controlIntent(_turkishLower(_normalizeSpacing(text)));
+  return intent == null ? null : PatikaIntent.fromWireName(intent);
+}
+
+String? _controlIntent(String lowered) {
+  for (final (pattern, intent) in _controlRules) {
+    if (pattern.hasMatch(lowered)) return intent;
+  }
+  return null;
+}
+
 class _Token {
   final String lower;
   final int start;
@@ -200,10 +215,18 @@ int _weightIn(IntentEntry entry, String token) {
 
 class _Score {
   final IntentEntry entry;
+
+  /// Sıralama puanı (kişi/yer cezası ve yönelme bonusu dahil).
   final int score;
+
+  /// Yalnızca anahtar kelime ağırlıkları - eşik buna uygulanır: "Ara" tek
+  /// başına (kişi yok, sıralama puanı 1) yine ARA'dır ve diyalog "Kimi
+  /// arayayım?" diye sorar. Ceza yalnızca niyetler arası sıralamayı etkiler
+  /// ("haberleri ara" -> HABER).
+  final int keywordScore;
   final Set<int> keywordTokens;
   final Set<String> matchedStems;
-  const _Score(this.entry, this.score, this.keywordTokens, this.matchedStems);
+  const _Score(this.entry, this.score, this.keywordScore, this.keywordTokens, this.matchedStems);
 }
 
 BleCommand _classifyByKeywords(String lowered, String source) {
@@ -218,6 +241,7 @@ BleCommand _classifyByKeywords(String lowered, String source) {
     final keywordTokens = <int>{};
     final matchedStems = <String>{};
     for (var i = 0; i < tokens.length; i++) {
+      if (keywordExceptions.contains(tokens[i].lower)) continue;
       var best = 0;
       for (final k in entry.keywords) {
         if (k.weight > best && _keywordMatches(k, tokens[i].lower)) {
@@ -231,6 +255,7 @@ BleCommand _classifyByKeywords(String lowered, String source) {
       }
     }
     if (score == 0) continue;
+    final keywordScore = score;
 
     if (entry.entity != EntityKind.none) {
       // Katı aday: bu niyetin anahtar kelimesi, dolgu kelimesi ya da BAŞKA
@@ -251,7 +276,7 @@ BleCommand _classifyByKeywords(String lowered, String source) {
         score += 1;
       }
     }
-    scores.add(_Score(entry, score, keywordTokens, matchedStems));
+    scores.add(_Score(entry, score, keywordScore, keywordTokens, matchedStems));
   }
 
   // En yüksek puan; eşitlikte tablo sırası (scores tablo sırasında).
@@ -263,7 +288,7 @@ BleCommand _classifyByKeywords(String lowered, String source) {
     debugPrint('[Intent] "$lowered" -> '
         '${scores.map((s) => '${s.entry.intent}:${s.score}').join(' ')}');
   }
-  if (winner == null || winner.score < minIntentScore) {
+  if (winner == null || winner.keywordScore < minIntentScore) {
     return BleCommand.fromWire('BİLİNMİYOR', null);
   }
 

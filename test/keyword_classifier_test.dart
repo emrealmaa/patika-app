@@ -81,7 +81,8 @@ void main() {
 
     test('niyet olmayanlar', () => check([
           ('arabam nerede', yok, null),
-          ('arada bir ara', yok, null),
+          // Kişi yok ama "ara" var: diyalog "Kimi arayayım?" diye sorar.
+          ('arada bir ara', ara, null),
           ('aralık ayı', yok, null),
         ]));
   });
@@ -113,6 +114,13 @@ void main() {
     test('geçiş modu', () => check([
           ('karşıya geçmek istiyorum', gecis, null),
           ('yolu geçmek istiyorum', gecis, null),
+        ]));
+
+    test('kişisiz eylem diyaloğu başlatır, veda başlatmaz', () => check([
+          ('ara', ara, null),
+          ('mesaj gönder', mesaj, null),
+          ('birini aramak istiyorum', ara, null),
+          ('görüşürüz', yok, null),
         ]));
 
     test('tek başına zayıf kelime yetmez', () => check([

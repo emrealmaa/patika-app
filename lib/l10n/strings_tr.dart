@@ -83,6 +83,36 @@ abstract final class Tr {
   static String contactAmbiguous(List<String> names) =>
       '${names.length} kişi buldum: ${names.join(', ')}. Lütfen tam adını söyleyin.';
   static const numberNoTarget = 'Kimin numarasını istediğinizi anlayamadım';
+
+  // --- Diyalog (Faz 3b) ------------------------------------------------------
+  static const dialogCancelled = 'İptal ettim';
+  static const dialogTimedOut = 'Cevap alamadım, iptal ettim';
+  static const dialogNotUnderstood = 'Anlayamadım, iptal ettim';
+  static const dialogDidNotHear = 'Sizi duyamadım.';
+  static const dialogWhoToCall = 'Kimi arayayım?';
+  static const dialogWhoToMessage = 'Kime mesaj göndereyim?';
+  static const dialogWhatToWrite = 'Ne yazayım?';
+  static String dialogNotFound(String nameAccusative, String question) =>
+      '$nameAccusative rehberde bulamadım. $question';
+  static const _countWords = {2: 'İki', 3: 'Üç'};
+  static const _ordinalWords = ['birinci', 'ikinci', 'üçüncü'];
+  static String dialogChoose(List<String> names) {
+    final listed = [
+      for (var i = 0; i < names.length && i < _ordinalWords.length; i++)
+        '${_ordinalWords[i]} ${names[i]}',
+    ];
+    return '${_countWords[names.length] ?? names.length} kişi buldum: '
+        '${listed.join(', ')}. Hangisi?';
+  }
+  static String dialogConfirmCall(String nameAccusative) => '$nameAccusative arayayım mı?';
+  static String dialogConfirmMessage(String nameDative, String body) =>
+      '$nameDative şu mesaj: $body. Göndereyim mi?';
+  static const dialogYesNoHint = 'Evet ya da hayır deyin.';
+  static const dialogChoiceHint = 'Birinci, ikinci ya da soyadını söyleyin.';
+  static const dialogReviewHint =
+      'Göndermek için evet, değiştirmek için düzelt, iptal için hayır deyin.';
+  static String smsReady(String name) => '$name için mesaj hazır';
+  static const smsReadyDetail = 'Göndermek için ekrandaki gönder tuşuna basın.';
   static String numberIs(String name, String spokenDigits) => '$name: $spokenDigits';
   static const aliasNotUnderstood =
       'Takma adı ve kişiyi anlayamadım. Örneğin: annemi Fatma Yılmaz olarak kaydet.';

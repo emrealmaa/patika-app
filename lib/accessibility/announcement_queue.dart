@@ -79,14 +79,18 @@ class AnnouncementQueue {
   /// (Tutorial) akışları bunu bekliyor.
   ///
   /// [remember] false ise duyuru "tekrar et" ile tekrarlanacak son duyuru
-  /// olarak hatırlanmaz.
+  /// olarak hatırlanmaz. [dedupe] false ise birleştirme kuralı uygulanmaz:
+  /// diyalog soruları ("tekrar oku", cevapsız sorunun tekrarı) kullanıcı
+  /// istediği için hiçbir zaman gereksiz tekrar değildir - atılırsa diyalog
+  /// dinlemeyi açmaz ve asılı kalır.
   Future<bool> add(
     String text, {
     AnnouncementPriority priority = AnnouncementPriority.normal,
     bool remember = true,
+    bool dedupe = true,
   }) {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isDuplicate(trimmed)) return Future.value(false);
+    if (trimmed.isEmpty || (dedupe && _isDuplicate(trimmed))) return Future.value(false);
 
     final item = Announcement(trimmed, priority, _now(), remember: remember);
     _insertByPriority(item);

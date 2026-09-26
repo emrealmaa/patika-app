@@ -6,10 +6,11 @@ import '../commands/intent.dart';
 import '../commands/voice_intent_classifier.dart';
 import '../l10n/strings_tr.dart';
 import '../settings/settings.dart';
+import 'dialog_manager.dart';
 import 'speech_input_service.dart';
 
 /// Dinlemeyi kim başlattı - davranış aynı, sadece kayıt/teşhis için.
-enum ListenSource { screen, glasses, gesture, tile, test }
+enum ListenSource { screen, glasses, gesture, tile, test, dialog }
 
 enum VoicePhase { idle, preparing, listening, processing }
 
@@ -33,11 +34,23 @@ class VoiceController extends ChangeNotifier {
   /// duyurusuyla kesilmesin.
   static const confirmGap = Duration(milliseconds: 1200);
 
+  /// Dikte (mesaj metni): insanlar cümle kurarken duraksar - dinleme
+  /// ayardaki sessizlik süresinden bu kadar daha geç bitsin.
+  static const dictationExtraSilence = Duration(seconds: 2);
+
+  /// Diyalog cevabı ("... arayayım mı?"): soruyu dinleyip düşünmek zaman
+  /// alır; gerçek cihazda cevaplar 3 sn'lik pencerede kaçtı (hiçbir şey
+  /// tanınmadan tam 3,0 sn'de kapandı). Komutlarda pencere değişmez.
+  static const dialogReplyExtraSilence = Duration(milliseconds: 1500);
+
   final SpeechInput _speech;
   final FeedbackHub _feedback;
   final Future<bool> Function() _ensureMicPermission;
   final Future<void> Function(BleCommand command) _submit;
   final VoidCallback? _onListenStart;
+
+  /// Etkin bir diyalog varsa tanınan metin sınıflandırıcıya değil ona gider.
+  DialogManager? dialog;
 
   VoicePhase _phase = VoicePhase.idle;
   String? _lastHeard;
@@ -76,8 +89,10 @@ class VoiceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Dinlemeyi başlatır; zaten dinliyorsa iptal eder. Komut işlenirken
-  /// gelen çağrılar yok sayılır.
+  /// Dinlemeyi başlatır; zaten dinliyorsa iptal eder (diyalog sürüyorsa
+  /// diyaloğu da). Komut işlenirken gelen çağrılar yok sayılır. Diyalog bir
+  /// cevap beklerken dokunmak "şimdi cevap veriyorum" demektir: dinleme
+  /// açılır, cevap diyaloğa gider.
   Future<void> startListening(ListenSource source) async {
     switch (_phase) {
       case VoicePhase.processing:
@@ -89,13 +104,30 @@ class VoiceController extends ChangeNotifier {
       case VoicePhase.idle:
         break;
     }
-
-    _source = source;
-    debugPrint('[Voice] dinleme istendi: ${source.name}');
-    _setPhase(VoicePhase.preparing);
     // Tetikleyiciyle araya girme: süren konuşma/eğitim hemen susar.
     _onListenStart?.call();
     _feedback.queue.stopAll();
+    await _listen(
+      source,
+      dictation: dialog?.expectsDictation ?? false,
+      dialogReply: dialog?.active ?? false,
+    );
+  }
+
+  /// Diyalog sorusu bittiğinde: tetikleyici beklemeden cevabı dinler.
+  Future<void> listenForReply({required bool dictation}) async {
+    if (_phase != VoicePhase.idle) return;
+    await _listen(ListenSource.dialog, dictation: dictation, dialogReply: true);
+  }
+
+  Future<void> _listen(
+    ListenSource source, {
+    required bool dictation,
+    required bool dialogReply,
+  }) async {
+    _source = source;
+    debugPrint('[Voice] dinleme istendi: ${source.name}${dictation ? " (dikte)" : ""}');
+    _setPhase(VoicePhase.preparing);
 
     final granted = await _ensureMicPermission();
     if (_phase != VoicePhase.preparing) return;
@@ -129,16 +161,28 @@ class VoiceController extends ChangeNotifier {
       onFinal: _onFinal,
       onError: _onError,
       onDone: () => _onError(Tr.didNotHear),
-      silenceTimeout: _settings.silenceTimeout,
+      silenceTimeout: _settings.silenceTimeout +
+          (dictation
+              ? dictationExtraSilence
+              : dialogReply
+                  ? dialogReplyExtraSilence
+                  : Duration.zero),
+      dictation: dictation,
     );
   }
 
-  /// Dinlemeyi sonuç üretmeden iptal eder.
+  /// Dinlemeyi sonuç üretmeden iptal eder. Diyalog sürüyorsa onu da bitirir
+  /// ("dinlerken dokunmak = iptal"); iptal duyurusunu diyalog yapar.
   Future<void> cancel() async {
     if (_phase != VoicePhase.preparing && _phase != VoicePhase.listening) return;
     _setPhase(VoicePhase.idle);
     await _speech.cancel();
-    _feedback.signal(FeedbackEvent.listenEnded, statusText: Tr.listenCancelled);
+    final dialog = this.dialog;
+    if (dialog != null && dialog.active) {
+      dialog.cancel();
+    } else {
+      _feedback.signal(FeedbackEvent.listenEnded, statusText: Tr.listenCancelled);
+    }
   }
 
   Future<void> _onFinal(String text) async {
@@ -149,6 +193,21 @@ class VoiceController extends ChangeNotifier {
     }
 
     _lastHeard = text;
+
+    final dialog = this.dialog;
+    if (dialog != null && dialog.active) {
+      if (classifyControl(text) == PatikaIntent.sos) {
+        // Güvenlik her zaman önce: diyalog sessizce biter, SOS işlenir.
+        dialog.cancel(null);
+      } else {
+        // Cevap sınıflandırıcıya gitmez ("Ahmet", "evet", mesaj metni).
+        // Boşta kalıyoruz ki diyalog sıradaki soruda dinlemeyi açabilsin.
+        _setPhase(VoicePhase.idle);
+        await dialog.reply(text);
+        return;
+      }
+    }
+
     _setPhase(VoicePhase.processing);
     var command = classifyVoiceCommand(text);
 
@@ -175,6 +234,19 @@ class VoiceController extends ChangeNotifier {
     if (_phase != VoicePhase.listening) return;
     debugPrint('[Voice] dinleme bitti, sonuç yok: $message');
     _setPhase(VoicePhase.idle);
+
+    final dialog = this.dialog;
+    if (dialog != null && dialog.active) {
+      if (message == Tr.didNotHear) {
+        // Sessizlik: diyalog soruyu bir kez tekrarlar, ikincide iptal eder.
+        _feedback.signal(FeedbackEvent.notUnderstood);
+        dialog.noReply();
+      } else {
+        // Ağ yok, izin yok vb.: diyalog sürdürülemez.
+        dialog.cancel(message);
+      }
+      return;
+    }
     _feedback.signal(FeedbackEvent.notUnderstood, text: message);
   }
 

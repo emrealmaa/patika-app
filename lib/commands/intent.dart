@@ -40,9 +40,9 @@ enum PatikaIntent {
   /// (ayrıntı seviyesinden bağımsız). Bilgi veren komutlarda sonucun kendisi
   /// ("Saat 14:05") neyin anlaşıldığını zaten gösteriyor.
   ///
-  /// GEÇİCİ: Faz 4'te ARA/MESAJ için gerçek onay diyaloğu ("Ahmet Yılmaz'ı
-  /// arayayım mı?") gelince bu teyit de kaldırılacak.
-  bool get needsConfirmation => this == ara || this == mesaj || this == navigasyon;
+  /// ARA/MESAJ'da bu teyidin yerini Faz 3b'de gerçek onay diyaloğu aldı
+  /// ("Ahmet Yılmaz'ı arayayım mı?"). NAVİGASYON'da Faz 6'ya kadar kalıyor.
+  bool get needsConfirmation => this == navigasyon;
 
   /// "Şunu anladım: ..." teyidi olmadan anında uygulanan kontrol niyetleri.
   bool get isControl =>

@@ -1,45 +1,59 @@
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 
+import '../../contacts/contact_matcher.dart';
 import '../../l10n/strings_tr.dart';
+import '../../voice/dialog_manager.dart';
+import '../../voice/dialogs/message_flow.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
+import '../url_opener.dart';
 import 'contact_lookup.dart';
 
 /// MESAJ niyeti. phone_bridge.py'deki simüle "SEND_MESSAGE" eyleminin
 /// gerçek karşılığı.
 ///
-/// v1 KAPSAM KARARI: mesaj METNİ şu an hiçbir yerde yakalanmıyor - Python
-/// tarafındaki intent_classifier/gemini_classifier de sadece alıcı ismini
-/// (`entity`) çıkarıyor, gövde metni yok. Bu yüzden burada sadece alıcı
-/// numarasıyla native SMS uygulaması dolu şekilde açılıyor (sms: URI),
-/// mesaj metni kullanıcının kendi girişine bırakılıyor. Sesli komutla mesaj
-/// içeriğini de almak (çok parçalı komut akışı) ayrı bir görev olarak
-/// patika_app/TODO.md'de not edildi.
+/// Diyalog yöneticisi verildiyse (uygulamada her zaman) çok adımlı akışı
+/// başlatır: kişi, mesaj metni (dikte), geri okuma ve onay (bkz.
+/// MessageFlow). SMS uygulaması metin DOLU açılır, gönder tuşuna kullanıcı
+/// basar (onaylı Faz 3 kararı); SmsManager ile doğrudan gönderme Faz 4'te
+/// bayrak arkasında.
 class MessageHandler {
   final ContactResolver _contacts;
+  final DialogManager? _dialogs;
+  final UrlOpener _openUrl;
 
-  MessageHandler({ContactResolver? contacts})
-      : _contacts = contacts ?? ContactResolver();
+  MessageHandler({ContactResolver? contacts, DialogManager? dialogs, UrlOpener? openUrl})
+      : _contacts = contacts ?? ContactResolver(),
+        _dialogs = dialogs,
+        _openUrl = openUrl ?? defaultOpenUrl;
 
   Future<ActionResult> handle(String? entity) async {
-    if (entity == null) {
-      return ActionResult.fail(Tr.messageNoTarget);
+    final dialogs = _dialogs;
+    if (dialogs != null) {
+      unawaited(dialogs.start(MessageFlow(entity, _contacts, send)));
+      return ActionResult.handedOff('Mesaj diyaloğu başladı');
     }
 
-    // Takma ad, Türkçe ek atma ve bulanık eşleştirme (bkz. ContactMatcher).
+    if (entity == null) return ActionResult.fail(Tr.messageNoTarget);
     final (contact, failure) = await lookupContact(_contacts, entity);
     if (contact == null) return failure!;
+    return send(contact, null);
+  }
+
+  /// SMS ekranını kişinin numarasıyla ve (varsa) metin dolu açar.
+  Future<ActionResult> send(ContactEntry contact, String? body) async {
     if (contact.phones.isEmpty) {
       return ActionResult.fail(Tr.contactNoNumber(contact.displayName));
     }
-
-    final number = contact.phones.first;
-    final uri = Uri(scheme: 'sms', path: number);
-    final launched = await launchUrl(uri);
-    if (!launched) {
-      return ActionResult.fail(Tr.smsFailed);
-    }
-    return ActionResult.ok(Tr.smsOpened(contact.displayName),
-        detail: Tr.smsOpenedDetail);
+    final number = contact.phones.first.replaceAll(RegExp(r'[^\d+]'), '');
+    // queryParameters boşlukları "+" yapar; bazı SMS uygulamaları bunu
+    // olduğu gibi gösterir - metin elle kodlanıyor.
+    final uri = Uri.parse(body == null || body.isEmpty
+        ? 'sms:$number'
+        : 'sms:$number?body=${Uri.encodeComponent(body)}');
+    if (!await _openUrl(uri)) return ActionResult.fail(Tr.smsFailed);
+    return body == null
+        ? ActionResult.ok(Tr.smsOpened(contact.displayName), detail: Tr.smsOpenedDetail)
+        : ActionResult.ok(Tr.smsReady(contact.displayName), detail: Tr.smsReadyDetail);
   }
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'fuzzy.dart';
 import 'turkish_stemmer.dart';
 
@@ -95,6 +97,7 @@ class ContactMatcher {
         (normalizeName(root), _pow(_perStripFactor, depth)),
     ];
     final scored = <(ContactEntry, double)>[];
+    final all = kDebugMode ? <(ContactEntry, double)>[] : null;
     for (final contact in contacts) {
       final full = normalizeName(contact.displayName);
       if (full.isEmpty) continue;
@@ -112,11 +115,27 @@ class ContactMatcher {
         s *= penalty;
         if (s > best) best = s;
       }
-      if (best >= threshold) scored.add((contact, best));
+      all?.add((contact, best));
+      // Eşiğin hemen altındakiler de tutulur: "bulundu" için en iyinin eşiği
+      // geçmesi gerekir, ama belirsizlik kontrolü yakın adayları da hesaba
+      // katar (aşağıda).
+      if (best >= threshold - ambiguityGap) scored.add((contact, best));
     }
-    if (scored.isEmpty) return const ContactNotFound();
-
+    if (all != null) {
+      // Eşik ayarı için: eşik altı adaylar dahil en iyi 3 (yalnızca debug;
+      // rehber adları bu cihazın logunda kalır).
+      all.sort((a, b) => b.$2.compareTo(a.$2));
+      debugPrint('[Contacts] "$spoken" -> ${all.take(3).map((e) => '${e.$1.displayName}:${e.$2.toStringAsFixed(3)}').join(', ')} '
+          '(eşik $threshold)');
+    }
     scored.sort((a, b) => b.$2.compareTo(a.$2));
+    if (scored.isEmpty || scored.first.$2 < threshold) return const ContactNotFound();
+
+    // Belirsizlik: en iyiye [ambiguityGap] kadar yakın başka biri varsa -
+    // eşiğin binde birlik farkla altında kalsa bile. Gerçek cihazda
+    // "Ayyıldız" -> Koray Yıldız 0,889 / Kaan Yıldız 0,880: ikinci eşiğin
+    // hemen altında kaldığı için soru sorulmadan biri SEÇİLİYORDU (yanlış
+    // kişiyi arama riski). Artık "hangisi?" diye sorulur.
     final top = scored.first.$2;
     final close = [
       for (final (c, s) in scored)
