@@ -1,22 +1,31 @@
+import 'package:flutter/foundation.dart';
+
 import '../ble/ble_command.dart';
 import '../settings/settings.dart';
+import 'intent_lexicon.dart';
 
-/// Telefon mikrofonundan gelen serbest metni (örn. "Ahmet'i ara") niyet +
-/// entity'ye çeviren basit, tamamen yerel regex sınıflandırıcı - Python
-/// tarafındaki intent_classifier.py `siniflandir_regex()`'in küçük Dart
-/// karşılığı. Kural sırası ve kalıplar oradakiyle aynı; ilk eşleşen kazanır.
+/// Telefon mikrofonundan gelen serbest metni (örn. "Ahmet'i arar mısın")
+/// niyet + entity'ye çeviren, tamamen yerel sınıflandırıcı. Üç katman:
 ///
-/// Python sürümünden bilinçli farklar:
-/// - Türkçe'ye uygun küçük harf dönüşümü (Dart'ta "İ".toLowerCase() iki
-///   karakterli "i̇" üretir) ve entity'nin ORİJİNAL metinden, büyük/küçük
-///   harfi korunarak alınması ("Kadıköy İskelesi" -> "Kadıköy İskelesi").
-/// - Kelime sınırı Türkçe harfleri tanıyor ("Ankara'ya git" ARA sayılmıyor).
-/// - Ekler sadece kesme işaretinden sonra atılıyor ("Ali ara" -> "Ali",
-///   Python'daki gibi "Al" değil). Yönelme halinde (MESAJ/NAVİGASYON)
-///   kesmesiz ek de atılıyor ("anneme" -> "annem", "iskelesine" -> "iskelesi").
+/// 1. Kontrol komutları (SOS, DUR, TEKRAR, KOMUTLAR, EĞİTİM) - katı
+///    kalıplar, her şeyden önce. Güvenlik: "durum" konuşmayı kesmesin.
+/// 2. Ayar komutları (AYAR) - katı kalıplar.
+/// 3. Diğer niyetler - AĞIRLIKLI ANAHTAR KELİME puanlaması
+///    (tablo: `intent_lexicon.dart`). İnsanlar aynı şeyi çok farklı söyler
+///    ("saat kaç", "saati söyler misin", "kaç oldu saat"); sabit kalıplar
+///    yerine anahtar kelimelerin geçmesine bakılıyor:
+///    - Her niyet, cümledeki anahtar kelimelerinin ağırlığı kadar puan alır
+///      (Türkçe ekleri tanır: "saati", "arar mısın", "götürür müsün").
+///    - Kişi/yer gerektiren niyet (ARA/MESAJ/NAVİGASYON) gerçek bir aday
+///      yoksa 1 puan kaybeder ("haberleri ara" -> HABER); yönelme ekli bir
+///      yer 1 puan ekler ("saat kulesine götür" -> NAVİGASYON).
+///    - En yüksek puan kazanır; eşitlikte tablo sırası; [minIntentScore]
+///      altı BİLİNMİYOR.
 ///
-/// Serbest/çeşitli cümle kalıplarını yakalayamaz - eşleşme yoksa BİLİNMİYOR
-/// döner ve CommandRouter bunu diğer kaynaklardaki gibi işler.
+/// Python intent_classifier.py'den bilinçli farklar: Türkçe'ye uygun küçük
+/// harf, entity'nin ORİJİNAL metinden (büyük/küçük harf korunarak)
+/// alınması, ARA'da ekin yalnızca kesme işaretinden sonra atılması
+/// ("Ali ara" -> "Ali"; "annemi ara" -> "annemi", Faz 3.2 kök bulucuya kadar).
 BleCommand classifyVoiceCommand(String text) {
   final original = _normalizeSpacing(text);
   final lowered = _turkishLower(original);
@@ -34,65 +43,12 @@ BleCommand classifyVoiceCommand(String text) {
     }
   }
 
-  for (final rule in _rules) {
-    for (final pattern in rule.patterns) {
-      final m = pattern.firstMatch(lowered);
-      if (m == null) continue;
-      final entity = m.groupCount >= 1 ? _entityFrom(m, source) : null;
-      return BleCommand.fromWire(rule.intent, entity);
-    }
-  }
-  return BleCommand.fromWire('BİLİNMİYOR', null);
-}
-
-class _Rule {
-  final String intent;
-  final List<RegExp> patterns;
-
-  _Rule(this.intent, List<String> patterns)
-      : patterns = patterns.map((p) => RegExp(p, unicode: true)).toList();
+  return _classifyByKeywords(lowered, source);
 }
 
 // Türkçe harfleri de kapsayan kelime sınırları (Dart'ta \b sadece ASCII).
 const _s = r'(?<!\p{L})';
 const _e = r'(?!\p{L})';
-// Kesme işaretli herhangi bir ek ("'i", "'ye") ya da kesmesiz yönelme eki
-// ("-e/-a", kaynaştırmalı "-ye/-ya", "-ne/-na").
-const _dative = r"(?:'\p{L}+|[yn]?[ae])";
-
-final _rules = [
-  _Rule('ARA', [
-    "^(.+?)(?:'\\p{L}+)?\\s+ara$_e",
-    '${_s}ara\\s+(.+)\$',
-  ]),
-  _Rule('MESAJ', [
-    '^(.+?)$_dative\\s+mesaj\\s*(?:gönder|yaz|at)$_e',
-    '${_s}mesaj\\s*(?:gönder|yaz|at)\\s+(.+)\$',
-  ]),
-  _Rule('HAVA', [r'hava\s*durumu', r'hava\s*nasıl']),
-  _Rule('SAAT', [r'saat\s*kaç', '${_s}saat$_e']),
-  _Rule('MÜZİK', [
-    r'müzik\s*(?:çal|aç)',
-    r'şarkı\s*(?:çal|aç)',
-    r'(?:bir\s*)?şeyler\s*çal',
-  ]),
-  _Rule('HABER', ['${_s}haber(?:ler)?(?:i)?$_e', r'ne\s*var\s*ne\s*yok']),
-  _Rule('OKU', [
-    r'(?:önümdeki|onumdeki|karşımdaki)?\s*yaz[ıi]y[ıi]\s*oku',
-    r'yaz[ıi]\s*ne',
-    r'bunu\s*oku',
-  ]),
-  _Rule('GECIS_MODU', [
-    r'karşı.{0,20}geç',
-    r'yolu\s*geç',
-    r'kavşa[ğg]ı?\s*geç',
-  ]),
-  _Rule('NAVİGASYON', [
-    '$_s(?:git|götür|yönlendir|yolu\\s*bul)\\s+(.+)\$',
-    '^(.+?)$_dative\\s*(?:git|götür)$_e',
-  ]),
-];
-
 // Kısa kontrol komutlarının başına/sonuna eklenebilen nezaket sözcükleri.
 const _polite = r'(?:lütfen\s+|tamam\s+)?';
 const _politeEnd = r'(?:\s+lütfen)?';
@@ -127,29 +83,175 @@ final _settingRules = [
   (r'titreşim\p{L}*\s+(?:azalt|hafiflet|düşür)', SettingAction.hapticWeaker),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
-/// Tüm entity grupları kalıplarda ya eşleşmenin başında ya sonunda duruyor;
-/// konumu buradan bulunup orijinal (büyük/küçük harfi korunmuş) metinden
-/// kesiliyor - Dart'ın Match'i grup indeksi vermiyor.
-String? _entityFrom(RegExpMatch m, String source) {
-  final group = m.group(1);
-  if (group == null) return null;
-  final whole = m.group(0)!;
-  final start = whole.startsWith(group)
-      ? m.start
-      : m.end - group.length;
-  final raw = source.substring(start, start + group.length);
-  return _cleanEntity(raw);
+// --- Anahtar kelime motoru ----------------------------------------------------
+
+class _Token {
+  final String lower;
+  final int start;
+  final int end;
+  const _Token(this.lower, this.start, this.end);
 }
 
-String? _cleanEntity(String raw) {
-  var entity = raw.trim();
-  // "beni Kadıköy'e götür" -> "Kadıköy"
-  entity = entity.replaceFirst(
-      RegExp(r'^(?:beni|bana)\s+', caseSensitive: false), '');
-  // "ara Ahmet'i" / "mesaj gönder Ayşe'ye" gibi sonda kalan kesmeli ek.
-  entity = entity.replaceFirst(RegExp(r"'\p{L}*$", unicode: true), '');
-  entity = entity.trim();
-  return entity.isEmpty ? null : entity;
+/// İsim kökünden sonra gelebilecek ekler (çoğul, hal, iyelik, -ki):
+/// saat|i, saat|in, haber|leri, önüm|deki, bu|nu, karşı|ya.
+/// "havaalanı" ("hava" + "alanı") ya da "saatçi" eşleşmez.
+final _nounSuffix = RegExp(
+  r"^'?(?:l[ae]r)?"
+  r"(?:[ıiuü]|y[ıiuü]|n[ıiuü]|[ae]|y[ae]|n[ae]|[dt][ae]|[dt][ae]n|n?[ıiuü]n|"
+  r"s[ıiuü]|s[ıiuü]n[ae]?|[ıiuü]?m|l[ae]|yl[ae])?"
+  r"(?:[dt][ae]|[dt][ae]n|k[ıi]|[ıiuü]|[ae]|n[ae]|n)?$",
+  unicode: true,
+);
+
+/// Fiil kökünden sonra gelebilecek çekimler: ara|r, ara|sana, ara|yabilir,
+/// ara|yın, git|mek, gid|erim, götür|ür, oku|yor. "araba", "arada",
+/// "aralık", "okula", "çalış" eşleşmez.
+final _verbSuffix = RegExp(
+  r'^(?:|s[ae]n[ae]|s[ıiuü]n(?:l[ae]r)?|y?[ıiuü]n(?:[ıiuü]z)?|'
+  r'(?:y?[ae]|[ıiuü])?r(?:[ıiuü]m|[ıiuü]z|s[ıiuü]n(?:[ıiuü]z)?|l[ae]r)?|'
+  r'y?[ae]bil\p{L}*|[ıiuü]?yor\p{L}*|m[ae]k\p{L}*|m[ae]l[ıi]\p{L}*|m[ae]|'
+  r'm[ae]y[ae]|y?[ae]c[ae][kğ]\p{L}*|y?[ae]l[ıi]m|y?[ae]y[ıi]m|'
+  r'[dt][ıiuü]\p{L}*|m[ıiuü]ş\p{L}*|s[ae]|y?[ae]s[ıi]n|[ıiuü]?ver\p{L}*)$',
+  unicode: true,
+);
+
+/// Kesmesiz yönelme eki: eve, okula, iskelesine, hastaneye.
+final _dativeEnd = RegExp(r'[yn]?[ae]$', unicode: true);
+final _apostropheSuffix = RegExp(r"'\p{L}*$", unicode: true);
+final _comitativeEnd = RegExp(r'y?l[ae]$', unicode: true);
+
+/// "Birlikte" (-le) anlamı taşıyan fiiller: "annemle mesajlaş", "Emre ile görüş".
+const _comitativeVerbs = {'mesajlaş', 'görüş', 'konuş'};
+
+bool _keywordMatches(Keyword k, String token) {
+  final suffix = k.kind == KeywordKind.noun ? _nounSuffix : _verbSuffix;
+  for (final stem in k.stems) {
+    if (token.startsWith(stem) && suffix.hasMatch(token.substring(stem.length))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// [token] bu niyetin bir anahtar kelimesiyse en yüksek ağırlığı, değilse 0.
+int _weightIn(IntentEntry entry, String token) {
+  var best = 0;
+  for (final k in entry.keywords) {
+    if (k.weight > best && _keywordMatches(k, token)) best = k.weight;
+  }
+  return best;
+}
+
+class _Score {
+  final IntentEntry entry;
+  final int score;
+  final Set<int> keywordTokens;
+  final Set<String> matchedStems;
+  const _Score(this.entry, this.score, this.keywordTokens, this.matchedStems);
+}
+
+BleCommand _classifyByKeywords(String lowered, String source) {
+  final tokens = [
+    for (final m in RegExp(r"[\p{L}\p{N}']+", unicode: true).allMatches(lowered))
+      _Token(m.group(0)!, m.start, m.end),
+  ];
+
+  final scores = <_Score>[];
+  for (final entry in intentLexicon) {
+    var score = 0;
+    final keywordTokens = <int>{};
+    final matchedStems = <String>{};
+    for (var i = 0; i < tokens.length; i++) {
+      var best = 0;
+      for (final k in entry.keywords) {
+        if (k.weight > best && _keywordMatches(k, tokens[i].lower)) {
+          best = k.weight;
+          matchedStems.add(k.stems.first);
+        }
+      }
+      if (best > 0) {
+        score += best;
+        keywordTokens.add(i);
+      }
+    }
+    if (score == 0) continue;
+
+    if (entry.entity != EntityKind.none) {
+      // Katı aday: bu niyetin anahtar kelimesi, dolgu kelimesi ya da BAŞKA
+      // bir niyetin güçlü anahtar kelimesi olmayan kelimeler. "haberleri ara"
+      // da "haberleri" kişi adayı sayılmaz.
+      final strict = [
+        for (var i = 0; i < tokens.length; i++)
+          if (!keywordTokens.contains(i) &&
+              !entityFillers.contains(tokens[i].lower) &&
+              !intentLexicon.any((other) =>
+                  other != entry && _weightIn(other, tokens[i].lower) >= 2))
+            i,
+      ];
+      if (strict.isEmpty) {
+        score -= 1;
+      } else if (entry.entity == EntityKind.place &&
+          _dativeEnd.hasMatch(tokens[strict.last].lower)) {
+        score += 1;
+      }
+    }
+    scores.add(_Score(entry, score, keywordTokens, matchedStems));
+  }
+
+  // En yüksek puan; eşitlikte tablo sırası (scores tablo sırasında).
+  _Score? winner;
+  for (final s in scores) {
+    if (winner == null || s.score > winner.score) winner = s;
+  }
+  if (kDebugMode && scores.isNotEmpty) {
+    debugPrint('[Intent] "$lowered" -> '
+        '${scores.map((s) => '${s.entry.intent}:${s.score}').join(' ')}');
+  }
+  if (winner == null || winner.score < minIntentScore) {
+    return BleCommand.fromWire('BİLİNMİYOR', null);
+  }
+
+  final entry = winner.entry;
+  final entity = entry.entity == EntityKind.none
+      ? null
+      : _extractEntity(tokens, source, winner);
+  return BleCommand.fromWire(entry.intent, entity);
+}
+
+/// Kazanan niyetin anahtar kelimeleri ve dolgu kelimeleri dışında kalan
+/// kelimeler, ORİJİNAL metinden (büyük/küçük harf korunarak).
+String? _extractEntity(List<_Token> tokens, String source, _Score winner) {
+  final entry = winner.entry;
+  final comitative = entry.comitative &&
+      winner.matchedStems.any(_comitativeVerbs.contains);
+  final dative = entry.intent == 'MESAJ' || entry.entity == EntityKind.place;
+
+  final parts = <String>[];
+  var lastHadApostrophe = false;
+  for (var i = 0; i < tokens.length; i++) {
+    final t = tokens[i];
+    if (winner.keywordTokens.contains(i) || entityFillers.contains(t.lower)) continue;
+    var word = source.substring(t.start, t.end);
+    lastHadApostrophe = word.contains("'");
+    if (lastHadApostrophe) {
+      // Kesmeli ek her zaman atılır: Ahmet'i -> Ahmet, Ayşe'ye -> Ayşe.
+      word = word.replaceFirst(_apostropheSuffix, '');
+    } else if (comitative && _comitativeEnd.hasMatch(t.lower) && word.length > 4) {
+      word = word.replaceFirst(_comitativeEnd, ''); // annemle -> annem
+    }
+    if (word.isNotEmpty) parts.add(word);
+  }
+  if (parts.isEmpty) return null;
+
+  // Kesmesiz yönelme eki yalnızca son kelimeden ve MESAJ/yer niyetlerinde:
+  // anneme -> annem, iskelesine -> iskelesi. ARA'da kesmesiz ek atılmaz
+  // ("Ali ara" -> "Ali").
+  if (dative && !lastHadApostrophe) {
+    final last = parts.last;
+    final stripped = last.replaceFirst(_dativeEnd, '');
+    if (stripped != last && stripped.length >= 2) parts[parts.length - 1] = stripped;
+  }
+  return parts.join(' ');
 }
 
 /// Noktalama boşluğa, tipografik kesme işaretleri düz kesmeye çevriliyor.
