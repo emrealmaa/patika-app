@@ -1,17 +1,47 @@
-# patika_app
+# Patika Companion
 
-A new Flutter project.
+Patika akıllı gözlüğünün (ESP32-S3; kamera, ToF, IMU, titreşim, earbud, BLE,
+WiFi) Flutter companion uygulaması. Birincil kullanıcı görme engelli
+bireyler; uygulama ekrana bakmadan, sesle ve titreşimle kullanılacak şekilde
+tasarlanıyor. Android öncelikli, iOS şimdilik ertelendi.
 
-## Getting Started
+Gözlük donanımı henüz yok: her şey **Simülasyon modunda** çalışır ve
+**Test Modu** sekmesinden denenebilir.
 
-This project is a starting point for a Flutter application.
+## Çalıştırma
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter pub get
+flutter run                     # varsayılan: simülasyon modu
+flutter test                    # birim + widget testleri
+flutter analyze
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Özellik bayrakları ve (ileride) API anahtarları koda gömülmez:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cp dart_defines.example.json dart_defines.json   # git'e girmez
+flutter run --dart-define-from-file=dart_defines.json
+```
+
+Kısa sesleri yeniden üretmek için: `dart run tool/generate_earcons.dart`
+
+## Sesli komutlar
+
+Test Modu'ndaki **Sesli Komut Ver** butonu telefonun mikrofonunu kullanır.
+Gözlük gerekmez.
+
+| Niyet | Örnek | Durum |
+|---|---|---|
+| ARA | "Ahmet'i ara", "ara Emre" | Arama ekranını numarayla açar |
+| MESAJ | "Ayşe'ye mesaj gönder" | SMS ekranını açar |
+| NAVİGASYON | "Kadıköy iskelesine götür" | Google Maps yürüyüş yönlendirmesi |
+| SAAT | "Saat kaç" | ✅ |
+| AYAR | "Daha hızlı konuş", "kısa anlat", "titreşimi azalt" | ✅ |
+| HAVA / HABER / MÜZİK / OKU / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (Faz 5, 8) |
+
+## Dokümanlar
+
+- [Mimari](docs/architecture.md): modüller ve akış
+- [BLE protokolü](docs/ble_protocol.md): gözlük ↔ telefon mesajları (firmware ekibi için)
+- [TODO.md](TODO.md): ertelenen kararlar ve açık işler

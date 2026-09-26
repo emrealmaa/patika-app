@@ -119,6 +119,29 @@ void main() {
     expect(queue.current, isNull);
   });
 
+  test('add() duyuru bitince tamamlanır', () async {
+    var done = false;
+    queue.add('açıklama').then((_) => done = true);
+    await settle();
+    expect(done, isFalse);
+    await finish();
+    expect(done, isTrue);
+  });
+
+  test('add() kesilince ve stopAll ile de tamamlanır (bekleyen takılmaz)', () async {
+    var interrupted = false;
+    var pending = false;
+    queue.add('uzun', priority: AnnouncementPriority.low).then((_) => interrupted = true);
+    await settle();
+    queue.add('sıradaki', priority: AnnouncementPriority.low).then((_) => pending = true);
+    queue.add('engel', priority: AnnouncementPriority.critical);
+    await settle();
+    expect(interrupted, isTrue);
+    queue.stopAll();
+    await settle();
+    expect(pending, isTrue);
+  });
+
   test('boş metin yok sayılır', () async {
     queue.add('   ');
     await settle();

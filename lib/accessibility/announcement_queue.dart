@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'speech_output.dart';
 
 /// Duyuru öncelikleri - sıralama önemli (index büyüdükçe öncelik artar).
@@ -19,8 +21,16 @@ class Announcement {
   final String text;
   final AnnouncementPriority priority;
   final DateTime createdAt;
+  final _done = Completer<void>();
 
-  const Announcement(this.text, this.priority, this.createdAt);
+  Announcement(this.text, this.priority, this.createdAt);
+
+  /// Konuşma bitince, kesilince ya da atılınca tamamlanır.
+  Future<void> get done => _done.future;
+
+  void _finish() {
+    if (!_done.isCompleted) _done.complete();
+  }
 }
 
 /// Tüm sesli duyuruların geçtiği tek kuyruk.
@@ -58,9 +68,12 @@ class AnnouncementQueue {
   /// Şu an konuşulan duyuru (yoksa null).
   Announcement? get current => _current;
 
-  void add(String text, {AnnouncementPriority priority = AnnouncementPriority.normal}) {
+  /// Dönen Future duyuru konuşulup bitince, kesilince ya da (tekrar/bayat
+  /// olduğu için) atılınca tamamlanır - "önce açıkla, sonra sor" akışları
+  /// (bkz. PermissionExplainer) bunu bekleyebilir.
+  Future<void> add(String text, {AnnouncementPriority priority = AnnouncementPriority.normal}) {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isDuplicate(trimmed)) return;
+    if (trimmed.isEmpty || _isDuplicate(trimmed)) return Future.value();
 
     final item = Announcement(trimmed, priority, _now());
     _insertByPriority(item);
@@ -71,6 +84,7 @@ class AnnouncementQueue {
     } else {
       _pump();
     }
+    return item.done;
   }
 
   /// Son duyuruyu tekrar okur (tekrar birleştirme kuralına takılmadan).
@@ -83,10 +97,15 @@ class AnnouncementQueue {
 
   /// Konuşmayı keser ve sırayı boşaltır ("dur" komutu).
   void stopAll() {
+    for (final a in _pending) {
+      a._finish();
+    }
     _pending.clear();
-    if (_current != null) {
+    final current = _current;
+    if (current != null) {
       _generation++;
       _current = null;
+      current._finish();
       _output.stop();
     }
   }
@@ -111,6 +130,7 @@ class AnnouncementQueue {
 
   void _interrupt() {
     _generation++;
+    _current?._finish();
     _current = null;
     _output.stop();
     _pump();
@@ -123,6 +143,7 @@ class AnnouncementQueue {
       final now = _now();
       if (next.priority == AnnouncementPriority.low &&
           now.difference(next.createdAt) > lowMaxAge) {
+        next._finish();
         continue;
       }
 
@@ -136,6 +157,7 @@ class AnnouncementQueue {
       } catch (_) {
         // Seslendirme hatası kuyruğu asla kilitlememeli.
       }
+      next._finish();
       // Bu sırada daha öncelikli bir duyuru araya girdiyse, kuyruğu artık
       // o turun _pump'ı yürütüyor.
       if (generation != _generation) return;

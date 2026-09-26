@@ -5,6 +5,8 @@ import '../accessibility/earcons.dart';
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
 import '../app_state.dart';
+import '../ble/glasses_protocol.dart';
+import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../commands/voice_intent_classifier.dart';
 import '../l10n/strings_tr.dart';
@@ -115,11 +117,16 @@ class _TestModeScreenState extends State<TestModeScreen> {
           icon: const Icon(Icons.send),
           label: const Text(Tr.sendCommand),
         ),
+        if (state.simulator case final sim?) ...[
+          const SizedBox(height: 24),
+          _GlassesSimulationSection(simulator: sim, lastEvent: state.lastGlassesEvent),
+        ],
         const SizedBox(height: 24),
         _FeedbackTestSection(feedback: state.feedback),
         const SizedBox(height: 24),
         Semantics(
           header: true,
+          container: true,
           child: Text(Tr.commandHistory, style: Theme.of(context).textTheme.titleMedium),
         ),
         const SizedBox(height: 8),
@@ -299,6 +306,93 @@ class _VoiceCommandButtonState extends State<_VoiceCommandButton> {
   }
 }
 
+/// Gözlüğün buton/jest/pil olaylarını ve bağlantı sorunlarını (donma,
+/// menzil dışı) donanımsız taklit eder - bağlantı denetçisinin heartbeat
+/// ve yeniden bağlanma davranışı buradan denenebilir.
+class _GlassesSimulationSection extends StatefulWidget {
+  final SimulatedBleService simulator;
+  final String? lastEvent;
+
+  const _GlassesSimulationSection({required this.simulator, this.lastEvent});
+
+  @override
+  State<_GlassesSimulationSection> createState() => _GlassesSimulationSectionState();
+}
+
+class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
+  late double _battery = widget.simulator.battery.toDouble();
+
+  SimulatedBleService get _sim => widget.simulator;
+
+  @override
+  Widget build(BuildContext context) {
+    final lastEvent = widget.lastEvent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // container: true -> düz metinler üstteki düğüme birleşip tek bir
+        // uzun etiket olarak okunmasın (emülatör erişilebilirlik ağacında
+        // görüldü).
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(Tr.glassesSimulation, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        Semantics(container: true, child: const Text(Tr.glassesSimulationHint)),
+        const SizedBox(height: 12),
+        for (final (label, action) in [
+          (Tr.buttonTap, () => _sim.injectButton(GlassesButton.tap)),
+          (Tr.buttonDoubleTap, () => _sim.injectButton(GlassesButton.doubleTap)),
+          (Tr.buttonLongPress, () => _sim.injectButton(GlassesButton.longPress)),
+          (Tr.gestureDoubleNod, () => _sim.injectGesture(GlassesGesture.doubleNod)),
+        ]) ...[
+          OutlinedButton(onPressed: action, child: Text(label)),
+          const SizedBox(height: 8),
+        ],
+        if (lastEvent != null)
+          Semantics(container: true, child: Text(Tr.glassesEvent(lastEvent))),
+        const SizedBox(height: 8),
+        // Görsel başlık; TalkBack aynı bilgiyi kaydırıcının kendisinden duyar.
+        ExcludeSemantics(
+          child: Text('${Tr.glassesBattery}: %${_battery.round()}',
+              style: Theme.of(context).textTheme.titleSmall),
+        ),
+        Slider(
+          min: 0,
+          max: 100,
+          divisions: 20,
+          value: _battery,
+          // `label` verilmiyor: TalkBack onu değerle birlikte ikinci kez okuyor.
+          semanticFormatterCallback: (v) => '${Tr.glassesBattery}: ${Tr.percent(v.round())}',
+          onChanged: (v) => setState(() => _battery = v),
+          onChangeEnd: (v) => _sim.setBattery(v.round()),
+        ),
+        SwitchListTile(
+          title: const Text(Tr.heartbeatPaused),
+          subtitle: const Text(Tr.heartbeatPausedHint),
+          value: _sim.heartbeatPaused,
+          onChanged: (v) => setState(() => _sim.setHeartbeatPaused(v)),
+        ),
+        SwitchListTile(
+          title: const Text(Tr.glassesUnreachable),
+          subtitle: const Text(Tr.glassesUnreachableHint),
+          value: !_sim.reachable,
+          onChanged: (v) => setState(() => _sim.setReachable(!v)),
+        ),
+        ValueListenableBuilder<HapticPatternId?>(
+          valueListenable: _sim.lastHaptic,
+          builder: (context, id, _) => id == null
+              ? const SizedBox.shrink()
+              : Semantics(
+                  container: true,
+                  child: Text(Tr.lastHaptic(Tr.hapticName(id.name))),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Titreşim dili, kısa sesler, duyuru önceliği ve engel titreşimini
 /// donanımsız denemek için. Hepsi FeedbackHub üzerinden gidiyor - ayarlar
 /// (titreşim şiddeti, bildirim türü) burada da geçerli.
@@ -347,6 +441,7 @@ class _FeedbackTestSectionState extends State<_FeedbackTestSection> {
       children: [
         Semantics(
           header: true,
+          container: true,
           child: Text(Tr.feedbackTest, style: Theme.of(context).textTheme.titleMedium),
         ),
         const SizedBox(height: 12),
@@ -401,20 +496,21 @@ class _FeedbackTestSectionState extends State<_FeedbackTestSection> {
             _updateObstacle();
           },
         ),
-        Semantics(
-          label: Tr.obstacleDistance,
-          child: Slider(
-            min: 0.2,
-            max: 3.0,
-            divisions: 28,
-            value: _obstacleMeters,
-            label: distanceText,
-            semanticFormatterCallback: (v) => Tr.meters(v),
-            onChanged: (v) {
-              setState(() => _obstacleMeters = v);
-              _updateObstacle();
-            },
-          ),
+        Slider(
+          min: 0.2,
+          max: 3.0,
+          divisions: 28,
+          value: _obstacleMeters,
+          // Ad kaydırıcının kendi etiketinde; ayrı bir Semantics sarmalayıcısı
+          // adı üstteki bölüm başlığına yapıştırıyordu.
+          semanticFormatterCallback: (v) {
+            final interval = HapticPatterns.obstacleInterval(v);
+            return '${Tr.obstacleDistance}: ${interval == null ? Tr.obstacleNone : Tr.meters(v)}';
+          },
+          onChanged: (v) {
+            setState(() => _obstacleMeters = v);
+            _updateObstacle();
+          },
         ),
       ],
     );

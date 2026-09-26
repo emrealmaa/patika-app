@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'accessibility/a11y_announcer.dart' as a11y;
 import 'accessibility/announcement_queue.dart';
@@ -8,8 +9,13 @@ import 'accessibility/earcons.dart';
 import 'accessibility/feedback_hub.dart';
 import 'accessibility/haptic_patterns.dart';
 import 'accessibility/speech_output.dart';
+import 'background/foreground_service.dart';
 import 'ble/ble_command.dart';
 import 'ble/ble_connection_state.dart';
+import 'ble/connection_supervisor.dart';
+import 'ble/device_memory.dart';
+import 'ble/glasses_haptics.dart';
+import 'ble/glasses_protocol.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
 import 'ble/simulated_ble_service.dart';
@@ -17,11 +23,12 @@ import 'commands/command_router.dart';
 import 'commands/handlers/settings_handler.dart';
 import 'commands/log_entry.dart';
 import 'l10n/strings_tr.dart';
+import 'permissions/permission_explainer.dart';
 import 'settings/settings_store.dart';
 
-/// Uygulamanın tek merkezi durumu. BLE servisi (gerçek/simüle) ile komut
-/// yönlendiriciyi (CommandRouter) birbirine bağlar, ekranlar (ConnectionScreen/
-/// TestModeScreen) sadece bunu dinler - hangi BLE implementasyonunun aktif
+/// Uygulamanın tek merkezi durumu. BLE servisi (gerçek/simüle), bağlantı
+/// denetçisi, komut yönlendirici ve geri bildirim merkezini birbirine
+/// bağlar; ekranlar sadece bunu dinler - hangi BLE implementasyonunun aktif
 /// olduğunu bilmeleri gerekmez.
 ///
 /// Donanım henüz olmadığı için varsayılan mod SİMÜLASYON - gerçek moda
@@ -33,43 +40,71 @@ class AppState extends ChangeNotifier {
 
   final SettingsStore settings;
   final SpeechOutput _speech;
+  final BackgroundService _background;
+  final DeviceMemory Function(bool simulated) _deviceMemory;
   late final FeedbackHub feedback;
   late final CommandRouter router;
+  late final PermissionExplainer permissions;
 
   late PatikaBleService bleService;
+  late ConnectionSupervisor _supervisor;
   bool isSimulated = true;
 
   BleConnectionState connectionState = BleConnectionState.disconnected;
   List<DiscoveredDevice> devices = [];
   final List<LogEntry> log = [];
 
-  StreamSubscription<BleConnectionState>? _connectionSub;
-  StreamSubscription? _commandSub;
-  StreamSubscription<List<DiscoveredDevice>>? _devicesSub;
+  /// Gözlüğün bildirdiği son pil yüzdesi (bağlı değilken null).
+  int? glassesBattery;
+
+  /// Gözlükten gelen son buton/jest olayı (test ekranında gösteriliyor).
+  String? lastGlassesEvent;
+
+  final List<StreamSubscription> _subs = [];
 
   /// Parametreler testlerde sahte uygulamalar vermek için; uygulamada
-  /// hepsi gerçek platform uygulamalarına düşer.
+  /// hepsi gerçek platform uygulamalarına düşer. [autoStart] kapalıyken
+  /// açılıştaki izin/arka plan servisi/otomatik bağlanma adımı atlanır.
   AppState({
     SettingsStore? settings,
     SpeechOutput? speech,
     HapticOutput? haptics,
     EarconPlayer? earcons,
+    BackgroundService? background,
+    DeviceMemory Function(bool simulated)? deviceMemory,
+    bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
-        _speech = speech ?? FlutterTtsOutput() {
+        _speech = speech ?? FlutterTtsOutput(),
+        _background = background ?? BackgroundService(),
+        _deviceMemory = deviceMemory ??
+            ((simulated) => SharedPrefsDeviceMemory(simulated: simulated)) {
     feedback = FeedbackHub(
       queue: AnnouncementQueue(_speech),
-      haptics: haptics ?? PhoneHaptics(),
+      // Desenler hem telefonda hem (bağlıysa) gözlükte çalar.
+      haptics: CompositeHaptics([
+        haptics ?? PhoneHaptics(),
+        GlassesHaptics(() => bleService),
+      ]),
       earcons: earcons ?? AudioplayersEarconPlayer(),
       settings: () => this.settings.value,
     );
     a11y.attachFeedbackHub(feedback);
+    permissions = PermissionExplainer(feedback);
     router = CommandRouter(settings: SettingsHandler(this.settings));
     this.settings.addListener(_applySettings);
     this.settings.load();
     _applySettings();
 
-    bleService = SimulatedBleService();
-    _subscribe();
+    _attach(SimulatedBleService());
+    if (autoStart) start();
+  }
+
+  /// Açılış: bildirim izni (arka plan servisi için) -> arka plan servisi ->
+  /// son gözlüğe otomatik bağlanma.
+  Future<void> start() async {
+    await permissions.ensure(Permission.notification, Tr.notificationPermissionWhy);
+    await _background.start(_notificationText);
+    await _supervisor.start();
   }
 
   void _applySettings() {
@@ -78,32 +113,93 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  SimulatedBleService get _simulated => bleService as SimulatedBleService;
+  /// Sadece simülasyon modunda dolu - test ekranı olay enjekte etmek için.
+  SimulatedBleService? get simulator =>
+      isSimulated ? bleService as SimulatedBleService : null;
 
-  void _subscribe() {
-    _connectionSub = bleService.connectionState.listen((state) {
-      final previous = connectionState;
-      connectionState = state;
-      // Sadece kalıcı/anlamlı geçişler duyuruluyor - "taranıyor"/"bağlanıyor"
-      // gibi ara durumlar sessiz kalıyor. "Koptu" sadece gerçekten bağlıyken
-      // söyleniyor (tarama bitince disconnected'a dönmek kopma değil).
-      if (state == BleConnectionState.connected &&
-          previous != BleConnectionState.connected) {
+  bool get isHealthy => _supervisor.isHealthy;
+
+  void _attach(PatikaBleService service) {
+    bleService = service;
+    _supervisor = ConnectionSupervisor(
+      service,
+      _deviceMemory(isSimulated),
+      onHealthy: () {
         feedback.signal(FeedbackEvent.connected,
             text: Tr.glassesConnected, priority: AnnouncementPriority.high);
-      } else if (state == BleConnectionState.disconnected &&
-          previous == BleConnectionState.connected) {
+        _refresh();
+      },
+      onLost: () {
         feedback.signal(FeedbackEvent.disconnected,
             text: Tr.glassesDisconnected, priority: AnnouncementPriority.high);
-      }
-      notifyListeners();
-    });
-    _devicesSub = bleService.discoveredDevices.listen((found) {
-      devices = found;
-      notifyListeners();
-    });
-    _commandSub = bleService.commands.listen(_process);
+        _refresh();
+      },
+      onPersistentFailure: () {
+        feedback.signal(FeedbackEvent.error,
+            text: Tr.cannotReachGlasses, priority: AnnouncementPriority.high);
+      },
+    );
+    _subs
+      ..add(service.connectionState.listen((state) {
+        connectionState = state;
+        if (state != BleConnectionState.connected) glassesBattery = null;
+        _refresh();
+      }))
+      ..add(service.discoveredDevices.listen((found) {
+        devices = found;
+        notifyListeners();
+      }))
+      ..add(service.commands.listen(_process))
+      ..add(service.batteryLevel.listen((percent) {
+        glassesBattery = percent;
+        notifyListeners();
+      }))
+      ..add(service.buttonEvents.listen((b) => _onGlassesEvent(_buttonName(b))))
+      ..add(service.gestureEvents.listen((g) => _onGlassesEvent(_gestureName(g))));
   }
+
+  Future<void> _detach() async {
+    _supervisor.dispose();
+    for (final s in _subs) {
+      await s.cancel();
+    }
+    _subs.clear();
+    bleService.dispose();
+  }
+
+  void _refresh() {
+    _background.update(_notificationText);
+    notifyListeners();
+  }
+
+  String get _notificationText {
+    if (connectionState == BleConnectionState.connected && _supervisor.isHealthy) {
+      return Tr.notificationConnected;
+    }
+    if (connectionState == BleConnectionState.disconnected && !_supervisor.isReconnecting) {
+      return Tr.notificationDisconnected;
+    }
+    return Tr.notificationSearching;
+  }
+
+  /// Faz 1b: gözlük olayları henüz bir eyleme bağlı değil (Faz 2'de
+  /// dokunuş dinlemeyi başlatacak, uzun basış SOS olacak) - şimdilik
+  /// alındığı kısaca duyuruluyor.
+  void _onGlassesEvent(String name) {
+    lastGlassesEvent = name;
+    feedback.say(Tr.glassesEvent(name), priority: AnnouncementPriority.low);
+    notifyListeners();
+  }
+
+  static String _buttonName(GlassesButton b) => switch (b) {
+        GlassesButton.tap => Tr.buttonTap,
+        GlassesButton.doubleTap => Tr.buttonDoubleTap,
+        GlassesButton.longPress => Tr.buttonLongPress,
+      };
+
+  static String _gestureName(GlassesGesture g) => switch (g) {
+        GlassesGesture.doubleNod => Tr.gestureDoubleNod,
+      };
 
   /// Kaynağı ne olursa olsun (gözlük BLE'si, simülasyon, telefon mikrofonu)
   /// her komutun geçtiği tek yol: route -> log -> sesli sonuç.
@@ -125,39 +221,37 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _unsubscribe() async {
-    await _connectionSub?.cancel();
-    await _devicesSub?.cancel();
-    await _commandSub?.cancel();
-  }
-
   /// Simülasyon <-> gerçek BLE arasında geçiş yapar. Mevcut servis dispose
-  /// edilip yenisi kurulur, log geçmişi korunur.
+  /// edilip yenisi kurulur, log geçmişi korunur; yeni modda da son cihaza
+  /// otomatik bağlanma denenir.
   Future<void> toggleMode(bool simulated) async {
     if (simulated == isSimulated) return;
-    await _unsubscribe();
-    bleService.dispose();
+    await _detach();
 
     isSimulated = simulated;
-    bleService = simulated ? SimulatedBleService() : RealBleService();
     devices = [];
+    glassesBattery = null;
     connectionState = BleConnectionState.disconnected;
-    _subscribe();
-    notifyListeners();
+    _attach(simulated
+        ? SimulatedBleService()
+        : RealBleService(permissions: permissions));
+    _refresh();
+    await _supervisor.start();
   }
 
   Future<void> startScan() => bleService.startScan();
 
-  Future<void> connect(String deviceId) => bleService.connect(deviceId);
+  void connect(String deviceId) => _supervisor.connect(deviceId);
 
-  Future<void> disconnect() => bleService.disconnect();
+  void disconnect() {
+    _supervisor.disconnect();
+    feedback.signal(FeedbackEvent.disconnected, text: Tr.glassesDisconnectedByUser);
+  }
 
   /// Sadece simülasyon modundayken anlamlı - test ekranındaki butonlar bunu
   /// çağırır.
-  void injectTestCommand(String intentRaw, {String? entity}) {
-    if (!isSimulated) return;
-    _simulated.injectCommand(intentRaw, entity: entity);
-  }
+  void injectTestCommand(String intentRaw, {String? entity}) =>
+      simulator?.injectCommand(intentRaw, entity: entity);
 
   /// Telefonun kendi mikrofonundan tanınan komut. BLE servisinden bağımsız
   /// olduğu için hem simülasyon hem gerçek modda çalışır - gözlük donanımı
@@ -170,8 +264,8 @@ class AppState extends ChangeNotifier {
     feedback.queue.stopAll();
     feedback.updateObstacle(null);
     a11y.attachFeedbackHub(null);
-    _unsubscribe();
-    bleService.dispose();
+    _detach();
+    _background.stop();
     super.dispose();
   }
 }

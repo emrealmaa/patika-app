@@ -16,10 +16,22 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Titreşim dili (bkz. haptic_patterns.dart). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Arka planda/ekran kilitliyken bağlantının sürmesi için foreground
+         service (bkz. background/foreground_service.dart). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android 14+: connectedDevice türündeki servis, Bluetooth izinlerinden
+         biri YA DA bu (normal, onaysız) izin olmadan başlatılamıyor. Simülasyon
+         modunda Bluetooth izni istenmediği için gerekli; Faz 5'teki WiFi kare
+         aktarımında da kullanılacak. -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
-        android:label="patika_app"
+        android:label="Patika"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -44,6 +56,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- flutter_foreground_task servisi (adı değiştirilmemeli). stopWithTask:
+             uygulama son uygulamalardan kaydırılınca servis de kapanır. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="connectedDevice|microphone"
+            android:stopWithTask="true"
+            android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

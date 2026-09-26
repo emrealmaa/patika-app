@@ -1,11 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart' as fble;
 import 'package:permission_handler/permission_handler.dart';
 
-import 'ble_command.dart';
+import '../accessibility/haptic_patterns.dart';
+import '../l10n/strings_tr.dart';
+import '../permissions/permission_explainer.dart';
 import 'ble_connection_state.dart';
+import 'glasses_protocol.dart';
 import 'patika_ble_service.dart';
 
 /// Gerçek ESP32-S3 gözlükle BLE üzerinden konuşan servis.
@@ -18,25 +21,30 @@ import 'patika_ble_service.dart';
 ///
 /// ÖNEMLİ: Aşağıdaki UUID'ler PLACEHOLDER'dır - henüz donanım/firmware
 /// olmadığı için gerçek servis/karakteristik UUID'leri bilinmiyor. Firmware
-/// tarafı belirlendiğinde bu üç sabit güncellenmeli, geri kalan kod
+/// tarafı belirlendiğinde bu sabitler güncellenmeli, geri kalan kod
 /// (bağlanma/keşif/subscribe akışı) değişmeden kalabilir.
 ///
-/// Beklenen mesaj formatı (karakteristik üzerinden UTF-8 JSON, tek satır):
-/// {"intent": "ARA", "entity": "Emre"}
-/// Bu, Python tarafındaki intent_classifier.siniflandir()'in (intent, entity,
-/// cevap) çıktısıyla aynı sözlüğü paylaşacak şekilde tasarlandı - "cevap"
-/// alanı henüz kullanılmıyor (bkz. NOTES.md).
-class RealBleService implements PatikaBleService {
+/// Mesaj formatı: bkz. docs/ble_protocol.md ve [GlassesProtocol] - her
+/// bildirim/yazma tek bir UTF-8 JSON nesnesi, `"t"` alanı türü belirler.
+class RealBleService with GlassesEventStreams implements PatikaBleService {
   static final fble.Uuid _serviceUuid =
       fble.Uuid.parse('0000ff10-0000-1000-8000-00805f9b34fb');
-  static final fble.Uuid _commandCharacteristicUuid =
+  /// Gözlük -> telefon (notify): komut, buton, jest, pil, heartbeat.
+  static final fble.Uuid _eventCharacteristicUuid =
       fble.Uuid.parse('0000ff11-0000-1000-8000-00805f9b34fb');
+  /// Telefon -> gözlük (write without response): titreşim deseni vb.
+  static final fble.Uuid _controlCharacteristicUuid =
+      fble.Uuid.parse('0000ff12-0000-1000-8000-00805f9b34fb');
+  /// 247 bayt MTU -> 244 bayt yük; en uzun JSON mesaj buna sığmalı.
+  static const _requestedMtu = 247;
 
   final fble.FlutterReactiveBle _ble = fble.FlutterReactiveBle();
+  final PermissionExplainer? _permissions;
+
+  RealBleService({PermissionExplainer? permissions}) : _permissions = permissions;
 
   final _connectionController =
       StreamController<BleConnectionState>.broadcast();
-  final _commandController = StreamController<BleCommand>.broadcast();
   final _devicesController =
       StreamController<List<DiscoveredDevice>>.broadcast();
 
@@ -44,12 +52,10 @@ class RealBleService implements PatikaBleService {
   StreamSubscription<fble.ConnectionStateUpdate>? _connectionSub;
   StreamSubscription<List<int>>? _valueSub;
   final List<DiscoveredDevice> _found = [];
+  String? _connectedDeviceId;
 
   @override
   Stream<BleConnectionState> get connectionState => _connectionController.stream;
-
-  @override
-  Stream<BleCommand> get commands => _commandController.stream;
 
   @override
   Stream<List<DiscoveredDevice>> get discoveredDevices => _devicesController.stream;
@@ -62,12 +68,21 @@ class RealBleService implements PatikaBleService {
   /// iOS'ta bu izinler `permission_handler` tarafında no-op/otomatik granted
   /// döner - gerçek CoreBluetooth izni Info.plist'teki açıklamayla ilk
   /// kullanımda sistem tarafından sorulur.
+  ///
+  /// İzin penceresinden önce neden gerektiği sesli anlatılıyor
+  /// ([PermissionExplainer]) - görme engelli kullanıcı sistem penceresini
+  /// bağlamsız duymasın.
   Future<bool> _ensurePermissions() async {
-    final statuses = await [
+    const permissions = [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.locationWhenInUse,
-    ].request();
+    ];
+    final explainer = _permissions;
+    if (explainer != null) {
+      return explainer.ensureAll(permissions, Tr.bluetoothPermissionWhy);
+    }
+    final statuses = await permissions.request();
     return statuses.values.every((s) => s.isGranted || s.isLimited);
   }
 
@@ -130,10 +145,12 @@ class RealBleService implements PatikaBleService {
       (update) {
         switch (update.connectionState) {
           case fble.DeviceConnectionState.connected:
+            _connectedDeviceId = deviceId;
             _connectionController.add(BleConnectionState.connected);
-            _subscribeToCommandCharacteristic(deviceId);
+            _onConnected(deviceId);
             break;
           case fble.DeviceConnectionState.disconnected:
+            _connectedDeviceId = null;
             _connectionController.add(BleConnectionState.disconnected);
             break;
           case fble.DeviceConnectionState.connecting:
@@ -144,17 +161,31 @@ class RealBleService implements PatikaBleService {
         }
       },
       onError: (_) {
+        _connectedDeviceId = null;
         _connectionController.add(BleConnectionState.disconnected);
       },
     );
   }
 
-  void _subscribeToCommandCharacteristic(String deviceId) {
-    final characteristic = fble.QualifiedCharacteristic(
-      deviceId: deviceId,
-      serviceId: _serviceUuid,
-      characteristicId: _commandCharacteristicUuid,
-    );
+  Future<void> _onConnected(String deviceId) async {
+    try {
+      await _ble.requestMtu(deviceId: deviceId, mtu: _requestedMtu);
+    } catch (e) {
+      // MTU pazarlığı başarısız olsa da bağlantı sürer; mesajlar kısa.
+      debugPrint('[BLE] MTU istenemedi: $e');
+    }
+    _subscribeToEventCharacteristic(deviceId);
+  }
+
+  fble.QualifiedCharacteristic _characteristic(String deviceId, fble.Uuid id) =>
+      fble.QualifiedCharacteristic(
+        deviceId: deviceId,
+        serviceId: _serviceUuid,
+        characteristicId: id,
+      );
+
+  void _subscribeToEventCharacteristic(String deviceId) {
+    final characteristic = _characteristic(deviceId, _eventCharacteristicUuid);
 
     _valueSub?.cancel();
     _valueSub = _ble.subscribeToCharacteristic(characteristic).listen(
@@ -168,16 +199,23 @@ class RealBleService implements PatikaBleService {
   }
 
   void _onRawValue(List<int> value) {
-    if (value.isEmpty) return;
+    // Bozuk/eksik/tanınmayan bir paket akışı asla kilitlememeli - decode
+    // null döner ve sessizce atlanır ("asla çökmesin" ilkesi).
+    final message = GlassesProtocol.decode(value);
+    if (message != null) dispatchGlassesMessage(message);
+  }
+
+  @override
+  Future<void> sendHapticPattern(HapticPatternId id, {required double scale}) async {
+    final deviceId = _connectedDeviceId;
+    if (deviceId == null) return;
     try {
-      final text = utf8.decode(value);
-      final json = jsonDecode(text) as Map<String, dynamic>;
-      final intentRaw = json['intent'] as String? ?? 'BİLİNMİYOR';
-      final entity = json['entity'] as String?;
-      _commandController.add(BleCommand.fromWire(intentRaw, entity));
-    } catch (_) {
-      // Bozuk/eksik bir paket komut akışını asla kilitlememeli - sessizce
-      // atlanıyor (main.py'deki "asla çökmesin" ilkesiyle aynı ruh).
+      await _ble.writeCharacteristicWithoutResponse(
+        _characteristic(deviceId, _controlCharacteristicUuid),
+        value: GlassesProtocol.encodeHaptic(id, scale),
+      );
+    } catch (e) {
+      debugPrint('[BLE] titreşim gönderilemedi: $e');
     }
   }
 
@@ -189,6 +227,7 @@ class RealBleService implements PatikaBleService {
     // etmek (bkz. yukarıdaki not) - ayrı bir disconnect() API'si yok.
     await _connectionSub?.cancel();
     _connectionSub = null;
+    _connectedDeviceId = null;
     _connectionController.add(BleConnectionState.disconnected);
   }
 
@@ -198,7 +237,7 @@ class RealBleService implements PatikaBleService {
     _connectionSub?.cancel();
     _valueSub?.cancel();
     _connectionController.close();
-    _commandController.close();
     _devicesController.close();
+    closeGlassesStreams();
   }
 }

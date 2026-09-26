@@ -32,7 +32,10 @@ class ConnectionScreen extends StatelessWidget {
           onChanged: (v) => state.toggleMode(v),
         ),
         const SizedBox(height: 16),
-        _StatusCard(connectionState: state.connectionState),
+        _StatusCard(
+          connectionState: state.connectionState,
+          battery: state.glassesBattery,
+        ),
         const SizedBox(height: 16),
         // Tek sütun/doğrusal düzen: butonlar yan yana (Row) değil alt alta.
         ElevatedButton.icon(
@@ -154,8 +157,9 @@ class _LogTile extends StatelessWidget {
 
 class _StatusCard extends StatelessWidget {
   final BleConnectionState connectionState;
+  final int? battery;
 
-  const _StatusCard({required this.connectionState});
+  const _StatusCard({required this.connectionState, this.battery});
 
   @override
   Widget build(BuildContext context) {
@@ -166,8 +170,14 @@ class _StatusCard extends StatelessWidget {
       BleConnectionState.connected => (Tr.stateConnected, AppColors.success),
     };
 
+    final battery = this.battery;
+    // Ekranda "%80", TalkBack'te "yüzde 80" (okunuşu net olsun).
+    final spoken = battery == null
+        ? Tr.connectionStatus(label)
+        : '${Tr.connectionStatus(label)}, ${Tr.batterySpoken(battery)}';
+
     return Semantics(
-      label: Tr.connectionStatus(label),
+      label: spoken,
       excludeSemantics: true,
       child: Card(
         child: ListTile(
@@ -179,6 +189,7 @@ class _StatusCard extends StatelessWidget {
             label,
             style: const TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold),
           ),
+          subtitle: battery == null ? null : Text(Tr.batteryVisual(battery)),
         ),
       ),
     );

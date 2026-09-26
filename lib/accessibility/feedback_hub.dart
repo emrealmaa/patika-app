@@ -41,9 +41,10 @@ class FeedbackHub {
 
   Settings get settings => _settings();
 
-  /// Sadece konuşma (titreşim/kısa ses yok).
-  void say(String text, {AnnouncementPriority priority = AnnouncementPriority.normal}) {
-    queue.add(text, priority: priority);
+  /// Sadece konuşma (titreşim/kısa ses yok). Konuşma bitince tamamlanır.
+  Future<void> say(String text,
+      {AnnouncementPriority priority = AnnouncementPriority.normal}) {
+    return queue.add(text, priority: priority);
   }
 
   /// Bir durum olayını bildirir.

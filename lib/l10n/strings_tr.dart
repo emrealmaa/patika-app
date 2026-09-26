@@ -13,6 +13,7 @@ abstract final class Tr {
   // --- Bağlantı ------------------------------------------------------------
   static const glassesConnected = 'Gözlük bağlandı';
   static const glassesDisconnected = 'Gözlük bağlantısı koptu';
+  static const glassesDisconnectedByUser = 'Gözlük bağlantısı kesildi';
   static const simulationMode = 'Simülasyon modu';
   static const simulationOn = 'Gözlük donanımı simüle ediliyor';
   static const simulationOff = 'Gerçek BLE ile taranıyor (donanım gerekir)';
@@ -29,6 +30,34 @@ abstract final class Tr {
   static const stateConnecting = 'Bağlanıyor…';
   static const stateConnected = 'Bağlı';
   static String connectionStatus(String state) => 'Bağlantı durumu: $state';
+  static const cannotReachGlasses = 'Gözlüğe bağlanılamıyor, denemeye devam ediyorum';
+  static String batteryVisual(int percent) => 'Gözlük pili: %$percent';
+  static String batterySpoken(int percent) => 'gözlük pili yüzde $percent';
+
+  // --- Gözlük olayları -----------------------------------------------------
+  static const buttonTap = 'Tek dokunuş';
+  static const buttonDoubleTap = 'Çift dokunuş';
+  static const buttonLongPress = 'Uzun basış';
+  static const gestureDoubleNod = 'Çift baş sallama';
+  static String glassesEvent(String event) => 'Gözlük: $event';
+
+  // --- Arka plan servisi ---------------------------------------------------
+  static const notificationChannel = 'Patika bağlantısı';
+  static const notificationChannelDescription =
+      'Gözlük bağlantısının arka planda sürmesi için kalıcı bildirim';
+  static const notificationTitle = 'Patika';
+  static const notificationConnected = 'Patika gözlüğe bağlı';
+  static const notificationSearching = 'Gözlük aranıyor';
+  static const notificationDisconnected = 'Gözlük bağlı değil';
+
+  // --- İzinler -------------------------------------------------------------
+  static const notificationPermissionWhy =
+      'Gözlük bağlantısı ekran kapalıyken de sürsün diye bildirim izni isteyeceğim.';
+  static const bluetoothPermissionWhy =
+      'Gözlüğü bulup bağlanabilmem için Bluetooth izni isteyeceğim.';
+  static const permissionDenied = 'İzin verilmedi. Ayarlardan daha sonra verebilirsiniz.';
+  static const permissionPermanentlyDenied =
+      'Bu izin daha önce reddedildi. Telefon ayarlarından, uygulamalar bölümünden Patika için izin verebilirsiniz.';
 
   // --- Komut geçmişi -------------------------------------------------------
   static const success = 'Başarılı';
@@ -107,6 +136,18 @@ abstract final class Tr {
   static const obstacleDistance = 'Engel mesafesi';
   static String meters(double m) => '${m.toStringAsFixed(1).replaceAll('.', ',')} metre';
   static const obstacleNone = 'Engel yok';
+  static const glassesSimulation = 'Gözlük simülasyonu';
+  static const glassesSimulationHint =
+      'Gözlüğün buton, jest ve pil olaylarını ve bağlantı sorunlarını taklit eder.';
+  static const glassesBattery = 'Gözlük pil seviyesi';
+  static String percent(int p) => 'yüzde $p';
+  static const heartbeatPaused = 'Gözlük donmuş gibi davransın';
+  static const heartbeatPausedHint =
+      'Gözlük sinyal göndermeyi keser. Birkaç saniye içinde bağlantı kopmuş sayılmalı.';
+  static const glassesUnreachable = 'Gözlük menzil dışında';
+  static const glassesUnreachableHint =
+      'Bağlantı kopar ve yeniden bağlanma denemeleri başarısız olur.';
+  static String lastHaptic(String name) => 'Gözlüğe giden son titreşim: $name';
 
   static String hapticName(String id) => switch (id) {
         'connected' => 'Bağlandı',

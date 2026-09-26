@@ -13,7 +13,11 @@ void main() {
 }
 
 class PatikaApp extends StatelessWidget {
-  const PatikaApp({super.key});
+  /// Testler sahte TTS/titreşim ve kapalı otomatik başlatmayla bir
+  /// AppState verebilsin diye; uygulamada null (varsayılan AppState).
+  final AppState Function()? appStateFactory;
+
+  const PatikaApp({super.key, this.appStateFactory});
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +29,15 @@ class PatikaApp extends StatelessWidget {
       locale: const Locale('tr', 'TR'),
       supportedLocales: const [Locale('tr', 'TR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: const HomePage(),
+      home: HomePage(appStateFactory: appStateFactory),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final AppState Function()? appStateFactory;
+
+  const HomePage({super.key, this.appStateFactory});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -44,7 +50,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _appState = AppState();
+    _appState = widget.appStateFactory?.call() ?? AppState();
     _appState.addListener(_onStateChanged);
   }
 

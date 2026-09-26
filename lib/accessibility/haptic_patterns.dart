@@ -100,6 +100,25 @@ abstract class HapticOutput {
   void updateObstacle(double? distanceMeters, {required double scale});
 }
 
+/// Aynı deseni birden çok çıkışta (telefon + gözlük) çalar.
+class CompositeHaptics implements HapticOutput {
+  final List<HapticOutput> outputs;
+
+  CompositeHaptics(this.outputs);
+
+  @override
+  Future<void> play(HapticPatternId id, {required double scale}) async {
+    await Future.wait(outputs.map((o) => o.play(id, scale: scale)));
+  }
+
+  @override
+  void updateObstacle(double? distanceMeters, {required double scale}) {
+    for (final o in outputs) {
+      o.updateObstacle(distanceMeters, scale: scale);
+    }
+  }
+}
+
 class PhoneHaptics implements HapticOutput {
   Timer? _obstacleTimer;
   Duration? _obstacleInterval;
