@@ -9,6 +9,7 @@ abstract final class Tr {
   static const tabSettings = 'Ayarlar';
   static const unexpectedError = 'Bir hata oluştu, komut tamamlanamadı';
   static const unknownCommand = 'Bu komutu anlayamadım';
+  static String unknownCommandHeard(String heard) => '"$heard" komutunu anlayamadım';
 
   // --- Bağlantı ------------------------------------------------------------
   static const glassesConnected = 'Gözlük bağlandı';

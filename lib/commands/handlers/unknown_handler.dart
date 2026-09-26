@@ -5,7 +5,12 @@ import '../action_result.dart';
 /// wire değeri - bkz. PatikaIntent.fromWireName). phone_bridge.isle()'deki
 /// "Bu komutu anlayamadım" davranışının karşılığı.
 class UnknownHandler {
+  /// [entity] sesli komutta duyulan metindir (varsa): "Şunu anladım" +
+  /// "anlayamadım" iki cümle yerine tek cümlede söyleniyor.
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(Tr.unknownCommand);
+    if (entity == null || entity.trim().isEmpty) {
+      return ActionResult.fail(Tr.unknownCommand);
+    }
+    return ActionResult.fail(Tr.unknownCommandHeard(entity.trim()));
   }
 }

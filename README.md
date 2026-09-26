@@ -58,8 +58,9 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | SOS | "Yardım", "imdat", "acil durum" | Faz 7 (şimdilik hazır değil der) |
 | HAVA / HABER / MÜZİK / OKU / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (Faz 5, 8) |
 
-"Dur", "tekrar et" gibi kontrol komutları "Şunu anladım" teyidi olmadan
-hemen uygulanır. "Yardım" kelimesi acil durum için ayrılmıştır; komut
+"Şunu anladım: …" teyidi yalnızca telefon eylemi başlatan komutlarda (ara,
+mesaj gönder, götür) söylenir: yanlış duyulan bir isim yanlış kişiyi
+aratmasın. Bilgi, ayar ve kontrol komutları hemen uygulanır. "Yardım" kelimesi acil durum için ayrılmıştır; komut
 listesi "ne yapabilirim" ile açılır.
 
 ## Dokümanlar

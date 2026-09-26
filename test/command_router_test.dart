@@ -54,6 +54,18 @@ void main() {
       expect(result.message, isNotEmpty);
     });
 
+    test('BİLİNMİYOR: duyulan metin varsa tek cümlede söylenir', () async {
+      final result = await router.route(
+        BleCommand.fromWire('BİLİNMİYOR', 'uçan halı'),
+      );
+      expect(result.message, '"uçan halı" komutunu anlayamadım');
+    });
+
+    test('teyit yalnızca telefon eylemi başlatan niyetlerde', () {
+      final confirmed = PatikaIntent.values.where((i) => i.needsConfirmation).toSet();
+      expect(confirmed, {PatikaIntent.ara, PatikaIntent.mesaj, PatikaIntent.navigasyon});
+    });
+
     test('Bilinmeyen bir wire değeri BİLİNMİYOR olarak ele alınır', () async {
       final result = await router.route(
         BleCommand.fromWire('YENİ_BİR_NİYET', null),

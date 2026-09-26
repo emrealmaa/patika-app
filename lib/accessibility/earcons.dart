@@ -17,12 +17,16 @@ abstract class EarconPlayer {
 }
 
 class AudioplayersEarconPlayer implements EarconPlayer {
-  /// Kısa bildirim sesi olarak işaretleniyor: müziği durdurmaz, kısa süre
-  /// kısar; TTS ile aynı şekilde kulaklığa yönlenir.
+  /// TTS ile AYNI kanal (navigasyon rehberliği -> pratikte medya sesi):
+  /// konuşmayı duyan kullanıcı kısa sesi de mutlaka duyar, ikisi aynı ses
+  /// tuşuyla ayarlanır. Önceki "sistem sesi" (assistanceSonification) kanalı
+  /// sistem sesleri kısık telefonlarda tamamen sessizdi - kullanıcı
+  /// dinlemenin başladığını hiç duymuyordu (Galaxy S24 FE'de sistem sesi
+  /// 0/15, medya 12/15 iken doğrulandı). Müziği durdurmaz, kısa süre kısar.
   static final _context = AudioContext(
     android: AudioContextAndroid(
       contentType: AndroidContentType.sonification,
-      usageType: AndroidUsageType.assistanceSonification,
+      usageType: AndroidUsageType.assistanceNavigationGuidance,
       audioFocus: AndroidAudioFocus.gainTransientMayDuck,
     ),
   );

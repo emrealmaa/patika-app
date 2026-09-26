@@ -46,23 +46,52 @@ void main() {
       });
     });
 
-    test('normal komut: "Şunu anladım" -> komut işlenir -> sonuç okunur', () {
+    test('bilgi komutu teyitsiz: "saat kaç" -> doğrudan sonuç', () {
       fakeAsync((async) {
         final h = Harness();
         h.app.voice.startListening(ListenSource.screen);
         async.elapse(listenDelay);
 
         h.speech.say('saat kaç');
-        async.flushMicrotasks();
-        expect(h.tts.spoken, ['Şunu anladım: saat kaç']);
-        expect(h.app.voice.phase, VoicePhase.processing);
-
-        async.elapse(VoiceController.confirmGap);
         h.speakAll(async);
-        expect(h.tts.spoken.last, startsWith('Saat '));
+        expect(h.tts.spoken, hasLength(1));
+        expect(h.tts.spoken.single, startsWith('Saat '));
         expect(h.app.log.first.intent, PatikaIntent.saat);
         expect(h.app.voice.phase, VoicePhase.idle);
         expect(h.app.voice.lastHeard, 'saat kaç');
+        h.dispose();
+      });
+    });
+
+    test('telefon eylemi teyitli: önce "Şunu anladım", beklemeden sonra eylem', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.voice.startListening(ListenSource.screen);
+        async.elapse(listenDelay);
+
+        h.speech.say("Ahmet'i ara");
+        async.flushMicrotasks();
+        expect(h.tts.spoken, ["Şunu anladım: Ahmet'i ara"]);
+        expect(h.app.voice.phase, VoicePhase.processing);
+        expect(h.app.log, isEmpty, reason: 'teyit bitmeden eylem başlamaz');
+
+        async.elapse(VoiceController.confirmGap);
+        h.speakAll(async);
+        expect(h.app.log.first.intent, PatikaIntent.ara);
+        expect(h.app.voice.phase, VoicePhase.idle);
+        h.dispose();
+      });
+    });
+
+    test('anlaşılamayan komut tek cümlede, duyulan metinle bildirilir', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.voice.startListening(ListenSource.screen);
+        async.elapse(listenDelay);
+
+        h.speech.say('merhaba nasılsın');
+        h.speakAll(async);
+        expect(h.tts.spoken, ['"merhaba nasılsın" komutunu anlayamadım']);
         h.dispose();
       });
     });
@@ -129,7 +158,8 @@ void main() {
         final h = Harness();
         h.app.voice.startListening(ListenSource.screen);
         async.elapse(listenDelay);
-        h.speech.say('saat kaç');
+        // Teyitli komut: teyit beklenirken "işleniyor" durumunda kalır.
+        h.speech.say("Ahmet'i ara");
         async.flushMicrotasks();
 
         h.app.voice.startListening(ListenSource.glasses);

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../accessibility/feedback_hub.dart';
 import '../ble/ble_command.dart';
+import '../commands/intent.dart';
 import '../commands/voice_intent_classifier.dart';
 import '../l10n/strings_tr.dart';
 import '../settings/settings.dart';
@@ -18,9 +19,10 @@ enum VoicePhase { idle, preparing, listening, processing }
 /// - Aynı çağrı dinleme sürerken gelirse dinlemeyi iptal eder (aç/kapat).
 /// - Dinlemeden önce süren konuşmayı susturur: tetikleyiciyle araya girme
 ///   (barge-in). Kendi sesimizi de mikrofona kaydetmemiş oluruz.
-/// - Kontrol komutları ("dur", "tekrar et", "ne yapabilirim") "Şunu
-///   anladım" teyidi olmadan hemen uygulanır - aksi halde "tekrar et" o
-///   teyit cümlesini tekrar ederdi.
+/// - "Şunu anladım" teyidi yalnızca telefon eylemi başlatan komutlarda
+///   (ARA/MESAJ/NAVİGASYON - [PatikaIntent.needsConfirmation]) söylenir.
+///   Bilgi, ayar ve kontrol komutları hemen uygulanır; "tekrar et" de böylece
+///   teyit cümlesini değil son sonucu tekrarlar.
 class VoiceController extends ChangeNotifier {
   /// "Dinliyorum" duyurusu ile mikrofonun açılması arasındaki bekleme -
   /// TTS'in sesi mikrofona komut olarak girmesin. Kısa ses ~0,2 sn sürüyor.
@@ -148,11 +150,17 @@ class VoiceController extends ChangeNotifier {
 
     _lastHeard = text;
     _setPhase(VoicePhase.processing);
-    final command = classifyVoiceCommand(text);
+    var command = classifyVoiceCommand(text);
 
-    if (!command.intent.isControl) {
+    if (command.intent.needsConfirmation) {
+      // Telefon eylemi başlatan komutlar: yanlış duyulmuşsa kullanıcı
+      // eylemden önce fark etsin.
       _feedback.signal(FeedbackEvent.understood, text: Tr.heard(text));
       await Future.delayed(confirmGap);
+    } else if (command.intent == PatikaIntent.bilinmiyor) {
+      // Teyit + "anlayamadım" iki cümle yerine tek cümle: duyulan metin
+      // sonuca ekleniyor (kullanıcı neyin yanlış duyulduğunu yine öğrenir).
+      command = BleCommand(intent: PatikaIntent.bilinmiyor, entity: text);
     }
 
     try {
