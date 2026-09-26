@@ -1,31 +1,97 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 
-/// ARA/MESAJ niyetlerindeki `entity` (örn. "Emre") bir kişi ADI - gerçek bir
-/// arama/mesaj için numaraya çözülmesi gerekiyor. Python tarafındaki
-/// intent_classifier/gemini_classifier sadece ismi çıkarıyor, numara
-/// bilgisi yok (bkz. patika/NOTES.md - companion app inceleme notları).
+import '../contacts/alias_store.dart';
+import '../contacts/contact_matcher.dart';
+
+/// Rehber soyutlaması - testlerde sahte bir liste veriliyor.
+abstract class ContactSource {
+  /// Numarası olan tüm kişiler (numarasız kişiler arama/mesaj/numara için
+  /// işe yaramaz, eşleştirmeye hiç girmez).
+  Future<List<ContactEntry>> loadAll();
+}
+
+class FlutterContactsSource implements ContactSource {
+  @override
+  Future<List<ContactEntry>> loadAll() async {
+    final contacts = await FlutterContacts.getAll(properties: {ContactProperty.phone});
+    return [
+      for (final c in contacts)
+        if (c.phones.isNotEmpty && (c.displayName ?? '').trim().isNotEmpty)
+          ContactEntry(c.id ?? '', c.displayName!.trim(), [
+            for (final p in c.phones) p.number,
+          ]),
+    ];
+  }
+}
+
+/// ARA/MESAJ/NUMARA niyetlerindeki `entity` (örn. "annemi", "Mehmet'in")
+/// bir kişi ADI - numaraya çözülmesi gerekiyor. Takma adlar, Türkçe ek
+/// atma ve bulanık eşleştirme [ContactMatcher]'da; burada rehberin
+/// okunması, izin ve kısa süreli önbellek var.
 class ContactResolver {
-  /// READ_CONTACTS izni isteyip verilmediyse false döner. `PermissionStatus.limited`
-  /// (iOS 18+ "sadece seçili kişiler") de yeterli sayılıyor - kısmi erişimle bile
-  /// isim aramak mantıklı.
-  Future<bool> requestPermission() async {
+  /// Rehber bu kadar süre önbellekte tutulur - her komutta binlerce kişiyi
+  /// yeniden okumamak için; yeni eklenen kişi en geç bu süre sonra görünür.
+  static const cacheFor = Duration(seconds: 60);
+
+  final ContactSource _source;
+  final AliasStore aliases;
+  final Future<bool> Function() _ensurePermission;
+  final ContactMatcher _matcher;
+  final DateTime Function() _now;
+
+  List<ContactEntry>? _cache;
+  DateTime? _cachedAt;
+
+  ContactResolver({
+    ContactSource? source,
+    AliasStore? aliases,
+    Future<bool> Function()? ensurePermission,
+    ContactMatcher matcher = const ContactMatcher(),
+    DateTime Function()? now,
+  })  : _source = source ?? FlutterContactsSource(),
+        aliases = aliases ?? MemoryAliasStore(),
+        _ensurePermission = ensurePermission ?? _defaultPermission,
+        _matcher = matcher,
+        _now = now ?? DateTime.now;
+
+  /// Sesli açıklama olmadan (eski davranış) - AppState açıklamalı sürümü
+  /// veriyor (PermissionExplainer). `limited` (iOS "seçili kişiler") de
+  /// yeterli sayılıyor.
+  static Future<bool> _defaultPermission() async {
     final status = await FlutterContacts.permissions.request(PermissionType.read);
     return status == PermissionStatus.granted || status == PermissionStatus.limited;
   }
 
-  /// İsme göre rehberde arama yapar (native filter zaten kısmi/case-insensitive
-  /// eşleştiriyor - bkz. ContactFilter.name). Birden fazla eşleşme varsa
-  /// ilkini döner; hangi kişinin kastedildiği belirsizse (aynı isimde birden
-  /// fazla kişi) bunu ayırt etmek şimdilik kapsam dışı (bkz. patika_app/TODO.md).
-  Future<Contact?> findByName(String name) async {
-    final granted = await requestPermission();
-    if (!granted) return null;
+  /// Söylenen adı bir kişiye çözer (önce takma adlar, sonra rehber).
+  Future<ContactMatch> resolve(String spokenName) async {
+    final contacts = await _contacts();
+    if (contacts == null) return const ContactPermissionDenied();
+    return _matcher.match(spokenName, contacts, aliases: await aliases.readAll());
+  }
 
-    final contacts = await FlutterContacts.getAll(
-      properties: {ContactProperty.phone},
-      filter: ContactFilter.name(name.trim()),
-    );
+  /// Takma ad kaydında: söylenen kişi adı rehberde kime karşılık geliyor
+  /// (takma adlara bakmadan).
+  Future<ContactMatch> resolveInContacts(String spokenName) async {
+    final contacts = await _contacts();
+    if (contacts == null) return const ContactPermissionDenied();
+    return _matcher.match(spokenName, contacts);
+  }
 
-    return contacts.isEmpty ? null : contacts.first;
+  /// İzin yoksa null.
+  Future<List<ContactEntry>?> _contacts() async {
+    final cachedAt = _cachedAt;
+    if (_cache != null && cachedAt != null && _now().difference(cachedAt) < cacheFor) {
+      return _cache;
+    }
+    if (!await _ensurePermission()) return null;
+    try {
+      _cache = await _source.loadAll();
+      _cachedAt = _now();
+      return _cache;
+    } catch (e) {
+      debugPrint('[Contacts] rehber okunamadı: $e');
+      rethrow;
+    }
   }
 }

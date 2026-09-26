@@ -76,6 +76,22 @@ abstract final class Tr {
   static const contactNotFoundDetail =
       'Rehber izni verilmemiş ya da isim farklı kaydedilmiş olabilir.';
   static String contactNoNumber(String name) => '$name için kayıtlı numara yok';
+  static const contactsPermissionWhy =
+      'Söylediğiniz kişiyi rehberinizde bulabilmem için rehber izni isteyeceğim.';
+  static const contactsPermissionDenied = 'Rehber izni olmadan kişileri bulamıyorum';
+  /// Faz 3b'deki "hangisi?" diyaloğuna kadar geçici.
+  static String contactAmbiguous(List<String> names) =>
+      '${names.length} kişi buldum: ${names.join(', ')}. Lütfen tam adını söyleyin.';
+  static const numberNoTarget = 'Kimin numarasını istediğinizi anlayamadım';
+  static String numberIs(String name, String spokenDigits) => '$name: $spokenDigits';
+  static const aliasNotUnderstood =
+      'Takma adı ve kişiyi anlayamadım. Örneğin: annemi Fatma Yılmaz olarak kaydet.';
+  static String aliasSaved(String alias, String name) =>
+      'Tamam. $alias dediğinizde $name anlayacağım';
+  static const aliasNone = 'Kayıtlı takma ad yok';
+  static String aliasList(List<String> entries) => 'Takma adlar: ${entries.join('. ')}';
+  static String aliasRemoved(String alias) => '$alias takma adı silindi';
+  static String aliasMissing(String alias) => '$alias adında bir takma ad yok';
   static const dialerFailed = 'Arama uygulaması açılamadı';
   static String dialerOpened(String name) => '$name için arama ekranı açıldı';
   static const dialerOpenedDetail = 'Aramak için ekrandaki arama tuşuna basın.';

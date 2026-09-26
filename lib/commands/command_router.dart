@@ -5,6 +5,7 @@ import '../l10n/strings_tr.dart';
 import '../settings/settings_store.dart';
 import 'action_result.dart';
 import 'intent.dart';
+import 'handlers/alias_handler.dart';
 import 'handlers/call_handler.dart';
 import 'handlers/control_handler.dart';
 import 'handlers/crossing_mode_handler.dart';
@@ -12,6 +13,7 @@ import 'handlers/message_handler.dart';
 import 'handlers/music_handler.dart';
 import 'handlers/navigation_handler.dart';
 import 'handlers/news_handler.dart';
+import 'handlers/number_handler.dart';
 import 'handlers/ocr_handler.dart';
 import 'handlers/settings_handler.dart';
 import 'handlers/time_handler.dart';
@@ -35,6 +37,8 @@ class CommandRouter {
   final CrossingModeHandler _crossingMode;
   final SettingsHandler _settings;
   final ControlHandler _control;
+  final NumberHandler _number;
+  final AliasHandler _alias;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -49,6 +53,8 @@ class CommandRouter {
     CrossingModeHandler? crossingMode,
     SettingsHandler? settings,
     ControlHandler? control,
+    NumberHandler? number,
+    AliasHandler? alias,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
@@ -62,6 +68,8 @@ class CommandRouter {
         _settings = settings ??
             SettingsHandler(SettingsStore(MemorySettingsPersistence())),
         _control = control ?? ControlHandler(),
+        _number = number ?? NumberHandler(),
+        _alias = alias ?? AliasHandler(),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -93,6 +101,10 @@ class CommandRouter {
           return await _crossingMode.handle(command.entity);
         case PatikaIntent.ayar:
           return await _settings.handle(command.entity);
+        case PatikaIntent.numara:
+          return await _number.handle(command.entity);
+        case PatikaIntent.takmaAd:
+          return await _alias.handle(command.entity);
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

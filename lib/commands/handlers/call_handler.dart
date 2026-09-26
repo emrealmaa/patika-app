@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
+import 'contact_lookup.dart';
 
 /// ARA niyeti. phone_bridge.py'deki simüle "CALL" eyleminin gerçek karşılığı.
 ///
@@ -22,23 +23,20 @@ class CallHandler {
       return ActionResult.fail(Tr.callNoTarget);
     }
 
-    final contact = await _contacts.findByName(entity);
-    if (contact == null) {
-      return ActionResult.fail(Tr.contactNotFound(entity),
-          detail: Tr.contactNotFoundDetail);
-    }
-    final phones = contact.phones;
-    if (phones.isEmpty) {
-      return ActionResult.fail(Tr.contactNoNumber(contact.displayName ?? entity));
+    // Takma ad, Türkçe ek atma ve bulanık eşleştirme (bkz. ContactMatcher).
+    final (contact, failure) = await lookupContact(_contacts, entity);
+    if (contact == null) return failure!;
+    if (contact.phones.isEmpty) {
+      return ActionResult.fail(Tr.contactNoNumber(contact.displayName));
     }
 
-    final number = phones.first.number;
+    final number = contact.phones.first;
     final uri = Uri(scheme: 'tel', path: number);
     final launched = await launchUrl(uri);
     if (!launched) {
       return ActionResult.fail(Tr.dialerFailed);
     }
-    return ActionResult.ok(Tr.dialerOpened(contact.displayName ?? entity),
+    return ActionResult.ok(Tr.dialerOpened(contact.displayName),
         detail: Tr.dialerOpenedDetail);
   }
 }

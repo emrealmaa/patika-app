@@ -62,6 +62,11 @@ const intentLexicon = [
     Keyword(['görüş'], _v, 2),
     Keyword(['konuş'], _v, 1),
   ], comitative: true),
+  IntentEntry('NUMARA', EntityKind.person, [
+    Keyword(['numara'], _n, 2),
+    Keyword(['telefon'], _n, 1),
+    Keyword(['söyle'], _v, 1),
+  ]),
   IntentEntry('NAVİGASYON', EntityKind.place, [
     Keyword(['git', 'gid'], _v, 2),
     Keyword(['götür'], _v, 2),

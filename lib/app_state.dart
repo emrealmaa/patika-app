@@ -20,9 +20,15 @@ import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
 import 'ble/simulated_ble_service.dart';
 import 'commands/command_router.dart';
+import 'commands/contact_resolver.dart';
+import 'commands/handlers/alias_handler.dart';
+import 'commands/handlers/call_handler.dart';
+import 'commands/handlers/message_handler.dart';
+import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
 import 'commands/log_entry.dart';
+import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
 import 'settings/settings_store.dart';
@@ -81,6 +87,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     SpeechInput? speechInput,
     Future<bool> Function()? ensureMicPermission,
     TutorialProgress? tutorialProgress,
+    ContactResolver? contacts,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -99,7 +106,20 @@ class AppState extends ChangeNotifier implements ControlActions {
     );
     a11y.attachFeedbackHub(feedback);
     permissions = PermissionExplainer(feedback);
+    // Tüm kişi işlemleri (ARA/MESAJ/NUMARA/TAKMA_AD) aynı çözücüyü
+    // paylaşıyor: rehber önbelleği ve takma adlar ortak; rehber izni sesli
+    // açıklamayla isteniyor.
+    final resolver = contacts ??
+        ContactResolver(
+          aliases: SharedPrefsAliasStore(),
+          ensurePermission: () =>
+              permissions.ensure(Permission.contacts, Tr.contactsPermissionWhy),
+        );
     router = CommandRouter(
+      call: CallHandler(contacts: resolver),
+      message: MessageHandler(contacts: resolver),
+      number: NumberHandler(contacts: resolver),
+      alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),
       control: ControlHandler(this),
     );

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/strings_tr.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
+import 'contact_lookup.dart';
 
 /// MESAJ niyeti. phone_bridge.py'deki simüle "SEND_MESSAGE" eyleminin
 /// gerçek karşılığı.
@@ -25,23 +26,20 @@ class MessageHandler {
       return ActionResult.fail(Tr.messageNoTarget);
     }
 
-    final contact = await _contacts.findByName(entity);
-    if (contact == null) {
-      return ActionResult.fail(Tr.contactNotFound(entity),
-          detail: Tr.contactNotFoundDetail);
-    }
-    final phones = contact.phones;
-    if (phones.isEmpty) {
-      return ActionResult.fail(Tr.contactNoNumber(contact.displayName ?? entity));
+    // Takma ad, Türkçe ek atma ve bulanık eşleştirme (bkz. ContactMatcher).
+    final (contact, failure) = await lookupContact(_contacts, entity);
+    if (contact == null) return failure!;
+    if (contact.phones.isEmpty) {
+      return ActionResult.fail(Tr.contactNoNumber(contact.displayName));
     }
 
-    final number = phones.first.number;
+    final number = contact.phones.first;
     final uri = Uri(scheme: 'sms', path: number);
     final launched = await launchUrl(uri);
     if (!launched) {
       return ActionResult.fail(Tr.smsFailed);
     }
-    return ActionResult.ok(Tr.smsOpened(contact.displayName ?? entity),
+    return ActionResult.ok(Tr.smsOpened(contact.displayName),
         detail: Tr.smsOpenedDetail);
   }
 }

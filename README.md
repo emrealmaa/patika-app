@@ -46,10 +46,12 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 
 | Niyet | Örnek | Durum |
 |---|---|---|
-| ARA | "Ahmet'i ara", "ara Emre" | Arama ekranını numarayla açar |
+| ARA | "Ahmet'i ara", "annemi arar mısın" | Arama ekranını numarayla açar |
 | MESAJ | "Ayşe'ye mesaj gönder" | SMS ekranını açar |
 | NAVİGASYON | "Kadıköy iskelesine götür" | Google Maps yürüyüş yönlendirmesi |
 | SAAT | "Saat kaç" | ✅ |
+| NUMARA | "Mehmet'in numarasını söyle" | ✅ Numarayı rakam rakam okur |
+| TAKMA AD | "Annemi Fatma Yılmaz olarak kaydet", "takma adları oku", "annem takma adını sil" | ✅ |
 | AYAR | "Daha hızlı konuş", "kısa anlat", "titreşimi azalt" | ✅ |
 | DUR | "Dur", "sus", "iptal", "vazgeç" | ✅ Konuşmayı keser (her an) |
 | TEKRAR | "Tekrar et", "ne dedin" | ✅ Son söyleneni tekrarlar |

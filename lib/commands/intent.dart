@@ -15,6 +15,13 @@ enum PatikaIntent {
   /// sadece telefon mikrofonundan gelir. Entity: [SettingAction] adı.
   ayar,
 
+  /// "Mehmet'in numarasını söyle" - kişinin numarasını okur.
+  numara,
+
+  /// "annemi Fatma Yılmaz olarak kaydet", "takma adları oku", "annem takma
+  /// adını sil". Entity: "kaydet|A|B", "oku", "sil|A" (bkz. AliasHandler).
+  takmaAd,
+
   /// Evrensel konuşma kontrolü (Faz 2) - telefon tarafına özgü. Bunlar
   /// "Şunu anladım" teyidi olmadan hemen uygulanır.
   dur,
@@ -68,6 +75,10 @@ enum PatikaIntent {
         return PatikaIntent.navigasyon;
       case 'AYAR':
         return PatikaIntent.ayar;
+      case 'NUMARA':
+        return PatikaIntent.numara;
+      case 'TAKMA_AD':
+        return PatikaIntent.takmaAd;
       case 'DUR':
         return PatikaIntent.dur;
       case 'TEKRAR':

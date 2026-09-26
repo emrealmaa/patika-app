@@ -34,6 +34,7 @@ göre veriliyor.
 | **VoiceController** | `lib/voice/voice_controller.dart` | Tüm tetikleyicilerin tek dinleme kapısı. Aç/kapat; dinlemeden önce TTS'i susturur (tetikleyiciyle araya girme); mikrofon iznini sesli açıklamayla ister; kontrol komutlarını ("dur", "tekrar et") teyitsiz uygular. |
 | **Tutorial** | `lib/tutorial/tutorial.dart` | Sesli eğitim. Yüksek öncelikli bir duyuruyla kesilen adımı tekrar okur (`AnnouncementQueue.add` → `Future<bool>`). "Dinlendi" bilgisi ayarlardan ayrı saklanır. |
 | **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
+| **Kişi eşleştirme** | `lib/contacts/` | Söylenen adı rehberdeki kişiye çözer (ARA/MESAJ/NUMARA). Bkz. aşağıdaki bölüm. |
 | **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları; titreşim gönderme. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
 | **GlassesProtocol** | `lib/ble/glasses_protocol.dart` | JSON mesaj ayrıştırma ve kodlama. Bkz. [ble_protocol.md](ble_protocol.md). |
 | **ConnectionSupervisor** | `lib/ble/connection_supervisor.dart` | Açılışta otomatik bağlanma (son cihaz, yoksa tek bulunan gözlük), heartbeat izleme (6 sn), üstel geri çekilmeli yeniden bağlanma, 3 başarısızlıktan sonra tek uyarı. "Bağlı" ile "sağlıklı" ayrı tutulur. |
@@ -58,6 +59,29 @@ göre veriliyor.
   Bozuk BLE mesajları atlanır.
 - **Sessiz kopma yok:** Bağlantı kaybı `high` öncelikle duyurulur. Engel
   uyarısı ise gözlükte, telefondan bağımsız çalışır (bkz. protokol §5).
+
+## Kişi eşleştirme (`lib/contacts/`)
+
+Söylenen ad ("annemi", "Mehmet'in", "Ayse") rehberdeki kişiye üç adımda çözülür:
+
+1. **Kök adayları** (`turkish_stemmer.dart`): Tek bir kök tahmin edilmez; tüm
+   makul kökler üretilir ("annemi" → annemi, annem, anne; "Ali" → ali, al) ve
+   **rehber karar verir**. Orijinal biçim her zaman aday ve cezasız olduğu için
+   "Ali" asla "Al"a düşmez. Kesme işaretinden sonrası her zaman ektir.
+2. **Takma adlar** (`alias_store.dart`): Önce bakılır ("annem" → Fatma Yılmaz).
+   Sesle tanımlanır: "annemi Fatma Yılmaz olarak kaydet". Yalnızca telefonda saklanır.
+3. **Bulanık eşleştirme** (`contact_matcher.dart`): Türkçe karakterler
+   sadeleştirilir ("Ayse" → Ayşe), Jaro-Winkler ile tam ad ve ad/soyad
+   parçalarına karşı puanlanır. Eşik 0,88. En iyiye 0,03 kadar yakın başka
+   kişiler varsa sonuç **belirsiz**dir ("iki Ahmet var"). Faz 3b bunu "hangisi?"
+   diye soracak.
+
+Rehber 60 sn önbellekte tutulur (`ContactResolver`). İzin sesli açıklamayla istenir.
+
+**Neden Zemberek değil:** Zemberek bir Java kütüphanesi. Dart sürümü yok,
+Android'de platform kanalıyla çalıştırılması ve sözlüğüyle ~20–30 MB eklenmesi
+gerekir, açılışı da yavaşlatır. Kişi adları için kural tabanlı kök adayları +
+rehberin karar vermesi yeterli.
 
 ## Dart motorunun ömrü
 

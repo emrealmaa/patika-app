@@ -43,6 +43,9 @@ BleCommand classifyVoiceCommand(String text) {
     }
   }
 
+  final alias = _aliasCommand(lowered, source);
+  if (alias != null) return BleCommand.fromWire('TAKMA_AD', alias);
+
   return _classifyByKeywords(lowered, source);
 }
 
@@ -82,6 +85,59 @@ final _settingRules = [
   (r'titreşim\p{L}*\s+(?:artır|arttır|güçlendir|yükselt)', SettingAction.hapticStronger),
   (r'titreşim\p{L}*\s+(?:azalt|hafiflet|düşür)', SettingAction.hapticWeaker),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
+
+// --- Takma ad komutları (katı, puanlamadan önce) -------------------------------
+
+final _aliasList = RegExp(r'takma\s+ad\p{L}*\s+(?:oku|söyle|listele|neler)|takma\s+adlarım',
+    unicode: true);
+final _accusativeEnd = RegExp(r'y?[ıiuü]$', unicode: true);
+
+/// "annemi Fatma Yılmaz olarak kaydet" -> "kaydet|annem|Fatma Yılmaz"
+/// "Fatma Yılmaz'ı annem olarak kaydet" -> "kaydet|Fatma Yılmaz|annem"
+/// "takma adları oku" -> "oku";  "annem takma adını sil" -> "sil|annem"
+///
+/// Hangi parçanın takma ad, hangisinin rehberdeki kişi olduğuna handler
+/// rehbere bakarak karar verir (Türkçe'de iki sıra da doğal). Burada yalnızca
+/// belirtme ekli parçadan ikiye bölünüyor (önce kesmeli kelime aranır).
+String? _aliasCommand(String lowered, String source) {
+  if (_aliasList.hasMatch(lowered)) return 'oku';
+
+  final tokens = [
+    for (final m in RegExp(r"[\p{L}\p{N}']+", unicode: true).allMatches(lowered))
+      _Token(m.group(0)!, m.start, m.end),
+  ];
+  String original(int from, int to) =>
+      [for (var i = from; i < to; i++) source.substring(tokens[i].start, tokens[i].end)].join(' ');
+
+  // "... takma adını sil"
+  final takma = tokens.indexWhere((t) => t.lower == 'takma');
+  if (takma > 0 &&
+      takma + 2 < tokens.length &&
+      tokens[takma + 1].lower.startsWith('ad') &&
+      tokens[takma + 2].lower.startsWith('sil')) {
+    return 'sil|${original(0, takma)}';
+  }
+
+  // "... olarak kaydet"
+  final olarak = tokens.indexWhere((t) => t.lower == 'olarak');
+  if (olarak < 2 ||
+      olarak + 1 >= tokens.length ||
+      !tokens[olarak + 1].lower.startsWith('kayde')) {
+    return null;
+  }
+  var split = tokens.indexWhere((t) => t.lower.contains("'"));
+  if (split < 0 || split >= olarak - 1) {
+    split = tokens.indexWhere((t) => _accusativeEnd.hasMatch(t.lower));
+  }
+  if (split < 0 || split >= olarak - 1) return 'kaydet||';
+
+  var first = original(0, split + 1);
+  final apostrophe = first.lastIndexOf("'");
+  first = apostrophe > 0
+      ? first.substring(0, apostrophe)
+      : first.replaceFirst(_accusativeEnd, '');
+  return 'kaydet|$first|${original(split + 1, olarak)}';
+}
 
 // --- Anahtar kelime motoru ----------------------------------------------------
 
