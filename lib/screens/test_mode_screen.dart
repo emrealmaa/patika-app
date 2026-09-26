@@ -180,6 +180,18 @@ class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
           OutlinedButton(onPressed: action, child: Text(label)),
           const SizedBox(height: 8),
         ],
+        OutlinedButton(
+          onPressed: () => Future.delayed(
+            const Duration(seconds: 5),
+            () => _sim.injectButton(GlassesButton.tap),
+          ),
+          child: Semantics(
+            label: '${Tr.delayedTap}. ${Tr.delayedTapHint}',
+            excludeSemantics: true,
+            child: const Text(Tr.delayedTap),
+          ),
+        ),
+        const SizedBox(height: 8),
         if (lastEvent != null)
           Semantics(container: true, child: Text(Tr.glassesEvent(lastEvent))),
         const SizedBox(height: 8),
@@ -307,14 +319,13 @@ class _FeedbackTestSectionState extends State<_FeedbackTestSection> {
           label: const Text(Tr.playEarcon),
         ),
         const SizedBox(height: 16),
-        Semantics(
-          button: true,
-          label: Tr.priorityTestLabel,
-          excludeSemantics: true,
-          child: OutlinedButton.icon(
-            onPressed: _runPriorityTest,
-            icon: const Icon(Icons.low_priority),
-            label: const Text(Tr.priorityTest),
+        OutlinedButton.icon(
+          onPressed: _runPriorityTest,
+          icon: const Icon(Icons.low_priority),
+          label: Semantics(
+            label: Tr.priorityTestLabel,
+            excludeSemantics: true,
+            child: const Text(Tr.priorityTest),
           ),
         ),
         const SizedBox(height: 16),

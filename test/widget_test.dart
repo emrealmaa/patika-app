@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:patika_app/app_state.dart';
@@ -101,6 +102,47 @@ void main() {
     await tester.scrollUntilVisible(logLine, 300,
         scrollable: find.byType(Scrollable).first);
     expect(logLine, findsOneWidget);
+  });
+
+  // Koruma testi: bir butonu dışarıdan Semantics(excludeSemantics: true) ile
+  // sarmak dokunma eylemini siliyordu - TalkBack butonu okuyor ama çift
+  // dokunuş hiçbir şey yapmıyordu ("Bağlan" butonu dahil, emülatörde
+  // bulundu). Her sekmedeki her etkin buton TalkBack'ten tetiklenebilmeli.
+  testWidgets('Her etkin butonun erişilebilirlik düğümünde dokunma eylemi var',
+      (WidgetTester tester) async {
+    // Tüm içerik ekran dışına taşmadan oluşturulsun (liste tembel kurar).
+    tester.view.physicalSize = const Size(1080, 16000);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(testApp());
+    await tester.pump();
+
+    Future<void> expectAllButtonsTappable(String tab) async {
+      await tester.tap(find.text(tab));
+      await tester.pumpAndSettle();
+      if (tab == 'Bağlantı') {
+        // "Bağlan" butonu olan cihaz kartı görünsün.
+        await tester.tap(find.text('Tara'));
+        await tester.pump(const Duration(seconds: 1));
+      }
+      final buttons = tester
+          .widgetList<ButtonStyleButton>(find.bySubtype<ButtonStyleButton>())
+          .where((b) => b.onPressed != null)
+          .toList();
+      expect(buttons, isNotEmpty, reason: tab);
+      for (final button in buttons) {
+        final data = tester.getSemantics(find.byWidget(button)).getSemanticsData();
+        expect(data.hasAction(SemanticsAction.tap), isTrue,
+            reason: '$tab sekmesinde "${data.label}" butonu TalkBack ile tetiklenemiyor');
+      }
+    }
+
+    for (final tab in ['Konuş', 'Bağlantı', 'Test Modu', 'Ayarlar']) {
+      await expectAllButtonsTappable(tab);
+    }
+    semantics.dispose();
   });
 
   testWidgets('Gözlük butonu simülasyonu dinlemeyi başlatır',

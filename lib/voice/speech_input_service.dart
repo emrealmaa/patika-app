@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -37,9 +38,13 @@ class SpeechInputService implements SpeechInput {
   @override
   Future<bool> init() {
     return _speech.initialize(
-      onError: (SpeechRecognitionError e) =>
-          _onError?.call(describeError(e.errorMsg)),
+      onError: (SpeechRecognitionError e) {
+        // Ham kod teşhis için loga (kullanıcıya Türkçe açıklaması gidiyor).
+        debugPrint('[Speech] hata: ${e.errorMsg} (kalıcı: ${e.permanent})');
+        _onError?.call(describeError(e.errorMsg));
+      },
       onStatus: (status) {
+        debugPrint('[Speech] durum: $status');
         if (status == SpeechToText.doneStatus) _onDone?.call();
       },
     );

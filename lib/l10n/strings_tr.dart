@@ -184,6 +184,9 @@ abstract final class Tr {
   static const glassesUnreachableHint =
       'Bağlantı kopar ve yeniden bağlanma denemeleri başarısız olur.';
   static String lastHaptic(String name) => 'Gözlüğe giden son titreşim: $name';
+  static const delayedTap = '5 saniye sonra dokun (arka plan testi)';
+  static const delayedTapHint =
+      'Bu sürede telefonu kilitleyin: ekran kapalıyken dinlemenin başlayıp başlamadığını dener.';
 
   static String hapticName(String id) => switch (id) {
         'connected' => 'Bağlandı',

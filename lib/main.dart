@@ -3,11 +3,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_state.dart';
 import 'l10n/strings_tr.dart';
+import 'platform/launch_actions.dart';
 import 'screens/connection_screen.dart';
 import 'screens/listen_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'theme/app_theme.dart';
+import 'voice/voice_controller.dart';
 
 void main() {
   runApp(const PatikaApp());
@@ -46,6 +48,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late final AppState _appState;
+  late final LaunchActions _launchActions;
   int _tabIndex = 0;
 
   @override
@@ -53,12 +56,21 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _appState = widget.appStateFactory?.call() ?? AppState();
     _appState.addListener(_onStateChanged);
+    // Hızlı Ayarlar karosu: "Konuş" sekmesine geç ve dinlemeyi başlat.
+    _launchActions = LaunchActions(onListen: () {
+      setState(() => _tabIndex = 0);
+      if (!_appState.voice.isActive) {
+        _appState.voice.startListening(ListenSource.tile);
+      }
+    })
+      ..attach();
   }
 
   void _onStateChanged() => setState(() {});
 
   @override
   void dispose() {
+    _launchActions.detach();
     _appState.removeListener(_onStateChanged);
     _appState.dispose();
     super.dispose();

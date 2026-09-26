@@ -89,6 +89,7 @@ class VoiceController extends ChangeNotifier {
     }
 
     _source = source;
+    debugPrint('[Voice] dinleme istendi: ${source.name}');
     _setPhase(VoicePhase.preparing);
     // Tetikleyiciyle araya girme: süren konuşma/eğitim hemen susar.
     _onListenStart?.call();
@@ -109,6 +110,7 @@ class VoiceController extends ChangeNotifier {
     final ready = await _speech.init();
     if (_phase != VoicePhase.preparing) return;
     if (!ready) {
+      debugPrint('[Voice] tanıyıcı hazır değil');
       _setPhase(VoicePhase.idle);
       _feedback.signal(FeedbackEvent.error, text: Tr.speechUnavailable);
       return;
@@ -120,6 +122,7 @@ class VoiceController extends ChangeNotifier {
     if (_phase != VoicePhase.preparing) return;
 
     _setPhase(VoicePhase.listening);
+    debugPrint('[Voice] mikrofon açılıyor');
     await _speech.listen(
       onFinal: _onFinal,
       onError: _onError,
@@ -162,6 +165,7 @@ class VoiceController extends ChangeNotifier {
 
   void _onError(String message) {
     if (_phase != VoicePhase.listening) return;
+    debugPrint('[Voice] dinleme bitti, sonuç yok: $message');
     _setPhase(VoicePhase.idle);
     _feedback.signal(FeedbackEvent.notUnderstood, text: message);
   }

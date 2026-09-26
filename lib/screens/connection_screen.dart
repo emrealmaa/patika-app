@@ -106,12 +106,14 @@ class _DeviceCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Semantics(
-              button: true,
-              label: Tr.connectTo(device.name),
-              excludeSemantics: true,
-              child: ElevatedButton(
-                onPressed: onConnect,
+            // Etiket butonun İÇİNDE: dışarıdan excludeSemantics ile sarmak
+            // butonun dokunma eylemini de siler, TalkBack'te çift dokunuş
+            // hiçbir şey yapmaz.
+            ElevatedButton(
+              onPressed: onConnect,
+              child: Semantics(
+                label: Tr.connectTo(device.name),
+                excludeSemantics: true,
                 child: const Text(Tr.connect),
               ),
             ),

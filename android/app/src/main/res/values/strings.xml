@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Hızlı Ayarlar karosu (ListenTileService). TalkBack karoyu bu adla okur. -->
+    <string name="tile_label">Patika: Konuş</string>
+    <string name="tile_description">Patika\'ya sesli komut ver</string>
+</resources>

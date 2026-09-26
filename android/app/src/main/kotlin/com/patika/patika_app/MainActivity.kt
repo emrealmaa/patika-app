@@ -2,11 +2,13 @@ package com.patika.patika_app
 
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.util.Log
 import com.pravera.flutter_foreground_task.service.ForegroundService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
+import io.flutter.plugin.common.MethodChannel
 
 /**
  * Dart motorunun (BLE bağlantısı, bağlantı denetçisi, duyurular) ömrünü
@@ -34,6 +36,62 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val TAG = "PatikaMainActivity"
         const val ENGINE_ID = "patika_main_engine"
+
+        /** Hızlı Ayarlar karosundan (ListenTileService) gelen "dinle" talimatı. */
+        const val ACTION_LISTEN = "com.patika.patika_app.LISTEN"
+        private const val LAUNCH_CHANNEL = "patika/launch"
+
+        /**
+         * Dart'ın henüz almadığı talimat. Etkinlikte değil burada: talimat
+         * etkinlik yeniden oluşturulsa da kaybolmasın. Dart ya "actionPending"
+         * bildirimiyle ya da açılışta kendisi sorarak alır ve temizler.
+         */
+        @Volatile
+        private var pendingAction: String? = null
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Yapılandırma değişimiyle yeniden oluşturulan etkinlik aynı
+        // talimatı ikinci kez işlemesin.
+        if (savedInstanceState == null) handleLaunchIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        if (intent?.action != ACTION_LISTEN) return
+        pendingAction = "listen"
+        // Dart zaten çalışıyorsa hemen haber ver; çalışmıyorsa (ilk açılış)
+        // Dart hazır olunca consumePendingAction ile kendisi alacak.
+        val engine = FlutterEngineCache.getInstance().get(ENGINE_ID) ?: return
+        if (engine.dartExecutor.isExecutingDart) {
+            MethodChannel(engine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
+                .invokeMethod("actionPending", null)
+        }
+    }
+
+    /**
+     * Motor dışarıdan verildiği için üst sınıf eklentileri tekrar kaydetmez
+     * (motor yapıcısı zaten kaydetti); burada sadece başlatma kanalı kuruluyor.
+     */
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "consumePendingAction" -> {
+                        val action = pendingAction
+                        pendingAction = null
+                        result.success(action)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     /**
