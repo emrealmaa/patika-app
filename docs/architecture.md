@@ -7,7 +7,7 @@ göre veriliyor.
 ## Akış
 
 ```
- Gözlük butonu / jest   Konuş sekmesi   (Faz 2b: QS karosu)
+ Gözlük butonu / jest   Konuş sekmesi   Hızlı Ayarlar karosu
              └──────────────┼──────────────┘
                    VoiceController.startListening()
                             │  SpeechInputService
@@ -32,6 +32,9 @@ göre veriliyor.
 | Modül | Dosya | Görevi |
 |---|---|---|
 | **VoiceController** | `lib/voice/voice_controller.dart` | Tüm tetikleyicilerin tek dinleme kapısı. Aç/kapat; dinlemeden önce TTS'i susturur (tetikleyiciyle araya girme); mikrofon iznini sesli açıklamayla ister; kontrol komutlarını ("dur", "tekrar et") teyitsiz uygular. |
+| **Sınıflandırıcı** | `lib/commands/voice_intent_classifier.dart`, `intent_lexicon.dart` | Tamamen yerel. Önce katı katmanlar (kontrol/SOS, ayar, takma ad, son mesaj), sonra ağırlıklı anahtar kelime puanlaması (tablo `intent_lexicon.dart`'ta). Günlük söyleyiş çeşitliliği tabloya kelime eklenerek karşılanır. |
+| **RecognitionSession** | `lib/voice/recognition_session.dart` | Tek dinleme oturumunun sonucunu bir kez teslim eder. `partialResults` açık: "final" gelmese de son tanınan metin kullanılır; "bitti"den sonra gelen geç sonuç için 1 sn bekler (Galaxy S24 FE'de görüldü). |
+| **LaunchActions** | `lib/platform/launch_actions.dart`, `android/.../ListenTileService.kt` | Hızlı Ayarlar karosu → "dinle". Talimat native tarafta bekletilir (kanal `patika/launch`), Dart hazır olunca alır; ilk açılışta da kaybolmaz. |
 | **Tutorial** | `lib/tutorial/tutorial.dart` | Sesli eğitim. Yüksek öncelikli bir duyuruyla kesilen adımı tekrar okur (`AnnouncementQueue.add` → `Future<bool>`). "Dinlendi" bilgisi ayarlardan ayrı saklanır. |
 | **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
 | **DialogManager** | `lib/voice/dialog_manager.dart`, `lib/voice/dialogs/` | Çok adımlı sesli akışlar (ARA, MESAJ): kişi eksikse sorar, "iki Ahmet var, hangisi?", onay ("Ahmet Kaya'yı arayayım mı?"), mesaj dikte + geri okuma + düzelt. Soru bitince tetikleyici beklemeden dinler; "dur"/"tekrar et" her adımda; cevapsız soru bir kez tekrarlanır, sonra iptal. SOS diyaloğu keser. |
@@ -47,6 +50,7 @@ göre veriliyor.
 | **PermissionExplainer** | `lib/permissions/permission_explainer.dart` | "Önce sesli açıkla, sonra sor": izin penceresinden önce neden gerektiği TTS ile söylenir. |
 | **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü. Ayarlar sesle de değişir (AYAR niyeti). |
 | **Tr** | `lib/l10n/strings_tr.dart` | Kullanıcıya giden tüm Türkçe metinler. |
+| **SentMessageLog** | `lib/commands/sent_messages.dart` | "Gönderdiğim son mesajı oku". Yalnızca bellekte. `play` türünde gönderim doğrulanamadığı için "hazırlanan son mesaj" denir. |
 | **DirectActions** | `lib/platform/direct_actions.dart`, `android/.../DirectActions.kt` | Onaydan sonra doğrudan arama (`TelecomManager.placeCall` - ekran başlatmaz, kilitli ekranda da çalışır) ve SMS (tüm parçalar operatöre ulaşınca "gönderildi"). Yalnızca `direct` derleme türünde; `play` türünde arama/SMS ekranı açılır. |
 
 ## İlkeler
@@ -74,8 +78,8 @@ Söylenen ad ("annemi", "Mehmet'in", "Ayse") rehberdeki kişiye üç adımda ç�
 3. **Bulanık eşleştirme** (`contact_matcher.dart`): Türkçe karakterler
    sadeleştirilir ("Ayse" → Ayşe), Jaro-Winkler ile tam ad ve ad/soyad
    parçalarına karşı puanlanır. Eşik 0,88. En iyiye 0,03 kadar yakın başka
-   kişiler varsa sonuç **belirsiz**dir ("iki Ahmet var"). Faz 3b bunu "hangisi?"
-   diye soracak.
+   kişiler varsa sonuç **belirsiz**dir ("iki Ahmet var"); eşiğin biraz
+   altındaki yakın adaylar da sayılır. DialogManager bunu "hangisi?" diye sorar.
 
 Rehber 60 sn önbellekte tutulur (`ContactResolver`). İzin sesli açıklamayla istenir.
 
@@ -83,6 +87,49 @@ Rehber 60 sn önbellekte tutulur (`ContactResolver`). İzin sesli açıklamayla 
 Android'de platform kanalıyla çalıştırılması ve sözlüğüyle ~20–30 MB eklenmesi
 gerekir, açılışı da yavaşlatır. Kişi adları için kural tabanlı kök adayları +
 rehberin karar vermesi yeterli.
+
+## Derleme türleri (`play` / `direct`)
+
+Android'de `--flavor` her zaman gerekir (`flutter run --flavor play`).
+Uygulama kimliği aynıdır; türler arası geçişte veriler ve izinler korunur.
+
+| Tür | Kısıtlı izinler | Arama / SMS |
+|---|---|---|
+| `play` (Play Store) | Yok | Onaydan sonra arama ekranı / SMS ekranı (metin dolu) açılır, kullanıcı tuşa basar |
+| `direct` (dernek dağıtımı) | `CALL_PHONE`, `SEND_SMS` (yalnızca `android/app/src/direct/AndroidManifest.xml`) | Doğrudan arar / gönderir |
+
+Tek doğruluk kaynağı `BuildConfig.DIRECT_ACTIONS`; Dart bunu `patika/direct`
+kanalından sorar. Ayrı bir Dart bayrağı yoktur, bu yüzden tür ile davranış
+birbirinden sapamaz. `direct` türünde izin reddedilirse ya da arama/SMS
+başlatılamazsa `play` davranışına düşülür ve bu kullanıcıya söylenir.
+
+## İzin mimarisi
+
+Hiçbir izin açılışta toplu istenmez. Her izin **ilk gerektiği anda**,
+`PermissionExplainer.ensure(izin, neden)` ile istenir: önce nedeni TTS ile
+söylenir, sonra sistem penceresi açılır. Reddedilirse özellik zarifçe
+geriler, uygulama çökmez.
+
+| İzin | Ne zaman |
+|---|---|
+| Bildirim (`POST_NOTIFICATIONS`) | Açılışta (arka plan servisinin kalıcı bildirimi için) |
+| Mikrofon | İlk dinlemede (VoiceController) |
+| Rehber | İlk ARA / MESAJ / NUMARA'da |
+| Bluetooth (+ API ≤30 konum) | Gözlük taraması / bağlanma |
+| Arama, SMS (yalnızca `direct`) | İlk doğrudan arama / SMS'te |
+
+Testlerde izin kontrolleri enjekte edilir (`AppState`'in
+`ensureCallPermission` / `ensureSmsPermission` parametreleri), gerçek
+eklenti çağrılmaz.
+
+## Erişilebilirlik kuralları (ekran)
+
+- Her etkileşimli öğe en az 56 dp, bilgi asla yalnızca renkle verilmez.
+- Butonları dıştan `Semantics(excludeSemantics: true)` ile sarmayın:
+  TalkBack'te dokunma eylemi kaybolur. Etiket butonun içinde verilir
+  (bunu koruyan bir test var).
+- Diyalog soruları `dedupe: false` ile kuyruğa eklenir; aksi halde tekrar
+  sorulan soru 3 sn birleştirmesine takılıp diyalog kilitlenir.
 
 ## Dart motorunun ömrü
 
@@ -105,8 +152,11 @@ sonra başlatılır; bu yüzden açılıştaki izin istekleri etkinliği bulabil
 ## Bilinen sınırlar
 
 - Kullanıcı uygulamayı son uygulamalardan kaydırırsa servis de kapanır
-  (`stopWithTask`). Bu bilinçli bir tercih: ölü bir süreç için "bağlı"
+  (`stopWithTask`, **yalnızca manifestte**: `flutter_foreground_task`'ın Dart
+  tarafındaki `stopWithTask` seçeneği uygulama görünmez olunca da servisi
+  durduruyordu). Bu bilinçli bir tercih: ölü bir süreç için "bağlı"
   bildirimi yanıltıcı olurdu.
 - Arka plan servisine mikrofon türü, yalnızca izin zaten verilmişse eklenir
-  (Android 14 kuralı). Ekran kilitliyken dinleme Faz 2'de gerçek cihazda
-  doğrulanacak.
+  (Android 14 kuralı).
+- Konuşmayı kesme (barge-in) yalnızca tetikleyiciyle yapılır; kulaklıkla
+  sürekli dinleyen deneysel araya girme ertelendi.
