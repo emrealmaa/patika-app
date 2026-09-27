@@ -44,6 +44,10 @@ BleCommand classifyVoiceCommand(String text) {
   }
 
   if (_lastSentMessage.hasMatch(lowered)) return BleCommand.fromWire('SON_MESAJ', null);
+  if (_newMessages.hasMatch(lowered)) return BleCommand.fromWire('MESAJLARIM', null);
+  if (_recentNotifications.hasMatch(lowered)) {
+    return BleCommand.fromWire('SON_BİLDİRİMLER', null);
+  }
 
   final alias = _aliasCommand(lowered, source);
   if (alias != null) return BleCommand.fromWire('TAKMA_AD', alias);
@@ -100,6 +104,8 @@ final _settingRules = [
   (r'titreşim\p{L}*\s+kapat', SettingAction.hapticOff),
   (r'titreşim\p{L}*\s+(?:artır|arttır|güçlendir|yükselt)', SettingAction.hapticStronger),
   (r'titreşim\p{L}*\s+(?:azalt|hafiflet|düşür)', SettingAction.hapticWeaker),
+  (r'bildirim\p{L}*\s+(?:sustur|kapat)', SettingAction.notificationsMuteOn),
+  (r'bildirim\p{L}*\s+aç', SettingAction.notificationsMuteOff),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
 // --- Takma ad komutları (katı, puanlamadan önce) -------------------------------
@@ -109,6 +115,14 @@ final _settingRules = [
 final _lastSentMessage = RegExp(
     r'gönderdiğim\s+(?:son\s+)?mesaj|son\s+gönder(?:diğim|ilen)\s+mesaj',
     unicode: true);
+
+/// "mesajlarımı oku", "gelen mesajları oku", "mesajları okur musun" - Faz 4b.
+/// [_lastSentMessage]'dan SONRA denetlenir, "gönderdiğim ... mesaj" burayı
+/// hiç etkilemez.
+final _newMessages = RegExp(r'mesaj\p{L}*\s+oku', unicode: true);
+
+/// "son bildirimleri oku", "bildirimlerimi oku" - Faz 4b.
+final _recentNotifications = RegExp(r'bildirim\p{L}*\s+oku', unicode: true);
 
 final _aliasList = RegExp(r'takma\s+ad\p{L}*\s+(?:oku|söyle|listele|neler)|takma\s+adlarım',
     unicode: true);

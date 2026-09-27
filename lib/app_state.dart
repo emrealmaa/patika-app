@@ -25,9 +25,11 @@ import 'commands/contact_resolver.dart';
 import 'commands/handlers/alias_handler.dart';
 import 'commands/handlers/call_handler.dart';
 import 'commands/handlers/message_handler.dart';
+import 'commands/handlers/message_history_handler.dart';
 import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
+import 'commands/incoming_message_log.dart';
 import 'commands/intent.dart';
 import 'commands/log_entry.dart';
 import 'commands/sent_messages.dart';
@@ -88,6 +90,10 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// bir kez gösterilip gösterilmediği.
   late final IncomingMessages incomingMessages;
   late final LoudMessagesNotice loudMessagesNotice;
+
+  /// Bildirimden yakalanan mesajların bellekteki günlüğü - "mesajlarımı
+  /// oku"/"son bildirimleri oku" bunu okuyor, [CommandRouter]'la paylaşılıyor.
+  final _messageLog = IncomingMessageLog();
 
   BleConnectionState connectionState = BleConnectionState.disconnected;
   List<DiscoveredDevice> devices = [];
@@ -191,6 +197,7 @@ class AppState extends ChangeNotifier implements ControlActions {
         sent: sentMessages,
       ),
       lastMessage: LastMessageHandler(sentMessages),
+      messageHistory: MessageHistoryHandler(_messageLog),
       number: NumberHandler(contacts: resolver),
       alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),
@@ -355,10 +362,16 @@ class AppState extends ChangeNotifier implements ControlActions {
     notifyListeners();
   }
 
-  /// Bildirimden yakalanan yeni mesaj (bkz. §4b/3). Ayar açıksa içerik
-  /// okunur - ilk kez okunurken önce bir kerelik sesli gizlilik uyarısı
-  /// verilir; kapalıysa yalnızca kimden geldiği söylenir.
+  /// Bildirimden yakalanan yeni mesaj (bkz. §4b/3). Günlüğe (bkz.
+  /// [_messageLog]) susturulmuş olsa bile eklenir - "bildirimleri sustur"
+  /// yalnızca duyuruyu engeller, "mesajlarımı oku" ile yine okunabilir.
+  /// Susturulmamışsa: ayar açıksa içerik okunur - ilk kez okunurken önce
+  /// bir kerelik sesli gizlilik uyarısı verilir; kapalıysa yalnızca kimden
+  /// geldiği söylenir.
   Future<void> _onIncomingMessage(IncomingMessage message) async {
+    _messageLog.add(message);
+    if (settings.value.notificationsMuted) return;
+
     final senderAblative = ablative(message.senderName);
     if (!settings.value.readMessagesAloud) {
       feedback.signal(FeedbackEvent.incomingMessage,

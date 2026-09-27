@@ -94,6 +94,12 @@ class SettingsScreen extends StatelessWidget {
           value: s.readMessagesAloud,
           onChanged: (v) => _update(s.copyWith(readMessagesAloud: v)),
         ),
+        SwitchListTile(
+          title: const Text(Tr.muteNotifications),
+          subtitle: const Text(Tr.muteNotificationsHint),
+          value: s.notificationsMuted,
+          onChanged: (v) => _update(s.copyWith(notificationsMuted: v)),
+        ),
         _Header(Tr.settingsFeedback),
         _Choice<FeedbackMode>(
           title: Tr.feedbackMode,

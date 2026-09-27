@@ -13,7 +13,9 @@ enum SettingAction {
   longer,
   hapticStronger,
   hapticWeaker,
-  hapticOff;
+  hapticOff,
+  notificationsMuteOn,
+  notificationsMuteOff;
 
   static SettingAction? fromName(String? name) {
     for (final a in values) {
@@ -55,6 +57,11 @@ class Settings {
   /// LoudMessagesNotice).
   final bool readMessagesAloud;
 
+  /// "Bildirimleri sustur" (Faz 4b) - açıkken gelen mesaj bildirimi hiç
+  /// seslendirilmez (yine de günlüğe eklenir, "mesajlarımı oku" ile
+  /// okunabilir). Gelen aramayı etkilemez. Varsayılan kapalı.
+  final bool notificationsMuted;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -64,6 +71,7 @@ class Settings {
     this.feedbackMode = FeedbackMode.earconOnly,
     this.nodToListen = false,
     this.readMessagesAloud = true,
+    this.notificationsMuted = false,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -86,6 +94,7 @@ class Settings {
     FeedbackMode? feedbackMode,
     bool? nodToListen,
     bool? readMessagesAloud,
+    bool? notificationsMuted,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -97,6 +106,7 @@ class Settings {
       feedbackMode: feedbackMode ?? this.feedbackMode,
       nodToListen: nodToListen ?? this.nodToListen,
       readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
+      notificationsMuted: notificationsMuted ?? this.notificationsMuted,
     );
   }
 
@@ -111,6 +121,8 @@ class Settings {
       SettingAction.hapticStronger => copyWith(hapticLevel: hapticLevel + 1),
       SettingAction.hapticWeaker => copyWith(hapticLevel: hapticLevel - 1),
       SettingAction.hapticOff => copyWith(hapticLevel: 0),
+      SettingAction.notificationsMuteOn => copyWith(notificationsMuted: true),
+      SettingAction.notificationsMuteOff => copyWith(notificationsMuted: false),
     };
     return next == this ? this : next;
   }
@@ -124,6 +136,7 @@ class Settings {
         'feedbackMode': feedbackMode.name,
         'nodToListen': nodToListen,
         'readMessagesAloud': readMessagesAloud,
+        'notificationsMuted': notificationsMuted,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -146,6 +159,9 @@ class Settings {
       readMessagesAloud: json['readMessagesAloud'] is bool
           ? json['readMessagesAloud'] as bool
           : d.readMessagesAloud,
+      notificationsMuted: json['notificationsMuted'] is bool
+          ? json['notificationsMuted'] as bool
+          : d.notificationsMuted,
     );
   }
 
@@ -159,12 +175,13 @@ class Settings {
       other.hapticLevel == hapticLevel &&
       other.feedbackMode == feedbackMode &&
       other.nodToListen == nodToListen &&
-      other.readMessagesAloud == readMessagesAloud;
+      other.readMessagesAloud == readMessagesAloud &&
+      other.notificationsMuted == notificationsMuted;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud);
+      readMessagesAloud, notificationsMuted);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

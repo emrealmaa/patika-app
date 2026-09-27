@@ -177,6 +177,17 @@ abstract final class Tr {
   static const readMessagesAloud = 'Mesaj içeriklerini yüksek sesle oku';
   static const readMessagesAloudHint =
       'Kapatırsanız yalnızca kimden geldiği söylenir, içerik okunmaz.';
+  static const noNewMessages = 'Yeni mesaj yok';
+  static String newMessages(List<String> lines) => lines.join('. ');
+  static const noRecentNotifications = 'Hiç bildirim yok';
+  static String recentNotifications(List<String> senders) =>
+      'Son bildirimler: ${senders.join(', ')}';
+  static const notificationsMuted = 'Bildirimler susturuldu';
+  static const notificationsUnmuted = 'Bildirimler açıldı';
+  static const muteNotifications = 'Bildirimleri sustur';
+  static const muteNotificationsHint =
+      'Açıkken gelen mesaj bildirimleri hiç seslendirilmez (yine de '
+      '"mesajlarımı oku" ile okunabilir). Gelen aramalar bundan etkilenmez.';
 
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';

@@ -15,6 +15,8 @@ void main() {
       expect(s.verbosity, Verbosity.long);
       expect(s.feedbackMode, FeedbackMode.earconOnly, reason: 'Faz 2: "Dinliyorum" yerine kısa ses');
       expect(s.nodToListen, isFalse);
+      expect(s.readMessagesAloud, isTrue);
+      expect(s.notificationsMuted, isFalse);
     });
 
     test('sınırlar dışına çıkılamaz', () {
@@ -40,6 +42,8 @@ void main() {
         hapticLevel: 1,
         feedbackMode: FeedbackMode.speech,
         nodToListen: true,
+        readMessagesAloud: false,
+        notificationsMuted: true,
       );
       expect(Settings.fromJson(jsonDecode(jsonEncode(s.toJson()))), s);
     });
@@ -110,6 +114,16 @@ void main() {
     test('bilinmeyen eylem', () async {
       final r = await handler.handle('uçmak');
       expect(r.success, isFalse);
+    });
+
+    test('bildirimleri sustur/aç', () async {
+      final on = await handler.handle(SettingAction.notificationsMuteOn.name);
+      expect(on.message, 'Bildirimler susturuldu');
+      expect(store.value.notificationsMuted, isTrue);
+
+      final off = await handler.handle(SettingAction.notificationsMuteOff.name);
+      expect(off.message, 'Bildirimler açıldı');
+      expect(store.value.notificationsMuted, isFalse);
     });
   });
 }

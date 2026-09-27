@@ -25,6 +25,15 @@ enum PatikaIntent {
   /// adını sil". Entity: "kaydet|A|B", "oku", "sil|A" (bkz. AliasHandler).
   takmaAd,
 
+  /// "mesajlarımı oku" (Faz 4b) - bildirimden yakalanan, henüz bu komutla
+  /// okunmamış mesajları okur. Python tarafında yok, yalnızca telefon
+  /// mikrofonundan (AYAR gibi).
+  mesajlarim,
+
+  /// "son bildirimleri oku" (Faz 4b) - son yakalanan bildirimlerin (en fazla
+  /// 20) yalnızca göndereni özetlenir. Python tarafında yok.
+  sonBildirimler,
+
   /// Evrensel konuşma kontrolü (Faz 2) - telefon tarafına özgü. Bunlar
   /// "Şunu anladım" teyidi olmadan hemen uygulanır.
   dur,
@@ -84,6 +93,11 @@ enum PatikaIntent {
         return PatikaIntent.takmaAd;
       case 'SON_MESAJ':
         return PatikaIntent.sonMesaj;
+      case 'MESAJLARIM':
+        return PatikaIntent.mesajlarim;
+      case 'SON_BİLDİRİMLER':
+      case 'SON_BILDIRIMLER':
+        return PatikaIntent.sonBildirimler;
       case 'DUR':
         return PatikaIntent.dur;
       case 'TEKRAR':

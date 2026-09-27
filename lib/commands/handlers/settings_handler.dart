@@ -26,9 +26,17 @@ class SettingsHandler {
       SettingAction.hapticStronger ||
       SettingAction.hapticWeaker ||
       SettingAction.hapticOff => (Tr.hapticStrength, after.hapticName),
+      SettingAction.notificationsMuteOn ||
+      SettingAction.notificationsMuteOff => (Tr.muteNotifications, ''),
     };
 
     if (action == SettingAction.hapticOff) return ActionResult.ok(Tr.hapticOff);
+    if (action == SettingAction.notificationsMuteOn) {
+      return ActionResult.ok(Tr.notificationsMuted);
+    }
+    if (action == SettingAction.notificationsMuteOff) {
+      return ActionResult.ok(Tr.notificationsUnmuted);
+    }
     if (identical(before, after)) {
       return ActionResult.ok(Tr.settingUnchanged(name, value));
     }
