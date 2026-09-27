@@ -15,7 +15,8 @@ enum FeedbackEvent {
   error(HapticPatternId.error, Earcon.error),
   connected(HapticPatternId.connected, null),
   disconnected(HapticPatternId.disconnected, null),
-  batteryLow(HapticPatternId.batteryLow, null);
+  batteryLow(HapticPatternId.batteryLow, null),
+  incomingCall(HapticPatternId.incomingCall, null);
 
   final HapticPatternId haptic;
   final Earcon? earcon;

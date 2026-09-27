@@ -202,6 +202,34 @@ void main() {
       });
     });
 
+    test('mesaj gövdesinde "acil durum" geçmesi SOS saymaz (dikte istisnası)', () {
+      fakeAsync((async) {
+        final h = Harness();
+        command(h, async, 'mesaj gönder');
+        answer(h, async, 'Ayşe');
+        expect(h.tts.spoken.last, Tr.dialogWhatToWrite);
+
+        answer(h, async, 'acil durumda beni ara diye yaz');
+        expect(h.app.dialogs.active, isTrue, reason: 'dikte içeriği SOS\'a düşmemeli');
+        expect(h.tts.spoken.last,
+            "Ayşe Demir'e şu mesaj: acil durumda beni ara diye yaz. Göndereyim mi?");
+        h.dispose();
+      });
+    });
+
+    test('mesaj gövdesi TAMAMEN "imdat" ise yine SOS sayılır', () {
+      fakeAsync((async) {
+        final h = Harness();
+        command(h, async, 'mesaj gönder');
+        answer(h, async, 'Ayşe');
+        answer(h, async, 'imdat');
+        h.speakAll(async);
+        expect(h.app.dialogs.active, isFalse);
+        expect(h.app.log.first.intent, PatikaIntent.sos);
+        h.dispose();
+      });
+    });
+
     test('cevap gelmezse soru bir kez tekrarlanır, ikincide iptal', () {
       fakeAsync((async) {
         final h = Harness();

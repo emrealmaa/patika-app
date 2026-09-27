@@ -159,6 +159,11 @@ abstract final class Tr {
   static const ocrNotReady = 'Yazı okuma henüz hazır değil';
   static const crossingNotReady = 'Karşıya geçiş modu henüz hazır değil';
 
+  // --- Gelen arama (Faz 4b) --------------------------------------------------
+  static String incomingCall(String callerName) => '$callerName arıyor';
+  static String callAnswered(String callerName) => '$callerName ile görüşme açılıyor';
+  static String callRejected(String callerName) => '$callerName için gelen arama reddedildi';
+
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';
   static String heard(String text) => 'Şunu anladım: $text';
@@ -255,6 +260,15 @@ abstract final class Tr {
   static const delayedTap = '5 saniye sonra dokun (arka plan testi)';
   static const delayedTapHint =
       'Bu sürede telefonu kilitleyin: ekran kapalıyken dinlemenin başlayıp başlamadığını dener.';
+  static const incomingCallSimulation = 'Gelen arama simülasyonu';
+  static const incomingCallSimulationHint =
+      'Bildirim dinleyici henüz yok - burada arayan adı girip aramayı çaldırabilir, '
+      'sonra gözlük butonuyla (dokun = aç, uzun bas = reddet) deneyebilirsiniz.';
+  static const callerNameLabel = 'Arayan adı';
+  static const callerNameHint = 'örn. Ahmet Yılmaz';
+  static const startIncomingCall = 'Aramayı çaldır';
+  static const noActiveCall = 'Çalan arama yok';
+  static String activeCall(String callerName) => '$callerName arıyor (çalıyor)';
 
   static String hapticName(String id) => switch (id) {
         'connected' => 'Bağlandı',
@@ -267,6 +281,7 @@ abstract final class Tr {
         'obstacle' => 'Engel',
         'turnLeft' => 'Sola dön',
         'turnRight' => 'Sağa dön',
+        'incomingCall' => 'Gelen arama',
         _ => id,
       };
 

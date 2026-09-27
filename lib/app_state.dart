@@ -35,7 +35,9 @@ import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
+import 'platform/call_service.dart';
 import 'platform/direct_actions.dart';
+import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
 import 'tutorial/tutorial.dart';
 import 'voice/dialog_manager.dart';
@@ -69,6 +71,11 @@ class AppState extends ChangeNotifier implements ControlActions {
   late ConnectionSupervisor _supervisor;
   bool isSimulated = true;
 
+  /// Telefonun kendi gelen arama durumu (Faz 4b) - BLE'den bağımsız, bkz.
+  /// `lib/platform/call_service.dart`. Gerçek `NotificationListenerService`
+  /// gelene kadar hep [SimulatedCallService].
+  late final PatikaCallService callService;
+
   BleConnectionState connectionState = BleConnectionState.disconnected;
   List<DiscoveredDevice> devices = [];
   final List<LogEntry> log = [];
@@ -79,7 +86,15 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// Gözlükten gelen son buton/jest olayı (test ekranında gösteriliyor).
   String? lastGlassesEvent;
 
+  /// Şu an çalmakta olan gelen arama (yokken null). Gözlük butonunun
+  /// dokunma/uzun basış davranışını değiştirir (bkz. [_onButton]).
+  IncomingCall? _ringingCall;
+
   final List<StreamSubscription> _subs = [];
+
+  /// BLE'den ayrı: `toggleMode`'daki [_detach]/[_attach] döngüsü bunu
+  /// kapatıp yeniden açmamalı, [callService] BLE moduyla değişmiyor.
+  StreamSubscription? _callSub;
 
   /// Parametreler testlerde sahte uygulamalar vermek için; uygulamada
   /// hepsi gerçek platform uygulamalarına düşer. [autoStart] kapalıyken
@@ -99,6 +114,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     DirectActions? direct,
     Future<bool> Function()? ensureCallPermission,
     Future<bool> Function()? ensureSmsPermission,
+    PatikaCallService? callService,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -176,6 +192,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.settings.load();
     _applySettings();
 
+    this.callService = callService ?? SimulatedCallService();
+    _callSub = this.callService.incomingCall.listen(_onIncomingCall);
+
     _attach(SimulatedBleService());
     if (autoStart) start();
   }
@@ -198,6 +217,14 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// Sadece simülasyon modunda dolu - test ekranı olay enjekte etmek için.
   SimulatedBleService? get simulator =>
       isSimulated ? bleService as SimulatedBleService : null;
+
+  /// Gerçek `PatikaNotificationListener.kt` gelene kadar hep dolu - test
+  /// ekranı gelen aramayı buradan tetikler.
+  SimulatedCallService? get callSimulator =>
+      callService is SimulatedCallService ? callService as SimulatedCallService : null;
+
+  /// Test ekranında ve gözlük buton mantığında gösterilecek/kullanılacak.
+  IncomingCall? get ringingCall => _ringingCall;
 
   bool get isHealthy => _supervisor.isHealthy;
 
@@ -266,16 +293,41 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   /// Gözlük butonu: tek dokunuş dinler (dinlerken iptal eder), çift dokunuş
   /// son duyuruyu tekrarlar, uzun basış SOS (Faz 7'ye kadar yer tutucu).
+  /// Telefon çalarken (bkz. [_ringingCall]) dokunma/uzun basış anlamı
+  /// değişir: dokunma açar, uzun basış reddeder - SOS o sırada yalnızca
+  /// sesle erişilebilir (bkz. CLAUDE.md Faz 4b kararları).
   void _onButton(GlassesButton button) {
     lastGlassesEvent = _buttonName(button);
+    final ringing = _ringingCall;
     switch (button) {
       case GlassesButton.tap:
-        voice.startListening(ListenSource.glasses);
+        if (ringing != null) {
+          callService.answer();
+          feedback.signal(FeedbackEvent.success, text: Tr.callAnswered(ringing.callerName));
+        } else {
+          voice.startListening(ListenSource.glasses);
+        }
       case GlassesButton.doubleTap:
         if (!repeatLast()) feedback.signal(FeedbackEvent.error, text: Tr.nothingToRepeat);
       case GlassesButton.longPress:
-        feedback.signal(FeedbackEvent.error,
-            text: Tr.sosNotReady, priority: AnnouncementPriority.high);
+        if (ringing != null) {
+          callService.reject();
+          feedback.signal(FeedbackEvent.success, text: Tr.callRejected(ringing.callerName));
+        } else {
+          feedback.signal(FeedbackEvent.error,
+              text: Tr.sosNotReady, priority: AnnouncementPriority.high);
+        }
+    }
+    notifyListeners();
+  }
+
+  /// Gelen arama başladığında/bittiğinde: [_ringingCall] güncellenir, çalmaya
+  /// başlarken yüksek öncelikle "$ad arıyor" duyurulur (bkz. §4b/2).
+  void _onIncomingCall(IncomingCall? call) {
+    _ringingCall = call;
+    if (call != null) {
+      feedback.signal(FeedbackEvent.incomingCall,
+          text: Tr.incomingCall(call.callerName), priority: AnnouncementPriority.high);
     }
     notifyListeners();
   }
@@ -388,6 +440,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     feedback.updateObstacle(null);
     a11y.attachFeedbackHub(null);
     _detach();
+    _callSub?.cancel();
+    callService.dispose();
     _background.stop();
     super.dispose();
   }

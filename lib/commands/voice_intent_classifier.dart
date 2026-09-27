@@ -34,7 +34,7 @@ BleCommand classifyVoiceCommand(String text) {
   // indeksler güvenilmez, entity küçük harfli metinden alınır.
   final source = lowered.length == original.length ? original : lowered;
 
-  final control = _controlIntent(lowered);
+  final control = _controlIntent(lowered, dictation: false);
   if (control != null) return BleCommand.fromWire(control, null);
 
   for (final (pattern, action) in _settingRules) {
@@ -60,13 +60,19 @@ const _politeEnd = r'(?:\s+lütfen)?';
 
 /// Evrensel kontrol komutları - her şeyden ÖNCE denetleniyor.
 ///
-/// SOS ilk sırada ve cümlenin HERHANGİ bir yerinde eşleşiyor: acil durumdaki
+/// SOS normalde cümlenin HERHANGİ bir yerinde eşleşiyor: acil durumdaki
 /// birinin yanlışlıkla başka bir komuta düşmesi, yardım isteyen birinin
 /// (Faz 7'de iptal edilebilir geri sayımlı) SOS'a düşmesinden çok daha kötü.
 ///
 /// DUR/TEKRAR ise yalnızca TÜM cümle o komutsa eşleşiyor: "durum", "Ahmet'e
 /// dur de" ya da "tekrar ara" gibi cümleler konuşmayı kesmesin.
-final _controlRules = [
+///
+/// Dikte sırasında (mesaj gövdesi yazdırılırken, [_controlRulesDictation])
+/// SOS de aynı "tüm cümle" kuralına tabi: aksi halde "acil durumda beni ara
+/// diye yaz" gibi dikte edilen bir mesaj içeriği SOS sanılıp mesaj
+/// kaybolurdu. Dikte dışı diyalog cevaplarında (isim, onay) güvenlik-önce
+/// davranış aynen kalıyor.
+final _controlRuleDefs = [
   ('$_s(?:yardım|imdat)$_e|acil\\s+durum', 'SOS'),
   ('^$_polite(?:dur|durdur|sus|kes|iptal(?:\\s+et)?|vazgeç|yeter)$_politeEnd\$', 'DUR'),
   ('^$_polite(?:tekrar\\s+(?:et|söyle|oku)|tekrarla|bir\\s+daha\\s+söyle|ne\\s+dedin)$_politeEnd\$',
@@ -74,6 +80,14 @@ final _controlRules = [
   (r'ne\s+yapabilir(?:im|sin)|neler\s+yapabilir(?:im|sin)|komutlar|nasıl\s+kullanılır',
       'KOMUTLAR'),
   (r'eğitim\p{L}*\s+(?:başlat|aç|tekrarla|dinle)', 'EĞİTİM'),
+];
+
+final _controlRules =
+    _controlRuleDefs.map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
+
+final _controlRulesDictation = [
+  ('^$_polite(?:yardım|imdat)$_politeEnd\$|^$_polite(?:acil\\s+durum)$_politeEnd\$', 'SOS'),
+  ..._controlRuleDefs.skip(1),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
 
 /// Telefon ayarları (AYAR niyeti) - entity metinden değil kalıptan geliyor.
@@ -151,14 +165,16 @@ String? _aliasCommand(String lowered, String source) {
 
 /// Yalnızca evrensel kontrol katmanı (SOS, DUR, TEKRAR, KOMUTLAR, EĞİTİM):
 /// diyalog cevaplarında "dur"/"tekrar et"/SOS'u yakalamak için - cevap
-/// ("Ahmet", "evet") niyet sınıflandırıcısına gitmez.
-PatikaIntent? classifyControl(String text) {
-  final intent = _controlIntent(_turkishLower(_normalizeSpacing(text)));
+/// ("Ahmet", "evet") niyet sınıflandırıcısına gitmez. [dictation]: mesaj
+/// gövdesi dikte ediliyorsa SOS yalnızca TÜM cümle buysa eşleşir.
+PatikaIntent? classifyControl(String text, {bool dictation = false}) {
+  final intent = _controlIntent(_turkishLower(_normalizeSpacing(text)), dictation: dictation);
   return intent == null ? null : PatikaIntent.fromWireName(intent);
 }
 
-String? _controlIntent(String lowered) {
-  for (final (pattern, intent) in _controlRules) {
+String? _controlIntent(String lowered, {bool dictation = false}) {
+  final rules = dictation ? _controlRulesDictation : _controlRules;
+  for (final (pattern, intent) in rules) {
     if (pattern.hasMatch(lowered)) return intent;
   }
   return null;

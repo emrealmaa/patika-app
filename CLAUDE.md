@@ -51,8 +51,14 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   oturumunda birlikte denenecek (gerçek arama/SMS, kullanıcının kendi ikinci
   numarasıyla).
 - Ertelenenler: kulaklıkla deneysel sesli araya girme (barge-in); TalkBack'in
-  gerçek cihazda baştan sona kontrolü. Dikte sırasında "SOS"un katılığı
-  sorusu yanıtsız; şimdilik cümlenin her yerinde tanınıyor.
+  gerçek cihazda baştan sona kontrolü.
+- **Karara bağlandı:** Dikte sırasında (mesaj gövdesi yazdırılırken) SOS
+  artık DUR/TEKRAR gibi yalnızca TÜM cümle "yardım"/"imdat"/"acil durum"
+  ise tetikleniyor (nezaket sözcükleriyle birlikte, ör. "lütfen imdat" de
+  sayılır) - aksi halde dikte edilen mesaj içeriğinde bu kelimeler geçince
+  mesaj kaybolurdu. Dikte dışı diyalog cevaplarında (isim, onay) güvenlik-
+  önce davranış aynen korunuyor: cümlenin her yerinde eşleşir.
+  (`classifyControl(..., dictation: ...)`, `voice_intent_classifier.dart`)
 
 ## Sıradaki: Faz 4b - bildirimler ve gelen arama
 
@@ -71,13 +77,20 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
    değiştirilebilir.
 
 **Plan:**
+- ~~Gelen arama simülasyonu~~ **BİTTİ:** `PatikaCallService`/
+  `SimulatedCallService` (`lib/platform/call_service.dart`), Test Modu'nda
+  "Gelen arama simülasyonu" bölümü, `HapticPatternId.incomingCall` (id 11).
+  Çalmaya başlayınca "$ad arıyor" (`high` öncelik); gözlükte (mevcut
+  buton simülasyonu üzerinden) dokunma açar, uzun basış reddeder - o
+  sırada SOS yalnızca sesle erişilebilir. 239 test.
 - `PatikaNotificationListener.kt` + Dart kanalı; bildirim erişimi izni
-  sesli açıklamayla (sistem ayar ekranına yönlendirme).
-- Gelen arama: "Ayşe arıyor" (`high` öncelik); `READ_PHONE_STATE`,
-  `ANSWER_PHONE_CALLS` (aç/reddet). Simülasyon ve Test Modu karşılıkları.
+  sesli açıklamayla (sistem ayar ekranına yönlendirme). **Sıradaki adım.**
+- Gerçek arama durumu: `READ_PHONE_STATE`, `ANSWER_PHONE_CALLS` (aç/reddet) -
+  `PatikaCallService`'in gerçek uygulaması bunu kullanacak.
 - Komutlar: "mesajlarımı oku", "son bildirimleri oku" (son 20 bildirim,
   yalnızca bellekte), "bildirimleri sustur / aç".
-- Türkçe ayrılma hali eki: "Ayşe'den" (`lib/l10n/turkish_suffix.dart`).
+- Türkçe ayrılma hali eki: "Ayşe'den" (`lib/l10n/turkish_suffix.dart`,
+  şu an yalnızca `accusative`/`dative` var, `ablative` eklenecek).
 - Kapanış: 4a + 4b birlikte gerçek telefon testi, sonra commit/push onayı.
 
 Sonrası: Faz 5–8 ilk şartnameye göre.

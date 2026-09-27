@@ -92,6 +92,7 @@ Kaynak: `lib/accessibility/haptic_patterns.dart`.
 | 8 | obstacle | 0, 60 (tekrarlı) | Engel (bkz. §5) |
 | 9 | turnLeft | 0, 300, 120, 80 (uzun-kısa) | Sola dön |
 | 10 | turnRight | 0, 80, 120, 300 (kısa-uzun) | Sağa dön |
+| 11 | incomingCall | 0, 120, 100, 120, 400, 120, 100, 120 (çift-çift) | Gelen arama (Faz 4b) |
 
 Gözlükte iki motor varsa `turnLeft` sol, `turnRight` sağ motorda çalınabilir.
 Tek motorda ritim farkı yeterlidir.

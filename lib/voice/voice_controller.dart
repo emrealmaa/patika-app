@@ -196,7 +196,7 @@ class VoiceController extends ChangeNotifier {
 
     final dialog = this.dialog;
     if (dialog != null && dialog.active) {
-      if (classifyControl(text) == PatikaIntent.sos) {
+      if (classifyControl(text, dictation: dialog.expectsDictation) == PatikaIntent.sos) {
         // Güvenlik her zaman önce: diyalog sessizce biter, SOS işlenir.
         dialog.cancel(null);
       } else {

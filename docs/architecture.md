@@ -37,7 +37,7 @@ göre veriliyor.
 | **LaunchActions** | `lib/platform/launch_actions.dart`, `android/.../ListenTileService.kt` | Hızlı Ayarlar karosu → "dinle". Talimat native tarafta bekletilir (kanal `patika/launch`), Dart hazır olunca alır; ilk açılışta da kaybolmaz. |
 | **Tutorial** | `lib/tutorial/tutorial.dart` | Sesli eğitim. Yüksek öncelikli bir duyuruyla kesilen adımı tekrar okur (`AnnouncementQueue.add` → `Future<bool>`). "Dinlendi" bilgisi ayarlardan ayrı saklanır. |
 | **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
-| **DialogManager** | `lib/voice/dialog_manager.dart`, `lib/voice/dialogs/` | Çok adımlı sesli akışlar (ARA, MESAJ): kişi eksikse sorar, "iki Ahmet var, hangisi?", onay ("Ahmet Kaya'yı arayayım mı?"), mesaj dikte + geri okuma + düzelt. Soru bitince tetikleyici beklemeden dinler; "dur"/"tekrar et" her adımda; cevapsız soru bir kez tekrarlanır, sonra iptal. SOS diyaloğu keser. |
+| **DialogManager** | `lib/voice/dialog_manager.dart`, `lib/voice/dialogs/` | Çok adımlı sesli akışlar (ARA, MESAJ): kişi eksikse sorar, "iki Ahmet var, hangisi?", onay ("Ahmet Kaya'yı arayayım mı?"), mesaj dikte + geri okuma + düzelt. Soru bitince tetikleyici beklemeden dinler; "dur"/"tekrar et" her adımda; cevapsız soru bir kez tekrarlanır, sonra iptal. SOS diyaloğu keser (dikte sırasında yalnızca TÜM cümle SOS ise - DUR/TEKRAR gibi; aksi halde mesaj içeriğinde "yardım" gibi kelimeler geçince mesaj kaybolurdu). |
 | **Kişi eşleştirme** | `lib/contacts/` | Söylenen adı rehberdeki kişiye çözer (ARA/MESAJ/NUMARA). Bkz. aşağıdaki bölüm. |
 | **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları; titreşim gönderme. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
 | **GlassesProtocol** | `lib/ble/glasses_protocol.dart` | JSON mesaj ayrıştırma ve kodlama. Bkz. [ble_protocol.md](ble_protocol.md). |
@@ -52,6 +52,7 @@ göre veriliyor.
 | **Tr** | `lib/l10n/strings_tr.dart` | Kullanıcıya giden tüm Türkçe metinler. |
 | **SentMessageLog** | `lib/commands/sent_messages.dart` | "Gönderdiğim son mesajı oku". Yalnızca bellekte. `play` türünde gönderim doğrulanamadığı için "hazırlanan son mesaj" denir. |
 | **DirectActions** | `lib/platform/direct_actions.dart`, `android/.../DirectActions.kt` | Onaydan sonra doğrudan arama (`TelecomManager.placeCall` - ekran başlatmaz, kilitli ekranda da çalışır) ve SMS (tüm parçalar operatöre ulaşınca "gönderildi"). Yalnızca `direct` derleme türünde; `play` türünde arama/SMS ekranı açılır. |
+| **PatikaCallService** | `lib/platform/call_service.dart`, `simulated_call_service.dart` | Gelen arama durumu (Faz 4b). `PatikaBleService`'ten bilerek ayrı: BLE değil, telefonun kendi yeteneği (DirectActions/SentMessageLog gibi). Çalmaya başlayınca yüksek öncelikle "$ad arıyor" duyurulur; gözlük butonunun dokunma/uzun basış anlamı o sırada değişir (`AppState._onButton`): dokunma açar, uzun basış reddeder - SOS yalnızca sesle erişilebilir olur. Gerçek uygulama (`PatikaNotificationListener.kt` + `NotificationListenerService`) henüz yazılmadı; şimdilik yalnızca `SimulatedCallService` var, Test Modu'ndan tetikleniyor. |
 
 ## İlkeler
 

@@ -80,6 +80,68 @@ void main() {
     });
   });
 
+  group('gelen arama simülasyonu (Faz 4b)', () {
+    test('çalmaya başlayınca yüksek öncelikle "X arıyor" duyurulur', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.feedback.say('Sıradan bir sonuç');
+        async.flushMicrotasks();
+        h.app.callSimulator!.startCall('Ahmet Yılmaz');
+        async.flushMicrotasks();
+        expect(h.tts.stops, 1, reason: 'yüksek öncelik sıradan duyuruyu keser');
+        expect(h.tts.spoken.last, 'Ahmet Yılmaz arıyor');
+        expect(h.app.ringingCall?.callerName, 'Ahmet Yılmaz');
+        h.dispose();
+      });
+    });
+
+    test('çalarken tek dokunuş dinlemeyi başlatmaz, aramayı açar', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.callSimulator!.startCall('Ahmet Yılmaz');
+        h.speakAll(async);
+        h.app.simulator!.injectButton(GlassesButton.tap);
+        async.elapse(listenDelay);
+
+        expect(h.speech.listening, isFalse,
+            reason: 'çalarken tek dokunuş dinlemeye gitmemeli');
+        expect(h.tts.spoken.last, 'Ahmet Yılmaz ile görüşme açılıyor');
+        expect(h.app.ringingCall, isNull, reason: 'açınca çalma bitmeli');
+        h.dispose();
+      });
+    });
+
+    test('çalarken uzun basış SOS değil, aramayı reddeder', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.callSimulator!.startCall('Ahmet Yılmaz');
+        h.speakAll(async);
+        h.app.simulator!.injectButton(GlassesButton.longPress);
+        async.flushMicrotasks();
+
+        expect(h.tts.spoken.last, 'Ahmet Yılmaz için gelen arama reddedildi');
+        expect(h.tts.spoken, isNot(contains('Acil durum özelliği henüz hazır değil')));
+        expect(h.app.ringingCall, isNull);
+        h.dispose();
+      });
+    });
+
+    test('arama bitince uzun basış yine SOS yer tutucusuna döner', () {
+      fakeAsync((async) {
+        final h = Harness();
+        h.app.callSimulator!.startCall('Ahmet Yılmaz');
+        h.speakAll(async);
+        h.app.simulator!.injectButton(GlassesButton.longPress);
+        h.speakAll(async);
+
+        h.app.simulator!.injectButton(GlassesButton.longPress);
+        async.flushMicrotasks();
+        expect(h.tts.spoken.last, contains('Acil durum özelliği henüz hazır değil'));
+        h.dispose();
+      });
+    });
+  });
+
   group('sesli eğitim', () {
     test('tüm adımlar sırayla okunur, sonunda bitti denir ve kaydedilir', () {
       fakeAsync((async) {

@@ -9,6 +9,8 @@ import '../ble/glasses_protocol.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../l10n/strings_tr.dart';
+import '../platform/call_service.dart';
+import '../platform/simulated_call_service.dart';
 import '../theme/app_theme.dart';
 import 'listen_screen.dart';
 
@@ -118,6 +120,10 @@ class _TestModeScreenState extends State<TestModeScreen> {
         if (state.simulator case final sim?) ...[
           const SizedBox(height: 24),
           _GlassesSimulationSection(simulator: sim, lastEvent: state.lastGlassesEvent),
+        ],
+        if (state.callSimulator case final callSim?) ...[
+          const SizedBox(height: 24),
+          _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
         const SizedBox(height: 24),
         _FeedbackTestSection(feedback: state.feedback),
@@ -230,6 +236,68 @@ class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
                   container: true,
                   child: Text(Tr.lastHaptic(Tr.hapticName(id.name))),
                 ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Gelen aramayı (Faz 4b) `PatikaNotificationListener.kt` yazılmadan önce
+/// taklit eder: arayan adını girip aramayı çaldırır, sonra gözlük
+/// butonuyla (dokun = aç, uzun bas = reddet - bkz. `AppState._onButton`)
+/// denenebilir.
+class _IncomingCallSimulationSection extends StatefulWidget {
+  final SimulatedCallService simulator;
+  final IncomingCall? ringing;
+
+  const _IncomingCallSimulationSection({required this.simulator, this.ringing});
+
+  @override
+  State<_IncomingCallSimulationSection> createState() => _IncomingCallSimulationSectionState();
+}
+
+class _IncomingCallSimulationSectionState extends State<_IncomingCallSimulationSection> {
+  final _callerController = TextEditingController(text: 'Ahmet Yılmaz');
+
+  @override
+  void dispose() {
+    _callerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ringing = widget.ringing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(Tr.incomingCallSimulation, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        Semantics(container: true, child: const Text(Tr.incomingCallSimulationHint)),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _callerController,
+          decoration: const InputDecoration(
+            labelText: Tr.callerNameLabel,
+            hintText: Tr.callerNameHint,
+          ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () {
+            final name = _callerController.text.trim();
+            if (name.isNotEmpty) widget.simulator.startCall(name);
+          },
+          icon: const Icon(Icons.phone_callback),
+          label: const Text(Tr.startIncomingCall),
+        ),
+        const SizedBox(height: 8),
+        Semantics(
+          container: true,
+          child: Text(ringing == null ? Tr.noActiveCall : Tr.activeCall(ringing.callerName)),
         ),
       ],
     );

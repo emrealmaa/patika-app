@@ -105,6 +105,25 @@ void main() {
     });
   });
 
+  group('classifyControl (dikte)', () {
+    test('dikte dışı: SOS cümlenin her yerinde eşleşir', () {
+      expect(classifyControl('acil durumda beni ara diye yaz'), PatikaIntent.sos);
+    });
+    test('dikte sırasında: SOS yalnızca TÜM cümle buysa eşleşir', () {
+      expect(classifyControl('acil durumda beni ara diye yaz', dictation: true), isNull,
+          reason: 'mesaj gövdesinde geçen "acil durum" mesajı kaybetmemeli');
+      expect(classifyControl('yardım', dictation: true), PatikaIntent.sos);
+      expect(classifyControl('imdat', dictation: true), PatikaIntent.sos);
+      expect(classifyControl('acil durum', dictation: true), PatikaIntent.sos);
+      expect(classifyControl('lütfen imdat', dictation: true), PatikaIntent.sos,
+          reason: 'nezaket sözcükleri DUR/TEKRAR gibi tüm-cümle sayılır');
+    });
+    test('dikte sırasında diğer kontrol niyetleri değişmez', () {
+      expect(classifyControl('dur', dictation: true), PatikaIntent.dur);
+      expect(classifyControl('tekrar et', dictation: true), PatikaIntent.tekrar);
+    });
+  });
+
   group('BİLİNMİYOR', () {
     test('anlamsız metin', () => expectCommand('merhaba nasılsın', PatikaIntent.bilinmiyor));
     test('boş metin', () => expectCommand('', PatikaIntent.bilinmiyor));
