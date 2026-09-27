@@ -32,9 +32,9 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
-## Nerede kaldık (2026-09-26)
+## Nerede kaldık (2026-09-28)
 
-**Bitenler** (hepsi commit'li ve push'lu, son commit `d49a90b`, 227 test):
+**Bitenler** (hepsi commit'li ve push'lu, son kod commit'i `d8d4ac8`, 260 test):
 
 | Faz | İçerik |
 |---|---|
@@ -45,11 +45,16 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 3a | Türkçe kişi eşleştirme (kök adayları + Jaro-Winkler), takma adlar, numara okuma |
 | 3b | Diyalog yönetimi: ARA/MESAJ çok adımlı (kişi sor, "hangisi?", onay, mesaj dikte + geri okuma) |
 | 4a | `play`/`direct` derleme türleri, doğrudan arama (`TelecomManager.placeCall`) ve SMS, "gönderdiğim son mesajı oku" |
+| 4b | Gelen arama simülasyonu (`PatikaCallService`/`SimulatedCallService`); bildirim erişimi izni + `PatikaNotificationListener.kt` (varsayılan SMS + WhatsApp mesajları); gelen mesaj duyurusu + bir kerelik gizlilik uyarısı (`LoudMessagesNotice`); ayrılma hali eki ("Ayşe'den"); "mesajlarımı oku", "son bildirimleri oku" (`IncomingMessageLog`, bellekte son 20), "bildirimleri sustur/aç" (`Settings.notificationsMuted`) |
 
 **Açık kalanlar:**
-- `direct` türü gerçek telefonda **henüz denenmedi**. 4b'nin telefon
-  oturumunda birlikte denenecek (gerçek arama/SMS, kullanıcının kendi ikinci
-  numarasıyla).
+- **Gerçek telefon testi: 2026-09-29.** 4a + 4b birlikte, `direct` türü dahil
+  (gerçek arama/SMS, kullanıcının kendi ikinci numarasıyla; gerçek WhatsApp/
+  SMS bildirimi). `direct` türü ve `PatikaNotificationListener.kt` gerçek
+  cihazda **henüz hiç denenmedi**.
+- Gerçek gelen arama durumu **yazılmadı**: `PatikaCallService` hâlâ yalnızca
+  simülasyon. Gereken: `READ_PHONE_STATE`, `ANSWER_PHONE_CALLS` (aç/reddet)
+  ve arayan kimliği (karar 1: NotificationListenerService'ten).
 - Ertelenenler: kulaklıkla deneysel sesli araya girme (barge-in); TalkBack'in
   gerçek cihazda baştan sona kontrolü.
 - **Karara bağlandı:** Dikte sırasında (mesaj gövdesi yazdırılırken) SOS
@@ -60,9 +65,13 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   önce davranış aynen korunuyor: cümlenin her yerinde eşleşir.
   (`classifyControl(..., dictation: ...)`, `voice_intent_classifier.dart`)
 
-## Sıradaki: Faz 4b - bildirimler ve gelen arama
+## Sıradaki
 
-**Alınmış kararlar (tekrar tartışma):**
+1. 2026-09-29: 4a + 4b gerçek telefon testi (yukarıda).
+2. Faz 6 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+
+## Faz 4b kararları (geçerli, tekrar tartışma)
+
 1. Arayanın kimliği **NotificationListenerService** ile alınır,
    CallScreeningService değil.
 2. Gözlükte **uzun basma yalnızca telefon çalarken aramayı reddeder**;
@@ -73,24 +82,32 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
    okunuyor, kalabalık ortamda dikkat edin, ayarlardan kapatabilirsiniz."
 4. "Bildirimleri sustur" **yalnızca uygulamanın kendi duyurularını**
    susturur; gelen aramalar yine duyurulur.
-5. Uygulama seçimi: varsayılan SMS uygulamaları + WhatsApp; ayarlardan
-   değiştirilebilir.
+5. Uygulama seçimi: varsayılan SMS uygulamaları + WhatsApp. (Şu an sabit;
+   ayarlardan değiştirme henüz yok.)
+6. "Mesajlarımı oku" okunmamışları içerikle okur ve okunmuş sayar; "son
+   bildirimleri oku" yalnızca göndereni özetler, okunmuşluğu etkilemez.
+   Susturma kaydı değil yalnızca duyuruyu engeller.
 
-**Plan:**
-- ~~Gelen arama simülasyonu~~ **BİTTİ:** `PatikaCallService`/
-  `SimulatedCallService` (`lib/platform/call_service.dart`), Test Modu'nda
-  "Gelen arama simülasyonu" bölümü, `HapticPatternId.incomingCall` (id 11).
-  Çalmaya başlayınca "$ad arıyor" (`high` öncelik); gözlükte (mevcut
-  buton simülasyonu üzerinden) dokunma açar, uzun basış reddeder - o
-  sırada SOS yalnızca sesle erişilebilir. 239 test.
-- `PatikaNotificationListener.kt` + Dart kanalı; bildirim erişimi izni
-  sesli açıklamayla (sistem ayar ekranına yönlendirme). **Sıradaki adım.**
-- Gerçek arama durumu: `READ_PHONE_STATE`, `ANSWER_PHONE_CALLS` (aç/reddet) -
-  `PatikaCallService`'in gerçek uygulaması bunu kullanacak.
-- Komutlar: "mesajlarımı oku", "son bildirimleri oku" (son 20 bildirim,
-  yalnızca bellekte), "bildirimleri sustur / aç".
-- Türkçe ayrılma hali eki: "Ayşe'den" (`lib/l10n/turkish_suffix.dart`,
-  şu an yalnızca `accusative`/`dative` var, `ablative` eklenecek).
-- Kapanış: 4a + 4b birlikte gerçek telefon testi, sonra commit/push onayı.
+## Faz planı
 
-Sonrası: Faz 5–8 ilk şartnameye göre.
+Faz 6–8 ilk şartnameye göre.
+
+**Faz 5 (Görsel Yardım - OCR, nesne tespiti, sahne anlatımı) İPTAL EDİLDİ
+(2026-09-28).** Gerekçe:
+1. Bu, Python tarafında zaten var ve çalışıyor (`ocr.py`, `ozel_tespit.py`,
+   `detector.py`) - Flutter'da ML Kit ile sıfırdan yeniden yazmak aynı işi
+   iki kez yapmak olurdu.
+2. Nihai mimaride görsel analiz zaten gözlük+telefon sisteminin (Python/
+   ileride Dart'a taşınacak Katman 1 - bkz. `patika/CLAUDE.md`) sorumluluğu;
+   companion app'e ayrı bir "kendi başına görsel asistan" özelliği eklemek
+   projenin asıl misyonuyla (kullanıcıyı güvenli bir şekilde bir noktadan
+   diğerine götürmek) örtüşmüyor, mimariyi gereksiz yere bölüyor.
+3. Kalıcı bir "asla yapılmayacak" kararı değil - donanım gelip Python→Dart
+   taşıması (`patika/CLAUDE.md` Z7) netleştiğinde ayrı ve bilinçli bir karar
+   olarak yeniden gündeme gelebilir.
+
+Faz numaraları **kaydırılmadı** (6, 7, 8 aynı kalıyor, "Faz 5" boş) - diğer
+belgelerdeki "Faz 7 = SOS" gibi referanslar bozulmasın diye. OKU niyeti
+(`ocr_handler.dart`) yer tutucu olarak kalıyor. `frm` (WiFi kare) komutu
+ayrılmış kalıyor; görsel yardım için değil, Katman 1 görüntü kanalı için
+(Z7 taşımasıyla netleşecek).

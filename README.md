@@ -66,7 +66,8 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | KOMUTLAR | "Ne yapabilirim", "komutlar" | ✅ Komut listesini okur |
 | EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
 | SOS | "Yardım", "imdat", "acil durum" | Faz 7 (şimdilik hazır değil der) |
-| HAVA / HABER / MÜZİK / OKU / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (Faz 5, 8) |
+| HAVA / HABER / MÜZİK / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (sonraki fazlar) |
+| OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
 
 "Şunu anladım: …" teyidi yalnızca telefon eylemi başlatan komutlarda (ara,
 mesaj gönder, götür) söylenir: yanlış duyulan bir isim yanlış kişiyi

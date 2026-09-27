@@ -56,7 +56,7 @@ Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
 | `t` | Alanlar | Anlamı | Örnek |
 |---|---|---|---|
 | `hap` | `id` (desen no), `s` (şiddet %0–100) | Titreşim desenini çal | `{"t":"hap","id":9,"s":70}` |
-| `frm` | — | *(Faz 5, ayrılmış)* Tek kare çek ve WiFi ile gönder | `{"t":"frm"}` |
+| `frm` | — | *(Ayrılmış)* Tek kare çek ve WiFi ile gönder | `{"t":"frm"}` |
 
 ## 3. Heartbeat ve bağlantı sağlığı
 
@@ -117,8 +117,10 @@ telefonun pili biterse kullanıcı **yine de** engel uyarısı almalıdır.
 ## 6. Açık konular
 
 - Gerçek UUID'ler (firmware ile birlikte).
-- Faz 5 WiFi kare aktarımı (`frm`): SoftAP mi, telefon hotspot'u mu? Karar
-  Faz 5 planında raporlanacak.
+- WiFi kare aktarımı (`frm`): SoftAP mi, telefon hotspot'u mu? Eskiden Faz 5
+  (görsel yardım) planındaydı; o faz iptal edildi. Kanal Katman 1 görüntü
+  işleme için yine gerekli, karar Python→Dart taşımasıyla (`patika/CLAUDE.md`
+  Z7) birlikte verilecek.
 - Gözlük pil yüzdesinin nasıl hesaplanacağı (voltaj eğrisi) firmware'e ait.
 - Protokol sürümü alanı (`"v"`) şimdilik yok. İlk kırıcı değişiklikte
   bağlanınca `{"t":"hello","v":2}` eklenmesi öneriliyor.
