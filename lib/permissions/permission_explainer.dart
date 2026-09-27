@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../accessibility/feedback_hub.dart';
 import '../l10n/strings_tr.dart';
+import '../platform/notification_access.dart';
 
 /// Çalışma zamanı izinlerini "önce sesli açıkla, sonra sor" şeklinde ister.
 /// Görme engelli kullanıcı sistem izin penceresini bağlamsız duymasın:
@@ -50,4 +51,18 @@ class PermissionExplainer {
   }
 
   static bool _ok(PermissionStatus s) => s.isGranted || s.isLimited;
+
+  /// Bildirim dinleyici erişimi (bkz. `NotificationAccess`) - normal
+  /// `ensure`den farklı: sistem bir izin penceresi değil ayar ekranı açar,
+  /// kullanıcı elle açıp geri döner. Zaten açıksa hiçbir şey sormaz. Kapalıysa
+  /// açıklayıp ayarları açar; dönüşte etkin olup olmadığını çağıran taraf
+  /// (ekrana her dönüldüğünde) tekrar [access.isEnabled] ile kontrol etmeli -
+  /// burada senkron bir "verildi" cevabı yok.
+  Future<bool> ensureNotificationAccess(
+      NotificationAccess access, String explanation) async {
+    if (await access.isEnabled()) return true;
+    await _feedback.say(explanation).timeout(_explainTimeout, onTimeout: () => false);
+    await access.openSettings();
+    return false;
+  }
 }

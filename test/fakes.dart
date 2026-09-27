@@ -4,6 +4,7 @@ import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
 import 'package:patika_app/platform/direct_actions.dart';
+import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/voice/speech_input_service.dart';
 
 /// Konuşmayı test kontrol etsin diye her speak() açık bir Completer döner;
@@ -123,6 +124,19 @@ class FakeDirectActions implements DirectActions {
     sms.add((number, body));
     return smsResult;
   }
+}
+
+/// Bildirim dinleyici erişiminin sahte hali: [enabled] elle ayarlanır,
+/// [openSettingsCalls] kaç kez ayarların açıldığını sayar.
+class FakeNotificationAccess implements NotificationAccess {
+  bool enabled = false;
+  int openSettingsCalls = 0;
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  Future<void> openSettings() async => openSettingsCalls++;
 }
 
 class FakeHaptics implements HapticOutput {

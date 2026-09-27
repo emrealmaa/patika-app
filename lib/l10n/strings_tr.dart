@@ -163,6 +163,10 @@ abstract final class Tr {
   static String incomingCall(String callerName) => '$callerName arıyor';
   static String callAnswered(String callerName) => '$callerName ile görüşme açılıyor';
   static String callRejected(String callerName) => '$callerName için gelen arama reddedildi';
+  static const notificationAccessWhy =
+      'Gelen arama ve mesaj bildirimlerini okuyabilmem için bildirim '
+      'erişimi izni gerekiyor. Şimdi ayarlar açılacak, listede Patika\'yı '
+      'bulup açın.';
 
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';
@@ -269,6 +273,14 @@ abstract final class Tr {
   static const startIncomingCall = 'Aramayı çaldır';
   static const noActiveCall = 'Çalan arama yok';
   static String activeCall(String callerName) => '$callerName arıyor (çalıyor)';
+  static const notificationAccessTest = 'Bildirim erişimi (Faz 4b)';
+  static const notificationAccessTestHint =
+      'Gerçek bildirim dinleyici henüz yok - burada yalnızca erişim durumu '
+      'kontrol edilip gerekirse ayar ekranı açılabilir.';
+  static const notificationAccessEnabled = 'Bildirim erişimi: açık';
+  static const notificationAccessDisabled = 'Bildirim erişimi: kapalı';
+  static const checkNotificationAccess = 'Durumu kontrol et';
+  static const requestNotificationAccess = 'İzni iste (ayarları aç)';
 
   static String hapticName(String id) => switch (id) {
         'connected' => 'Bağlandı',

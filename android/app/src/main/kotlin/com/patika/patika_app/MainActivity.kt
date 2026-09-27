@@ -84,6 +84,7 @@ class MainActivity : FlutterActivity() {
         // applicationContext: motor etkinlikten uzun yaşıyor; arama/SMS arka
         // planda da (ekran kilitliyken) çalışabilmeli.
         DirectActions(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        NotificationAccess(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

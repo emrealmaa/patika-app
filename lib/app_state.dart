@@ -37,6 +37,7 @@ import 'l10n/strings_tr.dart';
 import 'permissions/permission_explainer.dart';
 import 'platform/call_service.dart';
 import 'platform/direct_actions.dart';
+import 'platform/notification_access.dart';
 import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
 import 'tutorial/tutorial.dart';
@@ -75,6 +76,10 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// `lib/platform/call_service.dart`. Gerçek `NotificationListenerService`
   /// gelene kadar hep [SimulatedCallService].
   late final PatikaCallService callService;
+
+  /// Bildirim dinleyici erişim durumu/ayar ekranı (Faz 4b, iskelet -
+  /// gerçek dinleyici henüz yok). Test Modu'ndan denenebiliyor.
+  late final NotificationAccess notificationAccess;
 
   BleConnectionState connectionState = BleConnectionState.disconnected;
   List<DiscoveredDevice> devices = [];
@@ -115,6 +120,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     Future<bool> Function()? ensureCallPermission,
     Future<bool> Function()? ensureSmsPermission,
     PatikaCallService? callService,
+    NotificationAccess? notificationAccess,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -194,6 +200,7 @@ class AppState extends ChangeNotifier implements ControlActions {
 
     this.callService = callService ?? SimulatedCallService();
     _callSub = this.callService.incomingCall.listen(_onIncomingCall);
+    this.notificationAccess = notificationAccess ?? MethodChannelNotificationAccess();
 
     _attach(SimulatedBleService());
     if (autoStart) start();

@@ -9,7 +9,9 @@ import '../ble/glasses_protocol.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../l10n/strings_tr.dart';
+import '../permissions/permission_explainer.dart';
 import '../platform/call_service.dart';
+import '../platform/notification_access.dart';
 import '../platform/simulated_call_service.dart';
 import '../theme/app_theme.dart';
 import 'listen_screen.dart';
@@ -125,6 +127,11 @@ class _TestModeScreenState extends State<TestModeScreen> {
           const SizedBox(height: 24),
           _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
+        const SizedBox(height: 24),
+        _NotificationAccessSection(
+          access: state.notificationAccess,
+          permissions: state.permissions,
+        ),
         const SizedBox(height: 24),
         _FeedbackTestSection(feedback: state.feedback),
         const SizedBox(height: 24),
@@ -299,6 +306,69 @@ class _IncomingCallSimulationSectionState extends State<_IncomingCallSimulationS
           container: true,
           child: Text(ringing == null ? Tr.noActiveCall : Tr.activeCall(ringing.callerName)),
         ),
+      ],
+    );
+  }
+}
+
+/// Bildirim dinleyici erişimini (Faz 4b, iskelet) dener: durumu gösterir,
+/// kapalıysa sesli açıklamayla sistem ayar ekranını açar. Gerçek dinleyici
+/// (`PatikaNotificationListener.kt`) henüz yok - yalnızca izin/kanal.
+class _NotificationAccessSection extends StatefulWidget {
+  final NotificationAccess access;
+  final PermissionExplainer permissions;
+
+  const _NotificationAccessSection({required this.access, required this.permissions});
+
+  @override
+  State<_NotificationAccessSection> createState() => _NotificationAccessSectionState();
+}
+
+class _NotificationAccessSectionState extends State<_NotificationAccessSection> {
+  bool? _enabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final enabled = await widget.access.isEnabled();
+    if (mounted) setState(() => _enabled = enabled);
+  }
+
+  Future<void> _request() async {
+    await widget.permissions.ensureNotificationAccess(widget.access, Tr.notificationAccessWhy);
+    // Ayarlar ayrı bir ekranda; kullanıcı geri dönünce durumu yeniden sorar.
+    await _refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = _enabled;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(Tr.notificationAccessTest, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        Semantics(container: true, child: const Text(Tr.notificationAccessTestHint)),
+        const SizedBox(height: 12),
+        Semantics(
+          container: true,
+          child: Text(enabled == null
+              ? '...'
+              : enabled
+                  ? Tr.notificationAccessEnabled
+                  : Tr.notificationAccessDisabled),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(onPressed: _refresh, child: const Text(Tr.checkNotificationAccess)),
+        const SizedBox(height: 8),
+        OutlinedButton(onPressed: _request, child: const Text(Tr.requestNotificationAccess)),
       ],
     );
   }
