@@ -167,6 +167,16 @@ abstract final class Tr {
       'Gelen arama ve mesaj bildirimlerini okuyabilmem için bildirim '
       'erişimi izni gerekiyor. Şimdi ayarlar açılacak, listede Patika\'yı '
       'bulup açın.';
+  static String incomingMessage(String senderAblative, String body) =>
+      '$senderAblative mesaj: $body';
+  static String incomingMessageSenderOnly(String senderAblative) =>
+      '$senderAblative yeni mesaj';
+  static const loudMessagesNotice =
+      'Mesaj içerikleri yüksek sesle okunuyor, kalabalık ortamda dikkat '
+      'edin, ayarlardan kapatabilirsiniz.';
+  static const readMessagesAloud = 'Mesaj içeriklerini yüksek sesle oku';
+  static const readMessagesAloudHint =
+      'Kapatırsanız yalnızca kimden geldiği söylenir, içerik okunmaz.';
 
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';
@@ -294,6 +304,7 @@ abstract final class Tr {
         'turnLeft' => 'Sola dön',
         'turnRight' => 'Sağa dön',
         'incomingCall' => 'Gelen arama',
+        'incomingMessage' => 'Gelen mesaj',
         _ => id,
       };
 

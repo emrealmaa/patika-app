@@ -4,6 +4,7 @@ import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
 import 'package:patika_app/platform/direct_actions.dart';
+import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/voice/speech_input_service.dart';
 
@@ -137,6 +138,20 @@ class FakeNotificationAccess implements NotificationAccess {
 
   @override
   Future<void> openSettings() async => openSettingsCalls++;
+}
+
+/// Bildirimden gelen mesajların sahte hali: [emit] testte "şu mesaj geldi"
+/// demek için.
+class FakeIncomingMessages implements IncomingMessages {
+  final _controller = StreamController<IncomingMessage>.broadcast();
+
+  @override
+  Stream<IncomingMessage> get messages => _controller.stream;
+
+  void emit(IncomingMessage message) => _controller.add(message);
+
+  @override
+  void dispose() => _controller.close();
 }
 
 class FakeHaptics implements HapticOutput {

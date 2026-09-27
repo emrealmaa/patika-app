@@ -34,9 +34,11 @@ import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
+import 'l10n/turkish_suffix.dart';
 import 'permissions/permission_explainer.dart';
 import 'platform/call_service.dart';
 import 'platform/direct_actions.dart';
+import 'platform/incoming_messages.dart';
 import 'platform/notification_access.dart';
 import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
@@ -81,6 +83,12 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// gerçek dinleyici henüz yok). Test Modu'ndan denenebiliyor.
   late final NotificationAccess notificationAccess;
 
+  /// Bildirimden yakalanan mesajlar (varsayılan SMS + WhatsApp, bkz.
+  /// PatikaNotificationListener.kt) ve "yüksek sesle okunuyor" uyarısının
+  /// bir kez gösterilip gösterilmediği.
+  late final IncomingMessages incomingMessages;
+  late final LoudMessagesNotice loudMessagesNotice;
+
   BleConnectionState connectionState = BleConnectionState.disconnected;
   List<DiscoveredDevice> devices = [];
   final List<LogEntry> log = [];
@@ -100,6 +108,9 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// BLE'den ayrı: `toggleMode`'daki [_detach]/[_attach] döngüsü bunu
   /// kapatıp yeniden açmamalı, [callService] BLE moduyla değişmiyor.
   StreamSubscription? _callSub;
+
+  /// Aynı gerekçeyle BLE _detach/_attach döngüsünden ayrı tutuluyor.
+  StreamSubscription? _messageSub;
 
   /// Parametreler testlerde sahte uygulamalar vermek için; uygulamada
   /// hepsi gerçek platform uygulamalarına düşer. [autoStart] kapalıyken
@@ -121,6 +132,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     Future<bool> Function()? ensureSmsPermission,
     PatikaCallService? callService,
     NotificationAccess? notificationAccess,
+    IncomingMessages? incomingMessages,
+    LoudMessagesNotice? loudMessagesNotice,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -201,6 +214,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.callService = callService ?? SimulatedCallService();
     _callSub = this.callService.incomingCall.listen(_onIncomingCall);
     this.notificationAccess = notificationAccess ?? MethodChannelNotificationAccess();
+    this.incomingMessages = incomingMessages ?? MethodChannelIncomingMessages();
+    this.loudMessagesNotice = loudMessagesNotice ?? SharedPrefsLoudMessagesNotice();
+    _messageSub = this.incomingMessages.messages.listen(_onIncomingMessage);
 
     _attach(SimulatedBleService());
     if (autoStart) start();
@@ -339,6 +355,26 @@ class AppState extends ChangeNotifier implements ControlActions {
     notifyListeners();
   }
 
+  /// Bildirimden yakalanan yeni mesaj (bkz. §4b/3). Ayar açıksa içerik
+  /// okunur - ilk kez okunurken önce bir kerelik sesli gizlilik uyarısı
+  /// verilir; kapalıysa yalnızca kimden geldiği söylenir.
+  Future<void> _onIncomingMessage(IncomingMessage message) async {
+    final senderAblative = ablative(message.senderName);
+    if (!settings.value.readMessagesAloud) {
+      feedback.signal(FeedbackEvent.incomingMessage,
+          text: Tr.incomingMessageSenderOnly(senderAblative),
+          priority: AnnouncementPriority.high);
+      return;
+    }
+    if (!await loudMessagesNotice.wasShown()) {
+      await feedback.say(Tr.loudMessagesNotice);
+      await loudMessagesNotice.markShown();
+    }
+    feedback.signal(FeedbackEvent.incomingMessage,
+        text: Tr.incomingMessage(senderAblative, message.body),
+        priority: AnnouncementPriority.high);
+  }
+
   /// Çift baş sallama yalnızca ayar açıksa dinlemeyi başlatır (yanlışlıkla
   /// tetiklenebildiği için varsayılan kapalı); kapalıyken sessizce yok sayılır.
   void _onGesture(GlassesGesture gesture) {
@@ -449,6 +485,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     _detach();
     _callSub?.cancel();
     callService.dispose();
+    _messageSub?.cancel();
+    incomingMessages.dispose();
     _background.stop();
     super.dispose();
   }

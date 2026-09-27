@@ -49,6 +49,12 @@ class Settings {
   /// varsayılan kapalı).
   final bool nodToListen;
 
+  /// Gelen mesaj bildiriminin içeriği yüksek sesle okunsun mu (Faz 4b).
+  /// Varsayılan açık; kapalıyken yalnızca "kimden" söylenir. İlk kez açıkken
+  /// okunduğunda bir kerelik sesli gizlilik uyarısı var (bkz. AppState,
+  /// LoudMessagesNotice).
+  final bool readMessagesAloud;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -57,6 +63,7 @@ class Settings {
     this.hapticLevel = 2,
     this.feedbackMode = FeedbackMode.earconOnly,
     this.nodToListen = false,
+    this.readMessagesAloud = true,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -78,6 +85,7 @@ class Settings {
     int? hapticLevel,
     FeedbackMode? feedbackMode,
     bool? nodToListen,
+    bool? readMessagesAloud,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -88,6 +96,7 @@ class Settings {
       hapticLevel: _clamp(hapticLevel ?? this.hapticLevel, hapticScales.length),
       feedbackMode: feedbackMode ?? this.feedbackMode,
       nodToListen: nodToListen ?? this.nodToListen,
+      readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
     );
   }
 
@@ -114,6 +123,7 @@ class Settings {
         'hapticLevel': hapticLevel,
         'feedbackMode': feedbackMode.name,
         'nodToListen': nodToListen,
+        'readMessagesAloud': readMessagesAloud,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -133,6 +143,9 @@ class Settings {
       hapticLevel: readInt('hapticLevel', d.hapticLevel),
       feedbackMode: readEnum('feedbackMode', FeedbackMode.values, d.feedbackMode),
       nodToListen: json['nodToListen'] is bool ? json['nodToListen'] as bool : d.nodToListen,
+      readMessagesAloud: json['readMessagesAloud'] is bool
+          ? json['readMessagesAloud'] as bool
+          : d.readMessagesAloud,
     );
   }
 
@@ -145,11 +158,13 @@ class Settings {
       other.verbosity == verbosity &&
       other.hapticLevel == hapticLevel &&
       other.feedbackMode == feedbackMode &&
-      other.nodToListen == nodToListen;
+      other.nodToListen == nodToListen &&
+      other.readMessagesAloud == readMessagesAloud;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
-      silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen);
+      silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
+      readMessagesAloud);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

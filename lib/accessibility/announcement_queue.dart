@@ -10,7 +10,7 @@ enum AnnouncementPriority {
   /// Komut sonuçları.
   normal,
 
-  /// Bağlantı değişimi, gelen arama.
+  /// Bağlantı değişimi, gelen arama, gelen mesaj.
   high,
 
   /// Engel, SOS.

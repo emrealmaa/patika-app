@@ -32,6 +32,29 @@ String dative(String name) {
   return "${name.trim()}'${endsWithVowel ? 'y' : ''}$suffix";
 }
 
+/// Ayrılma hali: Ahmet'ten, Ayşe'den, Kaya'dan, Öztürk'ten. Ünlüyle uyum
+/// öndeki son ünlüye göre; sert ünsüzden sonra "t", aksi halde "d" (kesme
+/// öncesi asla kaynaştırma "y" gerekmez - ek zaten ünsüzle başlıyor).
+String ablative(String name) {
+  final trimmed = name.trim();
+  final lower = turkishLower(trimmed);
+  final (vowel, _) = _lastVowel(trimmed);
+  final back = vowel != null && 'aıou'.contains(vowel);
+  final lastChar = lower.isEmpty ? '' : lower[lower.length - 1];
+  final voiceless = _voicelessConsonants.contains(lastChar);
+  final suffix = switch ((back, voiceless)) {
+    (true, true) => 'tan',
+    (true, false) => 'dan',
+    (false, true) => 'ten',
+    (false, false) => 'den',
+  };
+  return "$trimmed'$suffix";
+}
+
+/// Sert (tonsuz) ünsüzler - "FISTIKÇI ŞAHAP" - kendinden sonraki ekin
+/// ünsüzünü sertleştirir (d -> t).
+const _voicelessConsonants = 'çfhkpsşt';
+
 const _vowels = 'aeıioöuü';
 
 /// Son ünlü ve adın ünlüyle bitip bitmediği.

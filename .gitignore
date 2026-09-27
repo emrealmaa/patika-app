@@ -47,3 +47,6 @@ app.*.map.json
 # Yerel derleme ayarları / API anahtarları (örnek: dart_defines.example.json)
 dart_defines.json
 .env
+
+# graphify çıktısı (üretilen, commit'e dahil edilmez)
+graphify-out/

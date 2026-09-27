@@ -16,7 +16,8 @@ enum HapticPatternId {
   obstacle(8),
   turnLeft(9),
   turnRight(10),
-  incomingCall(11);
+  incomingCall(11),
+  incomingMessage(12);
 
   final int wireId;
   const HapticPatternId(this.wireId);
@@ -71,6 +72,9 @@ abstract final class HapticPatterns {
     // Çift-çift, aralarda duraklı: telefon zili gibi "brr-brr ... brr-brr".
     HapticPatternId.incomingCall:
         HapticPattern([0, 120, 100, 120, 400, 120, 100, 120], [0, 255, 0, 255, 0, 255, 0, 255]),
+    // Tek orta uzunlukta vuruş: listening'in kısa tıkı ile notUnderstood'un
+    // uzun vızıltısı arasında - gelen mesaj.
+    HapticPatternId.incomingMessage: HapticPattern([0, 180], [0, 200]),
   };
 
   static HapticPattern of(HapticPatternId id) => all[id]!;
