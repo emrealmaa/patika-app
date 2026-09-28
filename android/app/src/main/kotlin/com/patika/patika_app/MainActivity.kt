@@ -86,6 +86,7 @@ class MainActivity : FlutterActivity() {
         DirectActions(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         NotificationAccess(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         AppIdentity(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        AudioModeProbe(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

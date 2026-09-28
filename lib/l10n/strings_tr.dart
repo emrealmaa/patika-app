@@ -550,4 +550,47 @@ abstract final class Tr {
       'Dikkat: acil durumda 112 aranacak. Asılsız 112 araması idari para cezası '
       'gerektirebilir. Kapatmak için aynı düğmeye tekrar dokunun';
   static const sosCall112DisabledInfo = 'Acil durumda 112 yerine ilk acil kişi aranacak';
+
+  // --- Acil durum geçmişi (Faz 7) ---------------------------------------------
+  // İşlem geçmişine yazılan satırlar: YALNIZCA isim ve sonuç durumu. Telefon
+  // numarası ve konum (koordinat, bağlantı) HİÇ yazılmaz.
+  static const sosSourceVoice = 'sesle';
+  static const sosSourceGlasses = 'gözlük';
+  static const sosSourceFall = 'düşme algılama';
+  static const sosCancelByVoice = 'sesle';
+  static const sosCancelByGlasses = 'gözlükten';
+  static const sosCancelByScreen = 'ekrandan';
+  static String sosHistStarted(String source) => 'SOS başladı ($source)';
+  static String sosHistCancelled(String by) => 'SOS iptal edildi ($by)';
+  static String sosHistBlocked(String reason) => 'SOS engellendi: $reason';
+  static const sosHistReasonUnsupported = 'bu sürümde desteklenmiyor';
+  static const sosHistReasonNoContacts = 'acil kişi yok';
+  static const sosHistReasonNoSms = 'SMS izni yok';
+  static const sosHistReasonNoCall = 'arama izni yok';
+  static const sosHistReasonRateLimited = 'az önce gönderildi';
+  static String sosHistSent(String sms, String location, String call) =>
+      'SOS gönderimi: $sms; $location; $call';
+  static const sosHistNoContactsSms = 'SMS: acil kişi yok';
+  static String sosHistSms(int sent, int total, String problems) =>
+      'SMS: $sent/$total kişiye gönderildi${problems.isEmpty ? '' : ' ($problems)'}';
+  static String sosHistSmsProblem(String name, String status) => '$name: $status';
+  static const sosHistStatusFailed = 'gönderilemedi';
+  static const sosHistStatusPending = 'sonuç bekleniyor';
+  static const sosHistLocationIncluded = 'konum eklendi';
+  static const sosHistLocationNoPermission = 'konum yok (izin yok)';
+  static const sosHistLocationUnavailable = 'konum yok (alınamadı)';
+  static String sosHistCalled(String nameOr112) => '$nameOr112 arandı';
+  static const sosHistNoCall = 'arama yapılmadı';
+  static const sosHistCallFailed = 'arama başlatılamadı';
+  static const sosHistCallNoPermission = 'arama izni yok';
+  static const sosHistCallNoNumber = 'arama yapılamadı (bu derlemede 112 aranmaz)';
+  static const sosHistTarget112 = '112';
+  static String sosHistLate(String name, String status) => '$name için sonuç sonradan geldi: $status';
+  static const sosHistStatusSent = 'gönderildi';
+  static String sosHistFollowUp(bool sent) =>
+      sent ? 'Takip konumu gönderildi' : 'Takip konumu gönderilemedi';
+  static const sosHistSilenced =
+      'Arama sürdüğü ya da bittiği doğrulanamadığı için sonuç konuşulmadı';
+  static String sosHist112Confirmed(bool placed) =>
+      placed ? '112 çift dokunuşla onaylandı ve arandı' : '112 onaylandı ama aranamadı';
 }

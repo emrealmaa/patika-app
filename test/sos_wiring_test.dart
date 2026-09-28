@@ -232,6 +232,30 @@ void main() {
       });
     });
 
+    test('"yardım" tetikleyicisi geri sayımı başlatınca aynı tanıma sonucunun az sonra '
+        'yinelenmesi (tanıyıcı çift bildirimi) hemen göndermez', () {
+      fakeAsync((async) {
+        final actions = FakeDirectActions();
+        final h = direct(actions: actions);
+        // Sesle tetikleme: "yardım" -> geri sayım başlar.
+        h.app.voice.startListening(ListenSource.screen);
+        async.elapse(const Duration(seconds: 1));
+        h.speech.say('yardım');
+        async.flushMicrotasks();
+        expect(h.app.sos.phase, SosPhase.countdown);
+
+        // Tanıyıcının az sonra AYNI sonucu yinelemesi ihtimaline karşı: geri
+        // sayımın hemen ardından gelen bir "yardım" (SOS dinlemesi henüz
+        // açılmamış bile olsa, sonraki tik pencerede) hemen göndermemeli.
+        async.elapse(const Duration(milliseconds: 300));
+        h.app.sos.sendNow();
+        async.flushMicrotasks();
+        expect(actions.sms, isEmpty, reason: 'koruma süresi dolmadan gönderilmez');
+        expect(h.app.sos.phase, SosPhase.countdown, reason: 'geri sayım sürmeye devam eder');
+        h.dispose();
+      });
+    });
+
     test('geri sayımda "yardım" tekrarı beklemeden gönderir', () {
       fakeAsync((async) {
         final actions = FakeDirectActions();
@@ -350,6 +374,27 @@ void main() {
         longPress(h, async);
         h.speakAll(async);
         expect(h.tts.spoken.first, startsWith('SMS izni yok, acil durum mesajı gönderilemez'));
+        h.dispose();
+      });
+    });
+  });
+
+  group('AppState işlem geçmişi', () {
+    test('SOS kayıtları yalnızca isim/sonuç durumu içerir, telefon numarası ya da konum yazılmaz', () {
+      fakeAsync((async) {
+        final actions = FakeDirectActions();
+        final h = direct(actions: actions);
+        longPress(h, async);
+        advance(h, async, 12);
+
+        final sosEntries = h.app.log.where((e) => e.intent == PatikaIntent.sos).toList();
+        expect(sosEntries, isNotEmpty);
+        final text = sosEntries.map((e) => e.result.message).join('\n');
+        expect(text, contains('Ayşe Demir'));
+        expect(text, isNot(contains(ayse.number)));
+        expect(text, isNot(contains(ali.number)));
+        expect(text, isNot(contains('41.')));
+        expect(text, isNot(contains('maps.google.com')));
         h.dispose();
       });
     });

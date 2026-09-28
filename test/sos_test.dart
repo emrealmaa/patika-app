@@ -124,17 +124,18 @@ class RecordingAnnouncer implements SosAnnouncer {
   void followUp({required bool sent}) => log.add('followUp($sent)');
 }
 
-/// Arama bitişini elle ya da sabit gecikmeyle bildirir ve günlüğe yazar.
-class LoggedCallMonitor implements SosCallMonitor {
-  final List<String> log;
-  final Duration delay;
+/// Arama sonu: `rig.callLength` sonra `rig.callEnd` döner (değerler test
+/// sırasında değiştirilebilsin diye çağrı anında okunur) ve günlüğe yazar.
+class RigCallMonitor implements SosCallMonitor {
+  final Rig rig;
 
-  LoggedCallMonitor(this.log, this.delay);
+  RigCallMonitor(this.rig);
 
   @override
-  Future<void> untilCallEnds() async {
-    await Future<void>.delayed(delay);
-    log.add('callEnded');
+  Future<SosCallEnd> untilCallEnds() async {
+    await Future<void>.delayed(rig.callLength);
+    rig.log.add('callEnded(${rig.callEnd.name})');
+    return rig.callEnd;
   }
 }
 
@@ -149,6 +150,7 @@ class Rig {
   int locationCalls = 0;
   Future<PositionFix?> Function() location = () async => fix;
   Duration callLength = const Duration(seconds: 40);
+  SosCallEnd callEnd = SosCallEnd.ended;
   EmergencyNumber emergency = const EmergencyNumber(debugTestNumber: testNumber);
   late final SosController controller;
 
@@ -167,7 +169,7 @@ class Rig {
       },
       hasLocationPermission: () async => locationPermission,
       call112Enabled: () => call112,
-      callMonitor: LoggedCallMonitor(log, callLength),
+      callMonitor: RigCallMonitor(this),
       now: () => DateTime(2026, 9, 28, 14, 5),
     );
   }
@@ -203,7 +205,9 @@ void main() {
           hits.add(entity.path.replaceAll('\\', '/'));
         }
       }
-      expect(hits, ['lib/sos/emergency_number.dart']);
+      // strings_tr.dart yalnızca geçmişte görünen etiket ("112" arandı);
+      // gerçek numara dial edilmiyor, o yalnızca emergency_number.dart'ta.
+      expect(hits, ['lib/l10n/strings_tr.dart', 'lib/sos/emergency_number.dart']);
     });
 
     test('testlerin sahte DirectActions\'ı 112\'ye arama ve SMS\'te hata fırlatır', () async {
@@ -494,15 +498,76 @@ void main() {
       });
     });
 
-    test('sendNow geri sayımı beklemeden gönderir', () {
+    test('sendNow geri sayımı beklemeden gönderir (koruma süresinden sonra)', () {
       fakeAsync((async) {
         final rig = Rig();
         trigger(rig, async, SosSource.voice);
         run(async, const Duration(seconds: 2));
-        rig.controller.sendNow();
+        expect(rig.controller.sendNow(), isTrue);
         run(async, const Duration(seconds: 3));
         expect(rig.direct.sms, hasLength(2));
         rig.dispose();
+      });
+    });
+
+    test('sendNow koruması: ilk 2 sn içinde gelen "yardım" tekrarı SAYILMAZ (tanıyıcı yinelemesi)', () {
+      fakeAsync((async) {
+        final rig = Rig();
+        trigger(rig, async, SosSource.voice);
+        run(async, const Duration(milliseconds: 500));
+        expect(rig.controller.sendNow(), isFalse,
+            reason: 'tetikleyici cümlenin yinelenmiş sonucu iptal penceresini kaybettirmemeli');
+        expect(rig.controller.phase, SosPhase.countdown, reason: 'geri sayım sürmeye devam eder');
+        expect(rig.direct.sms, isEmpty);
+
+        run(async, const Duration(seconds: 7));
+        expect(rig.direct.sms, hasLength(2), reason: 'geri sayım kendi süresinde normal bitti');
+        rig.dispose();
+      });
+    });
+
+    group('geçmiş: yalnızca isim ve sonuç durumu (telefon numarası/konum YAZILMAZ)', () {
+      test('normal gönderim', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 12));
+
+          expect(rig.controller.history, isNotEmpty);
+          final text = rig.controller.history.map((e) => e.text).join('\n');
+          expect(text, contains('Ayşe Demir'), reason: 'aranan kişinin adı geçer');
+          expect(text, isNot(contains(ayse.number)));
+          expect(text, isNot(contains(ali.number)));
+          expect(text, isNot(contains('41.')), reason: 'enlem/boylam yazılmamalı');
+          expect(text, isNot(contains('maps.google.com')), reason: 'konum bağlantısı yazılmamalı');
+          expect(text, isNot(contains(fix.accuracyMeters.toString())));
+          rig.dispose();
+        });
+      });
+
+      test('112 aranınca yalnızca "112" etiketi geçer, gerçek numara/test numarası değil', () {
+        fakeAsync((async) {
+          final rig = Rig()..call112 = true;
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 12));
+          final text = rig.controller.history.map((e) => e.text).join('\n');
+          expect(text, contains('112'));
+          expect(text, isNot(contains(testNumber)));
+          rig.dispose();
+        });
+      });
+
+      test('geçmiş en fazla maxHistory satır tutar', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          for (var i = 0; i < SosController.maxHistory + 5; i++) {
+            trigger(rig, async, SosSource.voice);
+            run(async, const Duration(seconds: 12));
+            run(async, const Duration(minutes: 2)); // 60 sn sınırını aş
+          }
+          expect(rig.controller.history.length, SosController.maxHistory);
+          rig.dispose();
+        });
       });
     });
 
@@ -798,6 +863,7 @@ void main() {
             getLocation: () async => fix,
             hasLocationPermission: () async => true,
             call112Enabled: () => false,
+            callMonitor: FakeCallMonitor(),
           );
           trigger2(c, async);
           async.flushMicrotasks();
@@ -874,6 +940,39 @@ void main() {
           trigger(rig, async, SosSource.voice);
           run(async, const Duration(seconds: 12));
           expect(rig.where('afterCall'), [contains('call=failed')]);
+          rig.dispose();
+        });
+      });
+
+      test('aramanın bittiği doğrulanamazsa (unknown) geç kalan SMS özeti HİÇ konuşulmaz', () {
+        fakeAsync((async) {
+          final rig = Rig()..callEnd = SosCallEnd.unknown;
+          final gate = Completer<SmsSendStatus>();
+          rig.direct.held[ali.number] = gate;
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 7 + 10 + 3));
+          gate.complete(SmsSendStatus.failed);
+
+          run(async, const Duration(minutes: 10));
+          expect(rig.where('afterCall'), isEmpty,
+              reason: '112 (ya da acil kişi) görüşmesinin üstüne asla konuşulmaz');
+          expect(rig.where('callEnded'), ['callEnded(unknown)']);
+          rig.dispose();
+        });
+      });
+
+      test('aramanın bittiği doğrulanamazsa takip SMS\'i duyurusu da konuşulmaz', () {
+        fakeAsync((async) {
+          final rig = Rig()..callEnd = SosCallEnd.unknown;
+          var attempt = 0;
+          rig.location = () {
+            attempt++;
+            return attempt == 1 ? Completer<PositionFix?>().future : Future.value(fix);
+          };
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(minutes: 10));
+          expect(rig.direct.sms.last.$2, contains('güncel konum'), reason: 'mesaj yine de gider');
+          expect(rig.where('followUp'), isEmpty, reason: 'bitiş bilinmiyorsa duyuru hiç yapılmaz');
           rig.dispose();
         });
       });

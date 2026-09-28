@@ -9,6 +9,7 @@ import 'package:patika_app/navigation/route.dart';
 import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/permissions/location_access.dart';
 import 'package:patika_app/platform/direct_actions.dart';
+import 'package:patika_app/sos/sos_call_monitor.dart';
 import 'package:patika_app/sos/sos_delivery.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/notification_access.dart';
@@ -63,6 +64,12 @@ class FakeSpeechInput implements SpeechInput {
   void Function(String)? _onError;
   void Function()? _onDone;
 
+  /// Her `listen()` çağrısının `onFinal` kapanışı, sırayla. Tanıyıcının bir
+  /// ÖNCEKİ oturumun sonucunu (yinelenmiş/geç gelen "final") yeni oturum
+  /// açıldıktan SONRA çağırma ihtimalini denemek için: testler
+  /// `sessionFinals[i]` ile eski bir kapanışı elle tetikleyebilir.
+  final sessionFinals = <void Function(String)>[];
+
   @override
   Future<bool> init() async {
     initCalls++;
@@ -83,6 +90,7 @@ class FakeSpeechInput implements SpeechInput {
     _onFinal = onFinal;
     _onError = onError;
     _onDone = onDone;
+    sessionFinals.add(onFinal);
   }
 
   /// Oturumun geri çağırmaları önce yerele alınıyor: onFinal yeni bir
@@ -255,4 +263,21 @@ class FakeSosPermissions implements SosPermissions {
 
   @override
   Future<bool> hasCall() async => call;
+}
+
+/// Arama sonu izleyicisinin sahte hali: [delay] sonra [end] döner. Log verilirse
+/// bitiş "callEnded" olarak yazılır (sıra denetimi için).
+class FakeCallMonitor implements SosCallMonitor {
+  final Duration delay;
+  final SosCallEnd end;
+  final List<String>? log;
+
+  FakeCallMonitor({this.delay = const Duration(seconds: 40), this.end = SosCallEnd.ended, this.log});
+
+  @override
+  Future<SosCallEnd> untilCallEnds() async {
+    await Future<void>.delayed(delay);
+    log?.add('callEnded(${end.name})');
+    return end;
+  }
 }

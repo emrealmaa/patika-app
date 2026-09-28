@@ -239,6 +239,46 @@ void main() {
     });
   });
 
+  test('eski oturumun geç/yinelenen sonucu YENİ oturuma sonuç gibi girmez (SOS dinlemesi kilidi)', () {
+    fakeAsync((async) {
+      final h = Harness();
+      final events = <String>[];
+      final voice = VoiceController(
+        speech: h.speech,
+        feedback: h.app.feedback,
+        ensureMicPermission: () async => true,
+        submit: (cmd) async => events.add('submit:${cmd.intent.name}'),
+      )..onSosSpeech = (text) => events.add('sos:$text');
+
+      // 1. oturum: tetikleyici cümle ("yardım"), normal şekilde işlenir.
+      voice.startListening(ListenSource.screen);
+      async.elapse(listenDelay);
+      expect(h.speech.sessionFinals, hasLength(1));
+      h.speech.sessionFinals[0]('yardım');
+      async.flushMicrotasks();
+      expect(voice.phase, VoicePhase.idle);
+      events.clear();
+
+      // SOS geri sayımı sessiz bir dinleme oturumu açar (2. oturum).
+      voice.listenForSos();
+      async.flushMicrotasks();
+      expect(h.speech.sessionFinals, hasLength(2));
+
+      // Tanıyıcı, 1. oturumun sonucunu GEÇ ve YİNELENEREK bildirir (bug/gecikme):
+      // aynı closure'ı ikinci kez çağırıyoruz. Yeni oturum açıldığı için yok sayılmalı.
+      h.speech.sessionFinals[0]('yardım');
+      async.flushMicrotasks();
+      expect(events, isEmpty, reason: 'eski oturumun yinelenen sonucu hiçbir şeyi tetiklememeli');
+
+      // Asıl (2.) oturumun kendi sonucu normal çalışır.
+      h.speech.sessionFinals[1]('iptal');
+      async.flushMicrotasks();
+      expect(events, ['sos:iptal']);
+      voice.dispose();
+      h.dispose();
+    });
+  });
+
   test('mikrofon izni ilk alındığında geri çağırma bir kez tetiklenir', () {
     fakeAsync((async) {
       final h = Harness();

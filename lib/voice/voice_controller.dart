@@ -64,6 +64,12 @@ class VoiceController extends ChangeNotifier {
   void Function(String text)? onSosSpeech;
   bool _sosSession = false;
 
+  /// Her dinleme oturumunun numarası. Eski bir oturumun geç ya da yinelenen
+  /// geri çağırması (tanıyıcı aynı sonucu iki kez döndürürse) yeni oturuma
+  /// sonuç gibi girmesin: özellikle SOS geri sayımında, tetikleyici "yardım"
+  /// cümlesinin yinelenmesi "hemen gönder" sayılmasın.
+  int _sessionSeq = 0;
+
   VoiceController({
     required SpeechInput speech,
     required FeedbackHub feedback,
@@ -139,6 +145,7 @@ class VoiceController extends ChangeNotifier {
   }) async {
     _source = source;
     _sosSession = sos;
+    final session = ++_sessionSeq;
     debugPrint('[Voice] dinleme istendi: ${source.name}${dictation ? " (dikte)" : ""}');
     _setPhase(VoicePhase.preparing);
 
@@ -171,15 +178,21 @@ class VoiceController extends ChangeNotifier {
       _feedback.signal(FeedbackEvent.listening, statusText: Tr.listening);
       await Future.delayed(_listenGap);
     }
-    // Beklerken iptal edildiyse dinlemeye başlama.
-    if (_phase != VoicePhase.preparing) return;
+    // Beklerken iptal edildiyse (ya da yeni bir oturum açıldıysa) başlama.
+    if (_phase != VoicePhase.preparing || session != _sessionSeq) return;
 
     _setPhase(VoicePhase.listening);
     debugPrint('[Voice] mikrofon açılıyor');
     await _speech.listen(
-      onFinal: _onFinal,
-      onError: _onError,
-      onDone: () => _onError(Tr.didNotHear),
+      onFinal: (text) {
+        if (session == _sessionSeq) _onFinal(text);
+      },
+      onError: (message) {
+        if (session == _sessionSeq) _onError(message);
+      },
+      onDone: () {
+        if (session == _sessionSeq) _onError(Tr.didNotHear);
+      },
       silenceTimeout: _settings.silenceTimeout +
           (dictation
               ? dictationExtraSilence

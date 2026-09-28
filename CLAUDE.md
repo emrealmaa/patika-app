@@ -88,9 +88,15 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   erişimin ekran kilitliyken sürüp sürmediği (Faz 6 ana senaryosuyla aynı
   varsayım), Galaxy S24 FE / Android 16'da pil optimizasyonu; konum
   gelmezse "konumsuz gönder + tek takip SMS'i" akışı.
-- [ ] **Faz 7 (SOS):** arama sırasında konuşmama ve arama sonu özeti:
-  arama sürerken TTS hiç araya girmiyor mu; `SosCallMonitor` geçici (120 sn),
-  gerçek arama sonu tespiti yazılınca cihazda denenecek.
+- [ ] **Faz 7 (SOS):** arama sırasında konuşmama ve arama sonu tespiti:
+  `AudioModeCallMonitor` (`AudioManager.getMode()`, kanal `patika/audiomode`)
+  **cihazda hiç doğrulanmadı**. Bakılacaklar: giden aramanın çalma
+  aşamasında (karşı taraf açmadan) `MODE_IN_CALL` görülüyor mu (izin
+  gerekmeden), yoksa yalnızca bağlanınca mı; `startGrace` (30 sn) bu durumda
+  yeterli mi; OEM'e göre fark (Galaxy S24 FE / One UI); modun aramadan
+  ÇIKARKEN art arda 2 okumada (`stableReads`) kararlı biçimde değişip
+  değişmediği. Doğrulanamazsa (`unknown`) SOS **hiç konuşmaz** ve yalnızca
+  geçmişe yazar - bunun gerçek cihazda ne sıklıkla olduğu izlenecek.
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - gerçek cihazda uçtan uca:** SOS'un
   **ikinci numarayla** denenmesi (asla gerçek 112 ile değil). Bakılacaklar:
   (a) kişi aranınca **ses hoparlörden mi** çıkıyor (eller serbest gerekir;
@@ -314,9 +320,14 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    bitince söylenir; arama başladıktan sonra TTS araya girmez; geç kalan
    (10 sn'de bitmeyen) ve sonradan başarısız olan SMS sonuçları ile takip
    SMS'i duyurusu arama BİTTİKTEN sonra özetlenir. Arama sonu tespiti
-   (`SosCallMonitor`) şimdilik **geçici**: aramadan 120 sn sonra bitmiş
-   sayılır; gerçeği `READ_PHONE_STATE` + `TelephonyManager` ile yazılacak
-   (gelen arama tespitiyle aynı izin).
+   (`AudioModeCallMonitor`, kanal `patika/audiomode`) `AudioManager.getMode()`
+   ile izin istemeden yapılır: `MODE_IN_CALL`/`MODE_IN_COMMUNICATION` sürüyor
+   sayılır, arama modundan art arda 2 okumada çıkış "bitti" sayılır. **Bitiş
+   doğrulanamazsa** (30 sn içinde arama modu hiç görülmezse, mod okunamazsa,
+   ya da 3 saatlik üst süre aşılırsa) sonuç **hiç konuşulmaz** - yalnızca
+   SOS geçmişine yazılır; amaç 112 (ya da acil kişi) görüşmesinin üstüne
+   uygulamanın asla konuşmamasıdır. **Cihazda hiç doğrulanmadı** (bkz.
+   "Bekleyen telefon testleri").
 6. **Sonucu doğru söyle:** "SOS gönderildi" yalnızca gönderim sonucu
    başarılıysa (`SmsSendStatus.sent`: mesaj operatöre ulaştı) söylenir.
    "İletildi/ulaştı" denmez: teslim raporu yok, karıştırılmaz. Başarısızsa
@@ -328,7 +339,10 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    dokunun" denir, çift dokunuş onayıyla 112 aranır. Rıza SMS'i isteğe bağlı
    ve yalnızca `direct`. Canlı konum paylaşımı kapsam dışı.
 8. **Eğitim metni:** "Patika acil durum servisi değildir." cümlesi eğitime
-   girer (SOS anlatılırken).
+   girer (SOS anlatılırken). **Bilinen tutarsızlık (TODO.md madde 17):** bu
+   cümle "acil kişilerinize mesaj gönderilir" diyor, ama bu yalnızca
+   `direct` derlemesinde doğru; `play`'de SOS "gönderilemiyor" der. `play`
+   dağıtımı gündeme gelirse eğitim metni derleme türüne göre ayrılmalı.
 9. **Düşme algılama (7c):** Önce gölge modu: yalnızca yerel kayıt, hiçbir
    mesaj göndermez. Sonra deneysel opt-in, varsayılan kapalı. Açarken sesli
    uyarı: "deneysel, her düşmeyi algılamayabilir, güvenilmemeli". Telefon
@@ -337,6 +351,23 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    (TODO.md madde 16, "firmware ile netleşecek"). 60 sn'de en fazla bir
    SOS sınırı **iptal edilen ya da gönderilemeyen SOS'u saymaz**. Sesli
    "yardım" her zaman erişilebilir kalır (sınırdan etkilenmez).
+11. **"Yardım" tekrarı = hemen gönder ([sendNow]) koruması:** Geri sayımın
+   ilk 2 saniyesinde ([SosConfig.sendNowGuard]) gelen bir `sendNow` isteği
+   sayılmaz. Gerekçe: tetikleyici "yardım" cümlesinin kendisi bir
+   dinleme oturumunda tanınır; SOS geri sayımı hemen ardından SESSİZ yeni
+   bir dinleme oturumu açar ([VoiceController.listenForSos]). Konuşma
+   tanıyıcı aynı sonucu (eski oturumun "final"i) geç ya da yinelenerek
+   bildirirse, bu yeni oturuma karışmasın diye her `_listen` çağrısı bir
+   oturum numarası alır; callback'ler yalnızca kendi oturum numaraları hâlâ
+   güncelse işlenir (`VoiceController._sessionSeq`). İki koruma birlikte:
+   numara eski oturumun sonucunu tamamen eler, süre koruması da aynı anda
+   söylenen gerçek bir tekrarın kazara "hemen gönder" sayılmasını geciktirir.
+12. **SOS geçmişi yalnızca isim ve sonuç durumu:** `SosController.history`
+   ve `AppState.log`'a yazılan SOS satırları telefon numarası ve konum
+   (koordinat, Haritalar bağlantısı, doğruluk) **hiçbir zaman içermez**;
+   yalnızca "Ayşe Demir arandı", "SMS: 2/2 kişiye gönderildi" gibi. Bellekte
+   en fazla `SosController.maxHistory` (20) satır. Testle kilitli
+   (`sos_test.dart` "geçmiş" grubu).
 
 **Z20 notu** (`patika/CLAUDE.md` Z20 maddesine eklenecek; o repo başka
 pencerede yönetiliyor, burada değiştirilmedi): *Telefon IMU'su cepte, çantada

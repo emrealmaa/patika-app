@@ -313,7 +313,14 @@ class AppState extends ChangeNotifier implements ControlActions {
       getLocation: () => this.locationService.currentPosition(),
       hasLocationPermission: () => this.locationAccess.isGranted(),
       call112Enabled: () => this.settings.value.emergencyCall112,
-      callMonitor: sosCallMonitor ?? const FixedDelayCallMonitor(),
+      // Arama sürerken konuşmamak için ses modunu izler; bitiş doğrulanamazsa
+      // hiç konuşulmaz (bkz. AudioModeCallMonitor).
+      callMonitor: sosCallMonitor ?? AudioModeCallMonitor(),
+      // SOS geçmişi işlem geçmişine de yazılır: yalnızca isim ve sonuç durumu.
+      onRecord: (text) {
+        _addLog(PatikaIntent.sos, null, ActionResult.silentOk(text));
+        notifyListeners();
+      },
     );
     sos.status.addListener(notifyListeners);
     voice.onSosSpeech = _onSosSpeech;
@@ -495,11 +502,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     notifyListeners();
   }
 
-  /// SOS'u başlatır ve işlem geçmişine (yalnızca kayıt, ses/titreşim yok:
-  /// SOS kendi geri bildirimini verir) yazar.
+  /// SOS'u başlatır. İşlem geçmişine yazma (ses/titreşim olmadan) ve
+  /// söylenenler SOS denetleyicisinin işi.
   void _startSos(SosSource source) {
-    _addLog(PatikaIntent.sos, null, ActionResult.silentOk('SOS'));
-    notifyListeners();
     unawaited(sos.trigger(source));
   }
 

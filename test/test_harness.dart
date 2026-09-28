@@ -84,7 +84,7 @@ class Harness {
     RoutePlanner? routePlanner,
     PlaceSearch? placeSearch,
     List<EmergencyContact> emergencyContacts = const [],
-    Duration sosCallLength = const Duration(seconds: 40),
+    SosCallMonitor? sosCallMonitor,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     this.emergencyContacts = MemoryEmergencyContactStore(emergencyContacts);
@@ -122,7 +122,7 @@ class Harness {
       emergencyContacts: this.emergencyContacts,
       sosPermissions: sosPermissions,
       emergencyNumber: const EmergencyNumber(debugTestNumber: '0999 000 00 00'),
-      sosCallMonitor: FixedDelayCallMonitor(sosCallLength),
+      sosCallMonitor: sosCallMonitor ?? FakeCallMonitor(),
     );
   }
 

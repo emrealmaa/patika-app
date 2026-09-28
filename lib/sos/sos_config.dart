@@ -57,6 +57,11 @@ abstract final class SosConfig {
   /// dokunuş 112 onayıdır ("tekrar et" değil); onaylanırsa kişi aranmaz.
   static const offerDecisionWindow = Duration(seconds: 6);
 
+  /// Geri sayımın başında bu kadar süre içinde gelen "yardım" tekrarı (hemen
+  /// gönder) SAYILMAZ: tetikleyici cümlenin tanıyıcıdan yinelenmesi iptal
+  /// penceresini kaybettirmesin.
+  static const sendNowGuard = Duration(seconds: 2);
+
   static const maxContacts = 3;
 
   static Duration countdownFor(SosSource source) =>

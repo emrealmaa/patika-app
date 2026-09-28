@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/strings_tr.dart';
 import '../navigation/guidance_engine.dart' show PositionFix;
 import 'sos_call_monitor.dart';
 import 'sos_config.dart';
@@ -28,6 +29,16 @@ class SosStatus {
   const SosStatus(this.phase, {this.remaining = Duration.zero, this.source});
 
   static const idle = SosStatus(SosPhase.idle);
+}
+
+/// SOS geçmişindeki bir satır. **Yalnızca isim ve sonuç durumu**: telefon
+/// numarası ve konum (koordinat, bağlantı) hiçbir zaman yazılmaz. Bellekte,
+/// en fazla [SosController.maxHistory] satır.
+class SosHistoryEntry {
+  final DateTime time;
+  final String text;
+
+  const SosHistoryEntry(this.time, this.text);
 }
 
 enum SosTriggerResult {
@@ -119,10 +130,16 @@ abstract class SosAnnouncer {
 ///   Düşmede (ya da hiçbir SMS gitmediyse) SMS sonuçlarından sonra kısa bir
 ///   pencerede "112'yi aramak için çift dokunun" onaylı teklifi sunulur.
 /// - Arama başladıktan sonra uygulama konuşmaz; geç kalan/başarısız sonuçlar
-///   arama bitince özetlenir.
+///   arama bitince özetlenir. Aramanın sürdüğü/bittiği doğrulanamazsa
+///   ([SosCallEnd.unknown]) hiç konuşulmaz, yalnızca geçmişe yazılır.
+/// - Geri sayımda "yardım" tekrarı ([sendNow]) ilk [SosConfig.sendNowGuard]
+///   içinde sayılmaz (tetikleyici cümlenin yinelenmesi iptal penceresini
+///   kaybettirmesin).
 /// - 60 sn sınırı yalnızca **başarıyla çıkan** SOS'u sayar ve sesli tetiklemeyi
 ///   etkilemez.
 class SosController {
+  static const maxHistory = 20;
+
   final SosDelivery _delivery;
   final SosAnnouncer _announcer;
   final Future<PositionFix?> Function() _getLocation;
@@ -131,11 +148,18 @@ class SosController {
   final SosCallMonitor _callMonitor;
   final DateTime Function() _now;
 
+  /// Her geçmiş satırı ayrıca buraya da verilir (AppState işlem geçmişine yazar).
+  final void Function(String text)? _onRecord;
+
   final status = ValueNotifier<SosStatus>(SosStatus.idle);
+
+  /// Bellekteki SOS geçmişi, en yeni başta (yalnızca isim ve sonuç durumu).
+  final List<SosHistoryEntry> history = [];
 
   SosPhase _phase = SosPhase.idle;
   SosSource? _source;
   Duration _remaining = Duration.zero;
+  Duration _total = Duration.zero;
   Timer? _ticker;
   Future<PositionFix?>? _locationFuture;
   bool _locationPermissionMissing = false;
@@ -146,7 +170,10 @@ class SosController {
   Completer<SosCallResult?>? _decision;
 
   /// Bir arama sürerken doludur; bitince tamamlanır. Bu sırada konuşulmaz.
-  Completer<void>? _callEnded;
+  Completer<SosCallEnd>? _callEnded;
+
+  /// Aramanın bitişi doğrulanamadı: bu SOS için bir daha konuşulmaz.
+  bool _callUnknown = false;
   bool _disposed = false;
 
   SosController({
@@ -155,9 +182,11 @@ class SosController {
     required Future<PositionFix?> Function() getLocation,
     required Future<bool> Function() hasLocationPermission,
     required bool Function() call112Enabled,
-    SosCallMonitor callMonitor = const FixedDelayCallMonitor(),
+    required SosCallMonitor callMonitor,
+    void Function(String text)? onRecord,
     DateTime Function()? now,
-  })  : _delivery = delivery,
+  })  : _onRecord = onRecord,
+        _delivery = delivery,
         _announcer = announcer,
         _getLocation = getLocation,
         _hasLocationPermission = hasLocationPermission,
@@ -181,6 +210,7 @@ class SosController {
     // Sesli "yardım" her zaman erişilebilir kalır: sınır yalnızca diğerlerine.
     if (_rateLimited && source != SosSource.voice) {
       _announcer.rateLimited();
+      _record(Tr.sosHistBlocked(Tr.sosHistReasonRateLimited));
       return SosTriggerResult.rateLimited;
     }
     _setPhase(SosPhase.preparing, source: source);
@@ -202,15 +232,19 @@ class SosController {
     switch (pre) {
       case SosPreflight.unsupported:
         _announcer.unsupported();
+        _record(Tr.sosHistBlocked(Tr.sosHistReasonUnsupported));
       // 112 teklifi her kaynakta var: kullanıcı onaylı, kendiliğinden arama değil.
       case SosPreflight.noContacts:
         _announcer.noContacts(offer112: true);
+        _record(Tr.sosHistBlocked(Tr.sosHistReasonNoContacts));
         _open112Offer(SosConfig.offer112Window);
       case SosPreflight.noSmsPermission:
         _announcer.noSmsPermission(offer112: true);
+        _record(Tr.sosHistBlocked(Tr.sosHistReasonNoSms));
         _open112Offer(SosConfig.offer112Window);
       case SosPreflight.noCallPermission:
         _announcer.noCallPermission();
+        _record(Tr.sosHistBlocked(Tr.sosHistReasonNoCall));
       case SosPreflight.ready:
         break;
     }
@@ -226,6 +260,11 @@ class SosController {
       _locationFuture = null;
       _setPhase(SosPhase.idle);
       _announcer.cancelled(by);
+      _record(Tr.sosHistCancelled(switch (by) {
+        SosCancelSource.voice => Tr.sosCancelByVoice,
+        SosCancelSource.glasses => Tr.sosCancelByGlasses,
+        SosCancelSource.screen => Tr.sosCancelByScreen,
+      }));
       return true;
     }
     if (_phase == SosPhase.sending) {
@@ -234,9 +273,14 @@ class SosController {
     return false;
   }
 
-  /// Geri sayımı beklemeden gönderir (ör. geri sayımda "yardım" tekrarı).
-  void sendNow() {
-    if (_phase == SosPhase.countdown) _send();
+  /// Geri sayımı beklemeden gönderir (geri sayımda "yardım" tekrarı). İlk
+  /// [SosConfig.sendNowGuard] içinde gelen istek SAYILMAZ: tetikleyici cümlenin
+  /// tanıyıcıdan yinelenmesi iptal penceresini kaybettirmesin. Gönderildiyse true.
+  bool sendNow() {
+    if (_phase != SosPhase.countdown) return false;
+    if (_total - _remaining < SosConfig.sendNowGuard) return false;
+    unawaited(_send());
+    return true;
   }
 
   /// "112'yi aramak için çift dokunun" teklifi açıksa 112'yi arar. Teklif
@@ -248,6 +292,7 @@ class SosController {
     _close112Offer();
     await _announcer.calling112();
     final outcome = await _delivery.call112();
+    _record(Tr.sosHist112Confirmed(outcome == SosCallOutcome.placed));
     if (outcome == SosCallOutcome.placed) {
       _beginCallQuiet();
     } else if (!_disposed) {
@@ -273,8 +318,15 @@ class SosController {
 
   SosTriggerResult _startCountdown(SosSource source) {
     final total = SosConfig.countdownFor(source);
+    _total = total;
     _remaining = total;
+    _callUnknown = false;
     _setPhase(SosPhase.countdown, source: source);
+    _record(Tr.sosHistStarted(switch (source) {
+      SosSource.voice => Tr.sosSourceVoice,
+      SosSource.glasses => Tr.sosSourceGlasses,
+      SosSource.fall => Tr.sosSourceFall,
+    }));
     _locationPermissionMissing = false;
     _locationFuture = _fetchLocation();
     _announcer.countdownStarted(source, total);
@@ -284,7 +336,7 @@ class SosController {
       if (_remaining <= Duration.zero) {
         t.cancel();
         _ticker = null;
-        _send();
+        unawaited(_send());
         return;
       }
       _setPhase(SosPhase.countdown, source: source);
@@ -363,6 +415,7 @@ class SosController {
       call = SosCallResult(SosCallOutcome.failed, target);
     }
     if (call.placed && _callEnded == null) _beginCallQuiet();
+    _record(_sentSummary(snapshot, location, call));
 
     _setPhase(SosPhase.idle);
     if (anySent || call.placed) _startRateLimit();
@@ -378,7 +431,8 @@ class SosController {
     SosCallResult call,
     SosLocation location,
   ) async {
-    await _quiet();
+    // Arama sürerken konuşulmaz; bitişi doğrulanamazsa HİÇ konuşulmaz.
+    final end = await _quiet();
     try {
       await batch.settled.timeout(const Duration(seconds: 60));
     } on TimeoutException {
@@ -390,10 +444,20 @@ class SosController {
       for (var i = 0; i < snapshot.length; i++)
         if (snapshot[i].pending) finalResults[i],
     ];
+    for (final r in late) {
+      final status = r.sent
+          ? Tr.sosHistStatusSent
+          : (r.pending ? Tr.sosHistStatusPending : Tr.sosHistStatusFailed);
+      _record(Tr.sosHistLate(r.contact.name, status));
+    }
     final callProblem = call.outcome == SosCallOutcome.failed ||
         call.outcome == SosCallOutcome.noPermission ||
         call.outcome == SosCallOutcome.numberUnavailable;
     if (late.isEmpty && !callProblem) return;
+    if (end == SosCallEnd.unknown) {
+      _record(Tr.sosHistSilenced);
+      return;
+    }
     await _announcer.afterCall(
       SosReport(sms: finalResults, call: call, locationIncluded: location == SosLocation.included),
       late: late,
@@ -408,22 +472,72 @@ class SosController {
       final fix = await _fetchLocation();
       if (fix == null) continue;
       final sent = await _delivery.sendFollowUp(time: _now(), fix: fix);
-      await _quiet();
+      _record(Tr.sosHistFollowUp(sent));
+      final end = await _quiet();
+      if (end == SosCallEnd.unknown) {
+        _record(Tr.sosHistSilenced);
+        return;
+      }
       if (!_disposed) _announcer.followUp(sent: sent);
       return;
     }
   }
 
-  /// Bir arama sürüyorsa bitene kadar bekler (o sürece konuşulmaz).
-  Future<void> _quiet() => _callEnded?.future ?? Future<void>.value();
+  /// Bir arama sürüyorsa bitene kadar bekler (o sürece konuşulmaz). Bitiş
+  /// doğrulanamadıysa [SosCallEnd.unknown]: bu SOS için bir daha konuşulmaz.
+  Future<SosCallEnd> _quiet() async {
+    final pending = _callEnded;
+    if (pending != null) return pending.future;
+    return _callUnknown ? SosCallEnd.unknown : SosCallEnd.ended;
+  }
 
   void _beginCallQuiet() {
-    final ended = Completer<void>();
+    final ended = Completer<SosCallEnd>();
     _callEnded = ended;
-    unawaited(_callMonitor.untilCallEnds().whenComplete(() {
-      if (!ended.isCompleted) ended.complete();
+    unawaited(_callMonitor.untilCallEnds().onError<Object>((_, _) => SosCallEnd.unknown).then((end) {
+      if (end == SosCallEnd.unknown) _callUnknown = true;
       if (identical(_callEnded, ended)) _callEnded = null;
+      if (!ended.isCompleted) ended.complete(end);
     }));
+  }
+
+  // --- geçmiş (yalnızca isim ve sonuç durumu) ----------------------------------
+
+  void _record(String text) {
+    history.insert(0, SosHistoryEntry(_now(), text));
+    if (history.length > maxHistory) history.removeRange(maxHistory, history.length);
+    _onRecord?.call(text);
+  }
+
+  static String _sentSummary(
+    List<SosRecipientResult> results,
+    SosLocation location,
+    SosCallResult call,
+  ) {
+    final sent = results.where((r) => r.sent).length;
+    final problems = [
+      for (final r in results)
+        if (!r.sent)
+          Tr.sosHistSmsProblem(
+              r.contact.name, r.pending ? Tr.sosHistStatusPending : Tr.sosHistStatusFailed),
+    ].join(', ');
+    final sms = results.isEmpty
+        ? Tr.sosHistNoContactsSms
+        : Tr.sosHistSms(sent, results.length, problems);
+    final loc = switch (location) {
+      SosLocation.included => Tr.sosHistLocationIncluded,
+      SosLocation.noPermission => Tr.sosHistLocationNoPermission,
+      SosLocation.unavailable => Tr.sosHistLocationUnavailable,
+    };
+    final who = call.target.is112 ? Tr.sosHistTarget112 : (call.target.name ?? '');
+    final callText = switch (call.outcome) {
+      SosCallOutcome.placed => Tr.sosHistCalled(who),
+      SosCallOutcome.notAttempted => Tr.sosHistNoCall,
+      SosCallOutcome.failed => Tr.sosHistCallFailed,
+      SosCallOutcome.noPermission => Tr.sosHistCallNoPermission,
+      SosCallOutcome.numberUnavailable => Tr.sosHistCallNoNumber,
+    };
+    return Tr.sosHistSent(sms, loc, callText);
   }
 
   void _startRateLimit() {
