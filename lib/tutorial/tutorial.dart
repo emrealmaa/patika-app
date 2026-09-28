@@ -66,20 +66,33 @@ class Tutorial extends ChangeNotifier {
   final TutorialProgress _progress;
   final List<String> steps;
 
+  /// İlk açılıştaki tur sonuna kadar dinlendiyse (durdurulmadıysa) çağrılır:
+  /// konum izni gibi "kullanıcı başındayken, ekran açıkken" sorulması gereken
+  /// şeyler için (bkz. CLAUDE.md Faz 6 kararları, madde 3). Tur "eğitimi
+  /// başlat" ile tekrar dinlenirse çağrılmaz.
+  final Future<void> Function()? onFirstRunCompleted;
+
   bool _running = false;
   int _run = 0;
 
-  Tutorial(this._feedback, this._progress, {this.steps = Tr.tutorialSteps});
+  Tutorial(this._feedback, this._progress,
+      {this.steps = Tr.tutorialSteps, this.onFirstRunCompleted});
 
   bool get running => _running;
 
   /// İlk açılışta: daha önce dinlenmediyse başlatır.
   Future<void> startIfFirstRun() async {
-    if (!await _progress.isDone()) await start();
+    if (await _progress.isDone()) return;
+    if (await _play()) await onFirstRunCompleted?.call();
   }
 
   /// Turu baştan başlatır; zaten sürüyorsa yeniden başlatır.
   Future<void> start() async {
+    await _play();
+  }
+
+  /// Tur sonuna kadar dinlendiyse true; durdurulduysa/yeniden başlatıldıysa false.
+  Future<bool> _play() async {
     final run = ++_run;
     _running = true;
     notifyListeners();
@@ -88,16 +101,17 @@ class Tutorial extends ChangeNotifier {
       var spoken = false;
       for (var attempt = 0; attempt < maxAttemptsPerStep && !spoken; attempt++) {
         spoken = await _feedback.say(step);
-        if (run != _run) return; // durduruldu ya da yeniden başlatıldı
+        if (run != _run) return false; // durduruldu ya da yeniden başlatıldı
       }
       await Future.delayed(stepPause);
-      if (run != _run) return;
+      if (run != _run) return false;
     }
 
     await _progress.markDone();
     _running = false;
     notifyListeners();
     await _feedback.say(Tr.tutorialDone);
+    return run == _run;
   }
 
   /// Turu hemen bitirir (konuşmayı susturmak çağıranın işi - genelde

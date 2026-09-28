@@ -13,6 +13,7 @@ import 'handlers/control_handler.dart';
 import 'handlers/crossing_mode_handler.dart';
 import 'handlers/message_handler.dart';
 import 'handlers/message_history_handler.dart';
+import 'handlers/navigation_control_handler.dart';
 import 'handlers/music_handler.dart';
 import 'handlers/navigation_handler.dart';
 import 'handlers/news_handler.dart';
@@ -32,6 +33,7 @@ class CommandRouter {
   final CallHandler _call;
   final MessageHandler _message;
   final NavigationHandler _navigation;
+  final NavigationControlHandler _navigationControl;
   final MusicHandler _music;
   final NewsHandler _news;
   final TimeHandler _time;
@@ -50,6 +52,7 @@ class CommandRouter {
     CallHandler? call,
     MessageHandler? message,
     NavigationHandler? navigation,
+    NavigationControlHandler? navigationControl,
     MusicHandler? music,
     NewsHandler? news,
     TimeHandler? time,
@@ -66,6 +69,7 @@ class CommandRouter {
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
         _navigation = navigation ?? NavigationHandler(),
+        _navigationControl = navigationControl ?? NavigationControlHandler(),
         _music = music ?? MusicHandler(),
         _news = news ?? NewsHandler(),
         _time = time ?? TimeHandler(),
@@ -120,6 +124,12 @@ class CommandRouter {
           return await _messageHistory.readNew();
         case PatikaIntent.sonBildirimler:
           return await _messageHistory.readRecent();
+        case PatikaIntent.navigasyonBitir:
+          return await _navigationControl.stop();
+        case PatikaIntent.navigasyonKalan:
+          return await _navigationControl.remaining();
+        case PatikaIntent.gectim:
+          return await _navigationControl.crossed();
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

@@ -8,8 +8,12 @@
     <!-- API 30 ve altı için eski Bluetooth izinleri (geriye dönük uyumluluk). -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+    <!-- Sesli navigasyon (Faz 6): yalnızca "uygulama kullanılırken" istenir;
+         ACCESS_BACKGROUND_LOCATION bilerek YOK (bkz. CLAUDE.md Faz 6 kararları).
+         BLE taraması hâlâ neverForLocation ile konumdan bağımsız. Eskiden API 30
+         ve altıyla sınırlıydı (yalnızca eski BLE taraması için). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- ARA/MESAJ niyetlerinde isim -> numara çözümlemesi için (bkz. contact_resolver.dart). -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Test modundaki "Sesli Komut Ver" butonu için telefon mikrofonu (bkz. speech_input_service.dart). -->
@@ -21,6 +25,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 14+: connectedDevice türündeki servis, Bluetooth izinlerinden
@@ -60,7 +65,7 @@
              uygulama son uygulamalardan kaydırılınca servis de kapanır. -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="connectedDevice|microphone"
+            android:foregroundServiceType="connectedDevice|microphone|location"
             android:stopWithTask="true"
             android:exported="false" />
         <!-- Hızlı Ayarlar karosu "Patika: Konuş" (bkz. ListenTileService.kt). -->

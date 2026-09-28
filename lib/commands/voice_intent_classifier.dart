@@ -49,6 +49,13 @@ BleCommand classifyVoiceCommand(String text) {
     return BleCommand.fromWire('SON_BİLDİRİMLER', null);
   }
 
+  // Navigasyon kontrolü (Faz 6): katı kalıplar, anahtar kelime puanlamasından
+  // ÖNCE - "geçtim" GECIS_MODU'nun "geç" fiiline, "kaç dakika kaldı" başka
+  // bir niyete kaymasın.
+  if (_crossingDone.hasMatch(lowered)) return BleCommand.fromWire('GECTIM', null);
+  if (_navStop.hasMatch(lowered)) return BleCommand.fromWire('NAV_BITIR', null);
+  if (_navRemaining.hasMatch(lowered)) return BleCommand.fromWire('NAV_KALAN', null);
+
   final alias = _aliasCommand(lowered, source);
   if (alias != null) return BleCommand.fromWire('TAKMA_AD', alias);
 
@@ -123,6 +130,32 @@ final _newMessages = RegExp(r'mesaj\p{L}*\s+oku', unicode: true);
 
 /// "son bildirimleri oku", "bildirimlerimi oku" - Faz 4b.
 final _recentNotifications = RegExp(r'bildirim\p{L}*\s+oku', unicode: true);
+
+// --- Navigasyon kontrolü (Faz 6) ------------------------------------------------
+
+/// "geçtim", "karşıya geçtim", "karşıdayım", "tamam geçtim": karşıya geçiş
+/// duraklamasını bitirir. YALNIZCA tüm cümle bu olduğunda ("karşıya geçmek
+/// istiyorum" GECIS_MODU'dur, buraya düşmez).
+final _crossingDone = RegExp(
+    '^$_polite'
+    r'(?:(?:karşıya\s+)?(?:geçtim|geçtik|geçildi|ulaştım|vardım)|karşıdayım)(?:\s+(?:tamam|oldu))?'
+    '$_politeEnd\$',
+    unicode: true);
+
+/// "navigasyonu bitir/kapat/durdur/iptal et", "yönlendirmeyi kapat", "gitmekten
+/// vazgeç". "durdur" tek başına DUR'dur (konuşmayı keser, navigasyonu değil).
+final _navStop = RegExp(
+    '$_s'
+    r'(?:navigasyon|yönlendirme|rota|yürüyüş)\p{L}*\s+(?:bitir|kapat|durdur|iptal|sonlandır)\p{L}*'
+    r'|gitmekten\s+vazgeç',
+    unicode: true);
+
+/// "ne kadar kaldı", "kaç dakika kaldı", "hedefe ne kadar", "ne zaman
+/// varırım". Navigasyon yoksa handler "çalışan bir navigasyon yok" der.
+final _navRemaining = RegExp(
+    r'ne\s+kadar\s+(?:kaldı|var|daha)|kaç\s+(?:dakika|metre|kilometre)\s+(?:kaldı|var|daha)|'
+    r'hedefe\s+(?:ne\s+kadar|kaç)|ne\s+zaman\s+varırım',
+    unicode: true);
 
 final _aliasList = RegExp(r'takma\s+ad\p{L}*\s+(?:oku|söyle|listele|neler)|takma\s+adlarım',
     unicode: true);

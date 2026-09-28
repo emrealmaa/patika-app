@@ -21,6 +21,7 @@ class BackgroundService {
   bool _initialized = false;
   bool _running = false;
   bool _withMicrophone = false;
+  bool _withLocation = false;
   String? _lastText;
 
   void _init() {
@@ -61,11 +62,17 @@ class BackgroundService {
         return update(text);
       }
       final micGranted = await Permission.microphone.isGranted;
+      final locationGranted = await Permission.locationWhenInUse.isGranted;
       final result = await FlutterForegroundTask.startService(
         serviceId: _serviceId,
         serviceTypes: [
           ForegroundServiceTypes.connectedDevice,
           if (micGranted) ForegroundServiceTypes.microphone,
+          // Konum türü, servis uygulama görünürken bu türle başladığı için
+          // ekran kapalıyken de konum erişimini sürdürür (Android 14+:
+          // arka plandan konum türüyle başlatılamaz). Bu yüzden izin
+          // eğitimde alınır (bkz. CLAUDE.md Faz 6 kararları, madde 3).
+          if (locationGranted) ForegroundServiceTypes.location,
         ],
         notificationTitle: Tr.notificationTitle,
         notificationText: text,
@@ -73,6 +80,7 @@ class BackgroundService {
       );
       _running = result is ServiceRequestSuccess;
       _withMicrophone = _running && micGranted;
+      _withLocation = _running && locationGranted;
       _lastText = text;
       if (!_running) debugPrint('[Background] başlatılamadı: $result');
     } catch (e) {
@@ -97,6 +105,24 @@ class BackgroundService {
       await start(text);
     } catch (e) {
       debugPrint('[Background] mikrofon türü eklenemedi: $e');
+    }
+  }
+
+  /// Konum izni servis başladıktan SONRA verildiyse servisi konum türüyle
+  /// yeniden başlatır ([ensureMicrophoneType] ile aynı gerekçe). Çağrı izin
+  /// yeni alındığında, yani uygulama ön plandayken yapılmalı: arka plandan
+  /// konum türüyle servis başlatılamaz.
+  Future<void> ensureLocationType() async {
+    if (!_running || _withLocation) return;
+    try {
+      if (!await Permission.locationWhenInUse.isGranted) return;
+      final text = _lastText ?? Tr.notificationSearching;
+      await FlutterForegroundTask.stopService();
+      _running = false;
+      _lastText = null;
+      await start(text);
+    } catch (e) {
+      debugPrint('[Background] konum türü eklenemedi: $e');
     }
   }
 

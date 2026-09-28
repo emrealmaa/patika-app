@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'accessibility/a11y_announcer.dart' as a11y;
@@ -25,7 +25,9 @@ import 'commands/contact_resolver.dart';
 import 'commands/handlers/alias_handler.dart';
 import 'commands/handlers/call_handler.dart';
 import 'commands/handlers/message_handler.dart';
+import 'commands/handlers/crossing_mode_handler.dart';
 import 'commands/handlers/message_history_handler.dart';
+import 'commands/handlers/navigation_control_handler.dart';
 import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
@@ -37,10 +39,14 @@ import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
+import 'navigation/navigation_session.dart';
+import 'navigation/route_planner.dart';
+import 'permissions/location_access.dart';
 import 'permissions/permission_explainer.dart';
 import 'platform/call_service.dart';
 import 'platform/direct_actions.dart';
 import 'platform/incoming_messages.dart';
+import 'platform/location_service.dart';
 import 'platform/notification_access.dart';
 import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
@@ -80,6 +86,17 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// `lib/platform/call_service.dart`. Gerçek `NotificationListenerService`
   /// gelene kadar hep [SimulatedCallService].
   late final PatikaCallService callService;
+
+  /// Sesli navigasyon (Faz 6): rota + konum + duyurular. Konum kaynağı
+  /// varsayılan olarak gerçek (`geolocator`); Test Modu kendi simülasyon
+  /// kaynağını `NavigationSession.start(location: ...)` ile verir.
+  late final PatikaLocationService locationService;
+  late final LocationAccess locationAccess;
+  late final NavigationSession navigation;
+
+  /// Test Modu'nun navigasyon simülasyonu için: yalnızca simülasyon
+  /// oturumları bunu kullanır, gerçek konum akmaz.
+  final simulatedLocation = SimulatedLocationService();
 
   /// Bildirim dinleyici erişim durumu/ayar ekranı (Faz 4b, iskelet -
   /// gerçek dinleyici henüz yok). Test Modu'ndan denenebiliyor.
@@ -140,6 +157,10 @@ class AppState extends ChangeNotifier implements ControlActions {
     NotificationAccess? notificationAccess,
     IncomingMessages? incomingMessages,
     LoudMessagesNotice? loudMessagesNotice,
+    PatikaLocationService? locationService,
+    LocationAccess? locationAccess,
+    RoutePlanner? routePlanner,
+    bool Function()? isAppVisible,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -176,6 +197,20 @@ class AppState extends ChangeNotifier implements ControlActions {
     );
     // Doğrudan arama/SMS yalnızca "direct" derleme türünde; izinler ilk
     // kullanımda sesli açıklamayla isteniyor.
+    // Sesli navigasyon (Faz 6). Konum izni melez akışla istenir: eğitimin
+    // sonunda (bkz. [_offerLocationAfterTutorial]); reddeden/atlayan için
+    // ilk navigasyonda, uygulama ön plandaysa (bkz. NavigationSession.start).
+    this.locationService = locationService ?? GeolocatorLocationService();
+    this.locationAccess = locationAccess ??
+        PermissionLocationAccess(permissions, onGranted: _background.ensureLocationType);
+    navigation = NavigationSession(
+      feedback: feedback,
+      location: this.locationService,
+      planner: routePlanner,
+      access: this.locationAccess,
+      isAppVisible: isAppVisible ?? _appIsVisible,
+    );
+
     final directActions = direct ?? MethodChannelDirectActions();
     final sentMessages = SentMessageLog();
     router = CommandRouter(
@@ -202,8 +237,14 @@ class AppState extends ChangeNotifier implements ControlActions {
       alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),
       control: ControlHandler(this),
+      navigationControl: NavigationControlHandler(navigation),
+      crossingMode: CrossingModeHandler(navigation),
     );
-    tutorial = Tutorial(feedback, tutorialProgress ?? SharedPrefsTutorialProgress());
+    tutorial = Tutorial(
+      feedback,
+      tutorialProgress ?? SharedPrefsTutorialProgress(),
+      onFirstRunCompleted: _offerLocationAfterTutorial,
+    );
     voice = VoiceController(
       speech: speechInput ?? SpeechInputService(),
       feedback: feedback,
@@ -236,6 +277,25 @@ class AppState extends ChangeNotifier implements ControlActions {
     await _background.start(_notificationText);
     await _supervisor.start();
     await tutorial.startIfFirstRun();
+  }
+
+  /// Eğitimin sonunda: konum izni yoksa sesli açıklamayla ister. Ekran açık,
+  /// kullanıcı başında; izin verilirse arka plan servisi konum türüyle
+  /// yeniden başlar. Verilmezse ilk navigasyonda yeniden denenir.
+  Future<void> _offerLocationAfterTutorial() async {
+    if (await locationAccess.isGranted()) return;
+    await locationAccess.requestWithExplanation();
+  }
+
+  /// Uygulama şu an ön planda mı? Ekran kapalıyken/arka planda (ör.
+  /// kulaklıktan sesle başlatma) izin penceresi görünmez ve konum türlü servis
+  /// başlatılamaz; bilinmiyorsa (null) güvenli tarafta kalıp "ön planda değil" denir.
+  static bool _appIsVisible() {
+    try {
+      return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _applySettings() {
@@ -322,7 +382,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   }
 
   /// Gözlük butonu: tek dokunuş dinler (dinlerken iptal eder), çift dokunuş
-  /// son duyuruyu tekrarlar, uzun basış SOS (Faz 7'ye kadar yer tutucu).
+  /// son duyuruyu tekrarlar (karşıya geçiş duraklamasındayken navigasyonu
+  /// devam ettirir), uzun basış SOS (Faz 7'ye kadar yer tutucu).
   /// Telefon çalarken (bkz. [_ringingCall]) dokunma/uzun basış anlamı
   /// değişir: dokunma açar, uzun basış reddeder - SOS o sırada yalnızca
   /// sesle erişilebilir (bkz. CLAUDE.md Faz 4b kararları).
@@ -335,10 +396,19 @@ class AppState extends ChangeNotifier implements ControlActions {
           callService.answer();
           feedback.signal(FeedbackEvent.success, text: Tr.callAnswered(ringing.callerName));
         } else {
+          // Karşıya geçiş duraklamasında da dinler: SOS ve sesli komutlar
+          // kavşakta erişilebilir kalmalı (duraklama çıkışı çift dokunuşta).
           voice.startListening(ListenSource.glasses);
         }
       case GlassesButton.doubleTap:
-        if (!repeatLast()) feedback.signal(FeedbackEvent.error, text: Tr.nothingToRepeat);
+        if (navigation.isPausedForCrossing) {
+          // Karşıya geçiş duraklaması: çift dokunuş "karşıya ulaştım" demektir
+          // (dört çıkış kanalından biri); "son duyuruyu tekrarla" anlamı o
+          // sırada geri planda kalır (sesle "tekrar et" yine çalışır).
+          navigation.resumeFromCrossing();
+        } else if (!repeatLast()) {
+          feedback.signal(FeedbackEvent.error, text: Tr.nothingToRepeat);
+        }
       case GlassesButton.longPress:
         if (ringing != null) {
           callService.reject();
@@ -500,6 +570,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     callService.dispose();
     _messageSub?.cancel();
     incomingMessages.dispose();
+    navigation.dispose();
+    locationService.dispose();
+    simulatedLocation.dispose();
     _background.stop();
     super.dispose();
   }

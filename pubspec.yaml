@@ -46,6 +46,7 @@ dependencies:
   audioplayers: ^6.7.1
   shared_preferences: ^2.5.5
   flutter_foreground_task: ^10.0.0
+  geolocator: ^14.1.1
 
 dev_dependencies:
   flutter_test:

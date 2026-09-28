@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
+import 'package:patika_app/permissions/location_access.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/notification_access.dart';
@@ -172,4 +173,23 @@ class FakeEarcons implements EarconPlayer {
 
   @override
   Future<void> play(Earcon earcon) async => played.add(earcon);
+}
+
+/// Konum izninin sahte hali: [granted] elle ayarlanır, [requests] kaç kez
+/// açıklamalı istendiğini sayar.
+class FakeLocationAccess implements LocationAccess {
+  bool granted;
+  bool grantOnRequest;
+  int requests = 0;
+  FakeLocationAccess({this.granted = false, this.grantOnRequest = true});
+
+  @override
+  Future<bool> isGranted() async => granted;
+
+  @override
+  Future<bool> requestWithExplanation() async {
+    requests++;
+    if (grantOnRequest) granted = true;
+    return granted;
+  }
 }

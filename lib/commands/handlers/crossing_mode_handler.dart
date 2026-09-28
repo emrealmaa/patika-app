@@ -1,4 +1,5 @@
 import '../../l10n/strings_tr.dart';
+import '../../navigation/navigation_session.dart';
 import '../action_result.dart';
 
 /// GECIS_MODU niyeti. Python tarafında bu, crossing_mode.py'deki ağır
@@ -6,13 +7,21 @@ import '../action_result.dart';
 /// başlatıyor - "telefon eylemi" değil, Katman 1 güvenlik mantığının bir
 /// parçası.
 ///
-/// KAPSAM DIŞI (v1): bu görevin kapsamı BLE + telefon eylemi yönlendirme
-/// idi. crossing_mode.py'nin Dart'a taşınması (kamera + görü işleme
-/// gerektirir) çok daha büyük, bağımsız bir iş kalemi (bkz.
-/// patika_app/TODO.md). Şimdilik sadece niyeti tanıyıp bilgilendirici bir
-/// sonuç döndürüyor, çökmüyor.
+/// KAPSAM DIŞI (v1): crossing_mode.py'nin Dart'a taşınması (kamera + görü
+/// işleme gerektirir) çok daha büyük, bağımsız bir iş kalemi (bkz.
+/// patika_app/TODO.md). Şimdilik niyeti tanıyıp bilgilendirici bir sonuç
+/// döndürüyor, çökmüyor.
+///
+/// Tek gerçek etkisi (Faz 6): açık bir navigasyon varsa onu duraklatır.
+/// Geçiş kararı Kavşak Geçiş Asistanına aittir; navigasyon bu sırada kendi
+/// başına hiçbir şey söylememeli.
 class CrossingModeHandler {
+  final NavigationSession? _navigation;
+
+  CrossingModeHandler([this._navigation]);
+
   Future<ActionResult> handle(String? entity) async {
-    return ActionResult.fail(Tr.crossingNotReady);
+    final paused = _navigation?.pauseForCrossing() ?? false;
+    return ActionResult.fail(paused ? Tr.navCrossingModeNotReady : Tr.crossingNotReady);
   }
 }

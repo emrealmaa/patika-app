@@ -34,6 +34,18 @@ enum PatikaIntent {
   /// 20) yalnızca göndereni özetlenir. Python tarafında yok.
   sonBildirimler,
 
+  /// Navigasyon kontrolü (Faz 6) - Python tarafında yok, yalnızca telefon
+  /// mikrofonundan. "navigasyonu bitir": çalışan yönlendirmeyi kapatır.
+  navigasyonBitir,
+
+  /// "ne kadar kaldı": hedefe kalan mesafe ve yaklaşık süre.
+  navigasyonKalan,
+
+  /// "geçtim": karşıya geçiş duraklamasını bitirir (gözlük çift dokunuşu ve
+  /// zaman aşımı ile birlikte dört çıkış kanalından biri). `crossing_mode.py`
+  /// da aynı sözcüğü kullanıyor.
+  gectim,
+
   /// Evrensel konuşma kontrolü (Faz 2) - telefon tarafına özgü. Bunlar
   /// "Şunu anladım" teyidi olmadan hemen uygulanır.
   dur,
@@ -98,6 +110,13 @@ enum PatikaIntent {
       case 'SON_BİLDİRİMLER':
       case 'SON_BILDIRIMLER':
         return PatikaIntent.sonBildirimler;
+      case 'NAV_BITIR':
+        return PatikaIntent.navigasyonBitir;
+      case 'NAV_KALAN':
+        return PatikaIntent.navigasyonKalan;
+      case 'GECTIM':
+      case 'GEÇTİM':
+        return PatikaIntent.gectim;
       case 'DUR':
         return PatikaIntent.dur;
       case 'TEKRAR':

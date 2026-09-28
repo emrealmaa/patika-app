@@ -9,6 +9,9 @@ import '../ble/glasses_protocol.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../l10n/strings_tr.dart';
+import '../navigation/guidance_speech.dart';
+import '../navigation/navigation_session.dart';
+import '../navigation/simulated_walk.dart';
 import '../permissions/permission_explainer.dart';
 import '../platform/call_service.dart';
 import '../platform/notification_access.dart';
@@ -127,6 +130,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
           const SizedBox(height: 24),
           _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
+        const SizedBox(height: 24),
+        _NavigationSimulationSection(state: state),
         const SizedBox(height: 24),
         _NotificationAccessSection(
           access: state.notificationAccess,
@@ -307,6 +312,115 @@ class _IncomingCallSimulationSectionState extends State<_IncomingCallSimulationS
           child: Text(ringing == null ? Tr.noActiveCall : Tr.activeCall(ringing.callerName)),
         ),
       ],
+    );
+  }
+}
+
+/// Navigasyonu (Faz 6) gerçek konum olmadan dener: deneme rotasında "yürür",
+/// rotadan sapar, konumu zayıflatır, karşıya geçiş duraklamasını sınar. Konum
+/// kaynağı BLE simülasyonundan bağımsız ([AppState.simulatedLocation]).
+class _NavigationSimulationSection extends StatefulWidget {
+  final AppState state;
+
+  const _NavigationSimulationSection({required this.state});
+
+  @override
+  State<_NavigationSimulationSection> createState() => _NavigationSimulationSectionState();
+}
+
+class _NavigationSimulationSectionState extends State<_NavigationSimulationSection> {
+  RouteWalker? _walker;
+
+  AppState get _state => widget.state;
+
+  Future<void> _start() async {
+    final route = demoRoute();
+    final walker = RouteWalker(route);
+    _walker = walker;
+    _state.simulatedLocation.emit(walker.position);
+    final result = await _state.navigation.start(route, location: _state.simulatedLocation);
+    if (result == NavigationStart.started) {
+      _state.feedback.say(describeRouteSummary(route,
+          withDirectionNote: _state.navigation.announcesDirection));
+    }
+  }
+
+  void _walk(double meters) {
+    final walker = _walker;
+    if (walker == null || !_state.navigation.active) return;
+    walker.advance(meters);
+    _state.simulatedLocation.emit(walker.position);
+  }
+
+  Future<void> _wander() async {
+    final walker = _walker;
+    if (walker == null || !_state.navigation.active) return;
+    // Rota dışı için ardışık üç okuma gerekir (bkz. GuidanceConfig.offRouteFixes).
+    for (var i = 0; i < 3; i++) {
+      _state.simulatedLocation.emit(walker.offRoute(40));
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  void _backOnRoute() {
+    final walker = _walker;
+    if (walker == null || !_state.navigation.active) return;
+    _state.simulatedLocation.emit(walker.position);
+  }
+
+  Future<void> _weakGps() async {
+    final walker = _walker;
+    if (walker == null || !_state.navigation.active) return;
+    for (var i = 0; i < 3; i++) {
+      _state.simulatedLocation.emit(walker.position, accuracy: 80);
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _state.navigation,
+      builder: (context, _) {
+        final nav = _state.navigation;
+        final status = !nav.active
+            ? Tr.testNavStatusIdle
+            : nav.isPausedForCrossing
+                ? Tr.testNavStatusPaused
+                : nav.isOffRoute
+                    ? Tr.testNavStatusOffRoute
+                    : nav.isGpsWeak
+                        ? Tr.testNavStatusWeakGps
+                        : Tr.testNavStatusRunning;
+        final remaining = nav.remainingText();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(Tr.testNavTitle, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            Semantics(container: true, child: const Text(Tr.testNavHint)),
+            const SizedBox(height: 12),
+            for (final (label, action) in [
+              (Tr.testNavStart, _start),
+              (Tr.testNavWalk10, () => _walk(10)),
+              (Tr.testNavWalk50, () => _walk(50)),
+              (Tr.testNavOffRoute, _wander),
+              (Tr.testNavBackOnRoute, _backOnRoute),
+              (Tr.testNavWeakGps, _weakGps),
+              (Tr.testNavCrossed, () => nav.resumeFromCrossing()),
+              (Tr.testNavStop, () => nav.stop()),
+            ]) ...[
+              OutlinedButton(onPressed: action, child: Text(label)),
+              const SizedBox(height: 8),
+            ],
+            Semantics(container: true, child: Text(Tr.testNavStatus(status))),
+            if (remaining != null) Semantics(container: true, child: Text(remaining)),
+          ],
+        );
+      },
     );
   }
 }

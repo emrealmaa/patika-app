@@ -6,6 +6,7 @@ import 'package:patika_app/contacts/alias_store.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
+import 'package:patika_app/platform/location_service.dart';
 import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/settings/settings.dart';
@@ -38,6 +39,10 @@ class Harness {
   final tutorialProgress = MemoryTutorialProgress(true);
   final SettingsStore settings;
   bool micGranted = true;
+
+  /// Konum izni (varsayılan verilmiş) ve konum kaynağı: testte gerçek konum akmaz.
+  final locationAccess = FakeLocationAccess(granted: true);
+  final location = SimulatedLocationService();
 
   /// Açılan tel:/sms: adresleri.
   final opened = <Uri>[];
@@ -76,6 +81,9 @@ class Harness {
       notificationAccess: const NoNotificationAccess(),
       incomingMessages: incomingMessages,
       loudMessagesNotice: loudMessagesNotice ?? MemoryLoudMessagesNotice(),
+      locationAccess: locationAccess,
+      locationService: location,
+      isAppVisible: () => true,
     );
   }
 
