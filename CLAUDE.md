@@ -111,6 +111,12 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   `adb backup`/Google hesap yedeği alıp geri yüklendiğinde acil kişilerin
   GELMEDİĞİ, ayarların/takma adların geldiği; cihazdan cihaza aktarımda
   (Android "Switch") aynı davranış.
+- [ ] **Faz 7 (SOS) - acil kişi kurulumu:** "acil kişi ekle" ile gerçek
+  rehberden ekleme; `direct`de SMS izni penceresinin kurulum sırasında
+  açılması (TalkBack'le); rıza SMS'inin **ikinci numaraya** gerçekten
+  gitmesi (asla üçüncü bir kişiye/112'ye değil); izin reddedilince "SMS
+  izni verilmedi" notunun duyulması; "acil kişi sil" isimsiz sorulduğunda
+  birden çok kişi arasından TalkBack'le seçim.
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - gerçek cihazda uçtan uca:** SOS'un
   **ikinci numarayla** denenmesi (asla gerçek 112 ile değil). Bakılacaklar:
   (a) kişi aranınca **ses hoparlörden mi** çıkıyor (eller serbest gerekir;
@@ -211,10 +217,11 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 
 ## Sıradaki
 
-1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı) ve
-   7a-2 (uygulamaya bağlama) kodlandı; sırada 7a-3 (acil kişi kurulumu,
-   izin akışı), sonra 7b (pil + durum), 7c (düşme, gölge modu). Sonra Faz 8
-   (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı), 7a-2
+   (uygulamaya bağlama) ve 7a-3 (acil kişi kurulumu: sesle ekle/sil/liste,
+   izin akışı kurulum sırasında, isteğe bağlı rıza SMS'i) kodlandı; SOS
+   çekirdeği (7a) tamamlandı. Sırada 7b (pil + durum), 7c (düşme, gölge
+   modu). Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
@@ -400,6 +407,18 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    **Cihazda doğrulanmadı**, bekleyen telefon testlerine eklendi: gerçek
    bir yedek alıp geri yüklendiğinde acil kişilerin gelmediği, ayarların
    geldiği kontrol edilecek.
+14. **Acil kişi kurulumu (7a-3):** sesle "acil kişi ekle X" telefon
+   rehberinden çözer (`RecipientFlow`, isim yoksa/belirsizse sorar), onaydan
+   sonra eklenir. Numara her zaman kişinin rehberdeki **ilk** numarası.
+   SMS izni **yalnızca `direct` derlemesinde ve kurulum sırasında** sesli
+   açıklamayla istenir - SOS anında değil (SOS yalnızca yoklar,
+   `SosPermissions`). İzin verilirse **isteğe bağlı**, yalnızca `direct`de
+   bir rıza SMS'i sorulur ("... acil kişiniz olarak eklendi" bildirimi);
+   `play`'de SMS izni hiç istenmez, rıza sorusu hiç sorulmaz. "acil kişi
+   sil X" **telefon rehberine değil kayıtlı acil kişilere** karşı çözülür
+   (`ContactMatcher` yeniden kullanılır, isim yoksa/bulunamazsa mevcut
+   kişiler söylenir). "acil kişiler kim" diyalogsuz tek adımda okur.
+   Testlerde gerçek SMS/arama gitmez (`FakeDirectActions`, 112 koruması).
 
 **Z20 notu** (`patika/CLAUDE.md` Z20 maddesine eklenecek; o repo başka
 pencerede yönetiliyor, burada değiştirilmedi): *Telefon IMU'su cepte, çantada

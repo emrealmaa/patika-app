@@ -4,6 +4,7 @@ import '../ble/ble_command.dart';
 import '../l10n/strings_tr.dart';
 import '../settings/settings_store.dart';
 import 'action_result.dart';
+import '../sos/emergency_contacts.dart';
 import 'incoming_message_log.dart';
 import 'intent.dart';
 import 'sent_messages.dart';
@@ -11,6 +12,7 @@ import 'handlers/alias_handler.dart';
 import 'handlers/call_handler.dart';
 import 'handlers/control_handler.dart';
 import 'handlers/crossing_mode_handler.dart';
+import 'handlers/emergency_contact_handler.dart';
 import 'handlers/message_handler.dart';
 import 'handlers/message_history_handler.dart';
 import 'handlers/navigation_control_handler.dart';
@@ -46,6 +48,7 @@ class CommandRouter {
   final AliasHandler _alias;
   final LastMessageHandler _lastMessage;
   final MessageHistoryHandler _messageHistory;
+  final EmergencyContactHandler _emergencyContact;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -65,6 +68,7 @@ class CommandRouter {
     AliasHandler? alias,
     LastMessageHandler? lastMessage,
     MessageHistoryHandler? messageHistory,
+    EmergencyContactHandler? emergencyContact,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
@@ -83,6 +87,8 @@ class CommandRouter {
         _alias = alias ?? AliasHandler(),
         _lastMessage = lastMessage ?? LastMessageHandler(SentMessageLog()),
         _messageHistory = messageHistory ?? MessageHistoryHandler(IncomingMessageLog()),
+        _emergencyContact =
+            emergencyContact ?? EmergencyContactHandler(store: MemoryEmergencyContactStore()),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -130,6 +136,8 @@ class CommandRouter {
           return await _navigationControl.remaining();
         case PatikaIntent.gectim:
           return await _navigationControl.crossed();
+        case PatikaIntent.acilKisi:
+          return await _emergencyContact.handle(command.entity);
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

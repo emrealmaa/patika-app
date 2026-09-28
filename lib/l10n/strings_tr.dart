@@ -494,6 +494,14 @@ abstract final class Tr {
       'Acil durum mesajının devamı: güncel konum (saat $time): $link '
       '(yaklaşık $accuracyMeters metre doğrulukla).';
 
+  /// Acil kişi eklenince, isteğe bağlı olarak KİŞİYE giden tek seferlik
+  /// bildirim (rıza SMS'i). Alıcı okuyor; gönderenin adı bilinmediği için
+  /// (uygulama kullanıcının adını tutmuyor) genel ifade kullanılır.
+  static const emergencyConsentSmsBody =
+      'Bir Patika (görme engelliler için akıllı gözlük) kullanıcısı sizi acil '
+      'kişisi olarak ekledi. Acil bir durumda bu numaradan SMS ya da arama '
+      'gelebilir.';
+
   // --- Acil durum (Faz 7): kullanıcıya söylenenler ---------------------------
   // Kural: "gönderildi" yalnızca gönderim sonucu başarılıysa (mesaj operatöre
   // ulaştı); "iletildi/ulaştı" HİÇ denmez (teslim raporu yok).
@@ -550,6 +558,34 @@ abstract final class Tr {
       'Dikkat: acil durumda 112 aranacak. Asılsız 112 araması idari para cezası '
       'gerektirebilir. Kapatmak için aynı düğmeye tekrar dokunun';
   static const sosCall112DisabledInfo = 'Acil durumda 112 yerine ilk acil kişi aranacak';
+
+  // --- Acil kişi kurulumu (Faz 7a-3) ------------------------------------------
+  static const dialogWhoToAddEmergency = 'Kimi acil kişi olarak ekleyeyim?';
+  static String dialogConfirmEmergencyAdd(String nameAccusative) =>
+      '$nameAccusative acil kişi olarak ekleyeyim mi?';
+  static String dialogConfirmConsentSms(String nameDative) =>
+      '$nameDative acil kişiniz olarak eklendiğini bildiren bir mesaj göndereyim mi?';
+  static String dialogConfirmEmergencyRemove(String nameAccusative) =>
+      '$nameAccusative acil kişilerden çıkarayım mı?';
+  static const emergencySmsPermissionWhy =
+      'Acil durumda kişilerinize otomatik mesaj gönderebilmem için SMS izni isteyeceğim.';
+  static String emergencyContactAdded(String name) => '$name acil kişi olarak eklendi';
+  static String emergencyContactDuplicate(String name) => '$name zaten acil kişi';
+  static const emergencyContactListFull =
+      'En fazla 3 acil kişi ekleyebilirsiniz. Önce birini silmeniz gerekir';
+  static const emergencyContactNoSmsPermissionDetail =
+      'SMS izni verilmedi; acil durumda bu kişiye mesaj gidemeyebilir';
+  static String emergencyConsentSent(String name) => '$name\'e bildirim mesajı gönderildi';
+  static String emergencyConsentFailed(String name) => '$name\'e bildirim mesajı gönderilemedi';
+  static String emergencyContactRemoved(String name) => '$name acil kişilerden çıkarıldı';
+  static String emergencyContactRemoveNotFound(String spoken, String currentNames) =>
+      currentNames.isEmpty
+          ? '$spoken acil kişilerinizde yok. Hiç acil kişiniz yok'
+          : '$spoken acil kişilerinizde yok. Acil kişileriniz: $currentNames';
+  static const emergencyContactListEmpty =
+      'Hiç acil kişiniz yok. Eklemek için acil kişi ekle deyin';
+  static String emergencyContactList(List<String> names) => 'Acil kişileriniz: ${names.join(', ')}';
+  static const emergencyContactNotUnderstood = 'Acil kişi komutunu anlayamadım';
 
   // --- Acil durum geçmişi (Faz 7) ---------------------------------------------
   // İşlem geçmişine yazılan satırlar: YALNIZCA isim ve sonuç durumu. Telefon

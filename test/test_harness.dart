@@ -85,6 +85,7 @@ class Harness {
     PlaceSearch? placeSearch,
     List<EmergencyContact> emergencyContacts = const [],
     SosCallMonitor? sosCallMonitor,
+    Future<bool> Function()? ensureSmsPermission,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     this.emergencyContacts = MemoryEmergencyContactStore(emergencyContacts);
@@ -110,7 +111,7 @@ class Harness {
       },
       direct: direct,
       ensureCallPermission: () async => true,
-      ensureSmsPermission: () async => true,
+      ensureSmsPermission: ensureSmsPermission ?? (() async => true),
       notificationAccess: const NoNotificationAccess(),
       incomingMessages: incomingMessages,
       loudMessagesNotice: loudMessagesNotice ?? MemoryLoudMessagesNotice(),

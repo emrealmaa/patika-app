@@ -76,7 +76,8 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | TEKRAR | "Tekrar et", "ne dedin" | ✅ Son söyleneni tekrarlar |
 | KOMUTLAR | "Ne yapabilirim", "komutlar" | ✅ Komut listesini okur |
 | EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
-| SOS | "Yardım", "imdat", "acil durum" | ✅ Geri sayım; "iptal", "yanlış alarm", "vazgeç", "gerek yok" iptal eder ("dur" iptal etmez). Acil kişi kurulumu 7a-3'te |
+| SOS | "Yardım", "imdat", "acil durum" | ✅ Geri sayım; "iptal", "yanlış alarm", "vazgeç", "gerek yok" iptal eder ("dur" iptal etmez) |
+| Acil kişi | "acil kişi ekle Ayşe", "acil kişi sil Ayşe", "acil kişiler kim" | ✅ En çok 3 kişi; ekleme onaylı, `direct`de isteğe bağlı bildirim SMS'i |
 | HAVA / HABER / MÜZİK / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (sonraki fazlar) |
 | OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
 

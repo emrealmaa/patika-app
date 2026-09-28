@@ -57,6 +57,12 @@ enum PatikaIntent {
   /// `lib/sos/`). `play` derlemesinde "bu sürümde gönderilemiyor" der. Diğer
   /// tüm niyetlerden önce denetlenir.
   sos,
+
+  /// "acil kişi ekle/sil X", "acil kişiler kim" (Faz 7a-3) - SOS'un
+  /// gönderdiği acil kişi listesini yönetir. Python tarafında yok, yalnızca
+  /// telefon mikrofonundan. Entity: "ekle|X", "sil|X", "liste"
+  /// (`EmergencyContactHandler`).
+  acilKisi,
   bilinmiyor;
 
   /// Anında (onay sorusu olmadan) uygulanan kontrol niyetleri. Telefon eylemi
@@ -120,6 +126,9 @@ enum PatikaIntent {
         return PatikaIntent.egitim;
       case 'SOS':
         return PatikaIntent.sos;
+      case 'ACIL_KİŞİ':
+      case 'ACIL_KISI':
+        return PatikaIntent.acilKisi;
       default:
         return PatikaIntent.bilinmiyor;
     }

@@ -59,6 +59,9 @@ BleCommand classifyVoiceCommand(String text) {
   final alias = _aliasCommand(lowered, source);
   if (alias != null) return BleCommand.fromWire('TAKMA_AD', alias);
 
+  final emergency = _emergencyContactCommand(lowered, source);
+  if (emergency != null) return BleCommand.fromWire('ACIL_KİŞİ', emergency);
+
   return _classifyByKeywords(lowered, source);
 }
 
@@ -236,6 +239,70 @@ String? _aliasCommand(String lowered, String source) {
       ? first.substring(0, apostrophe)
       : first.replaceFirst(_accusativeEnd, '');
   return 'kaydet|$first|${original(split + 1, olarak)}';
+}
+
+// --- Acil kişi komutları (Faz 7a-3, katı, puanlamadan önce) --------------------
+
+final _emergencyList = RegExp(
+  r'acil\s+kişi\p{L}*\s*(?:kim(?:ler)?|listele\p{L}*|oku\p{L}*|söyle\p{L}*|nedir)',
+  unicode: true,
+);
+
+/// "acil kişi ekle Ayşe" / "Ayşe'yi acil kişi ekle" -> "ekle|Ayşe"
+/// "acil kişi ekle" (isim yok) -> "ekle|"
+/// "acil kişi sil Ayşe" / "acil kişilerden Ayşe'yi çıkar" -> "sil|Ayşe"
+/// "acil kişiler kim" -> "liste" (yukarıda, ayrı kalıp)
+///
+/// Anchor "acil kişi..." bulunur; fiil (ekle/sil/çıkar/kaldır) sağa doğru
+/// aranır. İsim üç yerden birinde olabilir - anchor ile fiil arasında,
+/// fiilden sonra, ya da anchor'dan önce (Türkçe'de üçü de doğal); ilk
+/// dolu olan kullanılır.
+String? _emergencyContactCommand(String lowered, String source) {
+  if (_emergencyList.hasMatch(lowered)) return 'liste';
+
+  final tokens = [
+    for (final m in RegExp(r"[\p{L}\p{N}']+", unicode: true).allMatches(lowered))
+      _Token(m.group(0)!, m.start, m.end),
+  ];
+  String original(int from, int to) => from >= to
+      ? ''
+      : [for (var i = from; i < to; i++) source.substring(tokens[i].start, tokens[i].end)].join(' ');
+
+  final acilIdx = tokens.indexWhere((t) => t.lower == 'acil');
+  if (acilIdx < 0 || acilIdx + 1 >= tokens.length || !tokens[acilIdx + 1].lower.startsWith('kişi')) {
+    return null;
+  }
+  var anchorEnd = acilIdx + 2;
+  if (anchorEnd < tokens.length && tokens[anchorEnd].lower == 'olarak') anchorEnd++;
+
+  int? verbIdx;
+  String? verb;
+  for (var i = anchorEnd; i < tokens.length; i++) {
+    final w = tokens[i].lower;
+    if (w.startsWith('ekle')) {
+      verb = 'ekle';
+      verbIdx = i;
+      break;
+    }
+    if (w.startsWith('sil') || w.startsWith('çıkar') || w.startsWith('kaldır')) {
+      verb = 'sil';
+      verbIdx = i;
+      break;
+    }
+  }
+  if (verb == null || verbIdx == null) return null;
+
+  String strip(String s) {
+    if (s.isEmpty) return s;
+    final apostrophe = s.lastIndexOf("'");
+    return apostrophe > 0 ? s.substring(0, apostrophe) : s.replaceFirst(_accusativeEnd, '');
+  }
+
+  final between = strip(original(anchorEnd, verbIdx).replaceFirst(RegExp(r'^olarak\s+'), ''));
+  final after = strip(original(verbIdx + 1, tokens.length));
+  final before = strip(original(0, acilIdx));
+  final name = between.isNotEmpty ? between : (after.isNotEmpty ? after : before);
+  return '$verb|$name';
 }
 
 // --- Anahtar kelime motoru ----------------------------------------------------

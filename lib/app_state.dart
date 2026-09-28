@@ -26,6 +26,7 @@ import 'commands/handlers/alias_handler.dart';
 import 'commands/handlers/call_handler.dart';
 import 'commands/handlers/message_handler.dart';
 import 'commands/handlers/crossing_mode_handler.dart';
+import 'commands/handlers/emergency_contact_handler.dart';
 import 'commands/handlers/message_history_handler.dart';
 import 'commands/handlers/navigation_handler.dart';
 import 'commands/handlers/navigation_control_handler.dart';
@@ -254,6 +255,13 @@ class AppState extends ChangeNotifier implements ControlActions {
 
     final directActions = direct ?? MethodChannelDirectActions();
     final sentMessages = SentMessageLog();
+    // Acil kişi deposu burada oluşturuluyor (SosController'dan önce): hem
+    // SOS'un kendi gönderimi hem acil kişi ekle/sil diyaloğu aynı depoyu
+    // paylaşıyor. SMS izni de tek bir kapanışla paylaşılıyor (MESAJ ve acil
+    // kişi kurulumu aynı izni ister).
+    this.emergencyContacts = emergencyContacts ?? SecureFileEmergencyContactStore();
+    final ensureSms =
+        ensureSmsPermission ?? () => permissions.ensure(Permission.sms, Tr.smsPermissionWhy);
     router = CommandRouter(
       call: CallHandler(
         contacts: resolver,
@@ -268,14 +276,20 @@ class AppState extends ChangeNotifier implements ControlActions {
         dialogs: dialogs,
         openUrl: openUrl,
         direct: directActions,
-        ensureSmsPermission: ensureSmsPermission ??
-            () => permissions.ensure(Permission.sms, Tr.smsPermissionWhy),
+        ensureSmsPermission: ensureSms,
         sent: sentMessages,
       ),
       lastMessage: LastMessageHandler(sentMessages),
       messageHistory: MessageHistoryHandler(_messageLog),
       number: NumberHandler(contacts: resolver),
       alias: AliasHandler(contacts: resolver),
+      emergencyContact: EmergencyContactHandler(
+        contacts: resolver,
+        store: this.emergencyContacts,
+        dialogs: dialogs,
+        direct: directActions,
+        ensureSmsPermission: ensureSms,
+      ),
       settings: SettingsHandler(this.settings),
       control: ControlHandler(this),
       navigation: NavigationHandler(dialogs: dialogs, backend: navigationBackend),
@@ -298,9 +312,8 @@ class AppState extends ChangeNotifier implements ControlActions {
       onMicrophoneGranted: _background.ensureMicrophoneType,
     )..dialog = dialogs;
 
-    // Acil durum (Faz 7). Konum geri sayım başlarken aranır; izinler acil kişi
-    // kurulumunda istenir, burada yalnızca yoklanır.
-    this.emergencyContacts = emergencyContacts ?? SecureFileEmergencyContactStore();
+    // Acil durum (Faz 7) - depo yukarıda kuruldu. SOS anında izin İSTENMEZ,
+    // yalnızca yoklanır (bkz. SosPermissions); istenmesi kurulum sırasında.
     sos = SosController(
       delivery: sosDelivery ??
           DirectSosDelivery(
