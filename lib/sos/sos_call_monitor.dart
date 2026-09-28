@@ -36,6 +36,43 @@ abstract class SosCallMonitor {
 /// **Cihazda doğrulanmadı**: `MODE_IN_CALL`'ın Galaxy S24 FE / Android 16'da
 /// giden aramanın çalma aşamasında da (karşı taraf açmadan) görülüp
 /// görülmediği bekleyen telefon testlerinde (bkz. CLAUDE.md).
+///
+/// **Uygulamanın kendi sesi bu modu tetikler mi?** İncelendi (2026-09-28):
+/// - `flutter_tts` yalnızca ses odağı ister (`requestAudioFocus`), modu
+///   hiç değiştirmez. `audioplayers` (kısa sesler) `AudioManager`'a hiç
+///   dokunmuyor. İkisi de bu sınıfı etkilemez.
+/// - `speech_to_text` (STT) paketinin Android tarafı, eşleşmiş bir
+///   Bluetooth kulaklık varsa `BluetoothHeadset.startVoiceRecognition()`
+///   çağırıyor (kaynak: pub cache, `SpeechToTextPlugin.kt`,
+///   `optionallyStartBluetooth`). Bu, Android'in ses alt sisteminde SCO
+///   kanalını açar ve **muhtemelen** `AudioManager.getMode()`'u
+///   `MODE_IN_COMMUNICATION`'a geçirir (Android'in genel SCO davranışı;
+///   bu paketin kendisi `setMode` çağırmıyor, dolaylı). Bluetooth desteği
+///   kasıtlı olarak KAPATILMADI (`SpeechToText.androidNoBluetooth`): planlı
+///   donanımda gözlüğün açık-kulak kulaklığı Bluetooth ile bağlanacak ve
+///   STT'nin oradan dinleyebilmesi asıl kullanım senaryosu.
+///
+/// **Neden tehlikeli değil (koddan):**
+/// 1. Bu izleyici yalnızca **gerçek bir SOS araması başladıktan SONRA**
+///    (`call.placed == true`) devreye giriyor - ortamdaki bir mod
+///    değişikliğiyle KENDİLİĞİNDEN başlamıyor. Kendi STT'miz, hiç SOS
+///    araması yokken modu değiştirse bile hiçbir şeyi tetiklemez.
+/// 2. `SosPhase.sending` sırasında (arama sürerken) `VoiceController`
+///    normal akışta yeni bir dinleme AÇMIYOR: gözlük dokunuşu o anda
+///    `sos.cancel()`a gider (dinlemeye değil), "yardım" tekrarı geri
+///    sayımda kapalı, çift baş sallama da aynı fazda devre dışı bırakıldı
+///    (bkz. `AppState._onGesture`). Yani normal akışta kendi mikrofonumuz
+///    gerçek aramayla ÇAKIŞMIYOR.
+/// 3. Yine de kullanıcı elle (ekrandaki Konuş düğmesi, Hızlı Ayarlar
+///    karosu) arama sürerken başka bir sesli komut başlatırsa: en kötü
+///    ihtimalde `isCallMode` doğru ya da yanlış nedenle `true` kalmaya
+///    devam eder, izleyici beklemeye devam eder - **asla erken "bitti"
+///    sanıp konuşmaya başlamaz**, yalnızca özet daha geç (ya da hiç)
+///    söylenir. Tasarımın güvenli yönü budur: şüphede sessiz kal.
+/// 4. Adreslenmeyen ayrı bir risk: kendi STT'mizin Bluetooth SCO açması,
+///    gerçek aramanın ses kanalıyla (aynı SCO bağlantısı) ÇAKIŞIP arama
+///    sesinde bir kesinti/aksama yaratabilir - bu, tespit mantığından
+///    bağımsız bir donanım/ses yönlendirme sorusu, cihazda doğrulanacak.
 class AudioModeCallMonitor implements SosCallMonitor {
   static const _channel = MethodChannel('patika/audiomode');
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 import 'sos_config.dart';
 
@@ -75,16 +75,32 @@ class MemoryEmergencyContactStore implements EmergencyContactStore {
   }
 }
 
-class SharedPrefsEmergencyContactStore implements EmergencyContactStore {
-  static const _key = 'patika.emergency_contacts.v1';
-  // İlk kullanımda oluşturuluyor (plugin yokken yapıcı hata fırlatıyor).
-  late final _prefs = SharedPreferencesAsync();
+/// Acil kişileri Android'in **hiçbir zaman** otomatik yedeğe (buluta ya da
+/// cihazdan cihaza aktarıma) almadığı `Context.getNoBackupFilesDir()`
+/// dizininde saklar - bu, Android'in bu tür veriler için dokümante ettiği
+/// standart yoldur, ayrı bir yedek kuralı (XML) ya da yeni bir paket
+/// gerektirmez (bkz. kanal `patika/emergency_contacts`,
+/// `EmergencyContactsStorage.kt`). Diğer ayarlar (settings, takma adlar)
+/// olağan `SharedPreferences` üzerinden yedeklenmeye devam eder - yalnızca
+/// acil kişi listesi istisna.
+///
+/// **Değerlendirilen alternatif (kurulmadı):** ek olarak şifreli depolama
+/// (ör. `flutter_secure_storage`, Android Keystore destekli). Artı: yerel
+/// dosya bir şekilde (kök erişimi, dosya yöneticisi) okunursa da korur.
+/// Eksi: cihaz kökse (root) uygulamanın kendisi de çözüp kullanabildiği için
+/// şifreleme çoğu durumda ek koruma sağlamaz (anahtar süreç içinde);
+/// asıl adreslenen tehdit (bulut yedeği/hesap ele geçirme) zaten
+/// `noBackupFilesDir` ile kapatılıyor; ek bağımlılık ve bakım yükü. Karar:
+/// şimdilik gerekmiyor, istenirse sonra eklenir (paket kurulmadan önce onay
+/// gerekir).
+class SecureFileEmergencyContactStore implements EmergencyContactStore {
+  static const _channel = MethodChannel('patika/emergency_contacts');
 
   @override
   Future<List<EmergencyContact>> readAll() async {
     try {
-      final raw = await _prefs.getString(_key);
-      if (raw == null) return [];
+      final raw = await _channel.invokeMethod<String>('read');
+      if (raw == null || raw.isEmpty) return [];
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
       return [for (final e in decoded) ?EmergencyContact.fromJson(e)];
@@ -114,6 +130,8 @@ class SharedPrefsEmergencyContactStore implements EmergencyContactStore {
     return true;
   }
 
-  Future<void> _write(List<EmergencyContact> list) =>
-      _prefs.setString(_key, jsonEncode([for (final c in list) c.toJson()]));
+  Future<void> _write(List<EmergencyContact> list) => _channel.invokeMethod<void>(
+        'write',
+        {'json': jsonEncode([for (final c in list) c.toJson()])},
+      );
 }

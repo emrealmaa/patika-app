@@ -300,7 +300,7 @@ class AppState extends ChangeNotifier implements ControlActions {
 
     // Acil durum (Faz 7). Konum geri sayım başlarken aranır; izinler acil kişi
     // kurulumunda istenir, burada yalnızca yoklanır.
-    this.emergencyContacts = emergencyContacts ?? SharedPrefsEmergencyContactStore();
+    this.emergencyContacts = emergencyContacts ?? SecureFileEmergencyContactStore();
     sos = SosController(
       delivery: sosDelivery ??
           DirectSosDelivery(
@@ -586,7 +586,16 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// tetiklenebildiği için varsayılan kapalı); kapalıyken sessizce yok sayılır.
   void _onGesture(GlassesGesture gesture) {
     lastGlassesEvent = _gestureName(gesture);
-    if (gesture == GlassesGesture.doubleNod && settings.value.nodToListen) {
+    // SOS'un başlattığı arama sürerken (SosPhase.sending) yeni bir dinleme
+    // AÇILMAZ: kendi STT'miz Bluetooth kulaklık/gözlük bağlıyken ses modunu
+    // etkileyebilir (bkz. sos_call_monitor.dart) ve gerçek aramanın ses
+    // kanalıyla çakışabilir (cihazda doğrulanmadı). Diğer dinleme yolları
+    // (buton/karo/Konuş sekmesi) elle dokunmayı gerektirdiği için burada
+    // ayrıca kısıtlanmadı; yalnızca baş sallama gibi kazara/arka planda
+    // tetiklenebilen yol kapatıldı.
+    if (gesture == GlassesGesture.doubleNod &&
+        settings.value.nodToListen &&
+        sos.phase != SosPhase.sending) {
       voice.startListening(ListenSource.gesture);
     }
     notifyListeners();

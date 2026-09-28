@@ -97,6 +97,20 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   ÇIKARKEN art arda 2 okumada (`stableReads`) kararlı biçimde değişip
   değişmediği. Doğrulanamazsa (`unknown`) SOS **hiç konuşmaz** ve yalnızca
   geçmişe yazar - bunun gerçek cihazda ne sıklıkla olduğu izlenecek.
+  **Ayrıca:** `speech_to_text`'in Bluetooth kulaklık varken açtığı SCO
+  kanalının (`BluetoothHeadset.startVoiceRecognition`, bkz.
+  `sos_call_monitor.dart` doc'u) gerçekten `AudioManager.getMode()`'u
+  `MODE_IN_COMMUNICATION`'a geçirip geçirmediği; geçiriyorsa gerçek bir SOS
+  araması sürerken (kullanıcı elle başka bir sesli komut başlatırsa) izin
+  algısını nasıl etkilediği (beklenen: yalnızca gecikme/susma, asla erken
+  konuşma). **Ek, adreslenmemiş soru:** kendi STT'mizin Bluetooth SCO'yu
+  açması, gerçek aramanın ses kanalıyla (aynı SCO) çakışıp arama sesinde
+  kesinti yaratır mı - tespit mantığından bağımsız bir donanım sorusu.
+- [ ] **Faz 7 (SOS):** Acil kişi listesinin Android yedeğine girmediği
+  (`Context.getNoBackupFilesDir`, kanal `patika/emergency_contacts`):
+  `adb backup`/Google hesap yedeği alıp geri yüklendiğinde acil kişilerin
+  GELMEDİĞİ, ayarların/takma adların geldiği; cihazdan cihaza aktarımda
+  (Android "Switch") aynı davranış.
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - gerçek cihazda uçtan uca:** SOS'un
   **ikinci numarayla** denenmesi (asla gerçek 112 ile değil). Bakılacaklar:
   (a) kişi aranınca **ses hoparlörden mi** çıkıyor (eller serbest gerekir;
@@ -368,6 +382,24 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    yalnızca "Ayşe Demir arandı", "SMS: 2/2 kişiye gönderildi" gibi. Bellekte
    en fazla `SosController.maxHistory` (20) satır. Testle kilitli
    (`sos_test.dart` "geçmiş" grubu).
+13. **Acil kişi listesi Android otomatik yedeğine girmez.** Numaralar
+   `Context.getNoBackupFilesDir()` içinde saklanır (kanal
+   `patika/emergency_contacts`, `EmergencyContactsStorage.kt`,
+   `SecureFileEmergencyContactStore`) - Android'in bu tür veriler için
+   dokümante ettiği yol; bulut yedeğine ve cihazdan cihaza aktarıma hiç
+   girmez, ayrı bir yedek kuralı (XML) ya da yeni paket gerekmez. Diğer
+   veriler (ayarlar, takma adlar) olağan `SharedPreferences`'ta kalıp
+   yedeklenmeye devam eder.
+   **Şifreli depolama değerlendirildi, kurulmadı:** `flutter_secure_storage`
+   (Android Keystore) ek koruma sağlardı ama (a) adreslenen asıl tehdit
+   (bulut/hesap ele geçirme) `noBackupFilesDir` ile zaten kapanıyor,
+   (b) cihaz kökse uygulamanın kendisi de anahtara erişebildiği için ek
+   şifreleme çoğu senaryoda sınırlı fayda sağlar, (c) yeni bağımlılık ve
+   bakım yükü. Sonra istenirse eklenebilir - **paket kurulmadan önce onay
+   gerekir** (proje kuralı).
+   **Cihazda doğrulanmadı**, bekleyen telefon testlerine eklendi: gerçek
+   bir yedek alıp geri yüklendiğinde acil kişilerin gelmediği, ayarların
+   geldiği kontrol edilecek.
 
 **Z20 notu** (`patika/CLAUDE.md` Z20 maddesine eklenecek; o repo başka
 pencerede yönetiliyor, burada değiştirilmedi): *Telefon IMU'su cepte, çantada
