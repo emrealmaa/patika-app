@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
+import 'package:patika_app/navigation/geo.dart';
+import 'package:patika_app/navigation/place_search.dart';
+import 'package:patika_app/navigation/route.dart';
+import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/permissions/location_access.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
@@ -191,5 +195,39 @@ class FakeLocationAccess implements LocationAccess {
     requests++;
     if (grantOnRequest) granted = true;
     return granted;
+  }
+}
+
+/// Rota hesaplayıcının sahte hali: [result] verilir, [fail] açıksa hata fırlatır.
+class FakePlanner implements RoutePlanner {
+  final calls = <({LatLng from, LatLng to, String name})>[];
+  WalkingRoute? result;
+  bool fail = false;
+
+  @override
+  Future<WalkingRoute> plan({
+    required LatLng from,
+    required LatLng to,
+    required String destinationName,
+  }) async {
+    calls.add((from: from, to: to, name: destinationName));
+    if (fail || result == null) throw const RoutePlanException('hesaplanamadı');
+    return result!;
+  }
+}
+
+/// Yer aramasının sahte hali: [results] döner, [fail] açıksa hata fırlatır.
+class FakePlaceSearch implements PlaceSearch {
+  List<PlaceCandidate> results;
+  bool fail = false;
+  final calls = <({String query, LatLng? near})>[];
+
+  FakePlaceSearch([this.results = const []]);
+
+  @override
+  Future<List<PlaceCandidate>> search(String query, {LatLng? near}) async {
+    calls.add((query: query, near: near));
+    if (fail) throw const PlaceSearchException('arama başarısız');
+    return results;
   }
 }

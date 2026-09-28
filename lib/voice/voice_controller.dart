@@ -20,19 +20,15 @@ enum VoicePhase { idle, preparing, listening, processing }
 /// - Aynı çağrı dinleme sürerken gelirse dinlemeyi iptal eder (aç/kapat).
 /// - Dinlemeden önce süren konuşmayı susturur: tetikleyiciyle araya girme
 ///   (barge-in). Kendi sesimizi de mikrofona kaydetmemiş oluruz.
-/// - "Şunu anladım" teyidi yalnızca telefon eylemi başlatan komutlarda
-///   (ARA/MESAJ/NAVİGASYON - [PatikaIntent.needsConfirmation]) söylenir.
-///   Bilgi, ayar ve kontrol komutları hemen uygulanır; "tekrar et" de böylece
-///   teyit cümlesini değil son sonucu tekrarlar.
+/// - Telefon eylemi başlatan komutlar (ARA, MESAJ, NAVİGASYON) çok adımlı
+///   diyaloğa gider ve eylemden önce onay sorar ("Ahmet Yılmaz'ı arayayım
+///   mı?"); yanlış duyulmuş bir isim/yer yanlış eyleme yol açmasın. Bilgi,
+///   ayar ve kontrol komutları hemen uygulanır.
 class VoiceController extends ChangeNotifier {
   /// "Dinliyorum" duyurusu ile mikrofonun açılması arasındaki bekleme -
   /// TTS'in sesi mikrofona komut olarak girmesin. Kısa ses ~0,2 sn sürüyor.
   static const speechGap = Duration(milliseconds: 1200);
   static const earconGap = Duration(milliseconds: 400);
-
-  /// "Şunu anladım" ile komutun uygulanması arası - teyit, sonucun
-  /// duyurusuyla kesilmesin.
-  static const confirmGap = Duration(milliseconds: 1200);
 
   /// Dikte (mesaj metni): insanlar cümle kurarken duraksar - dinleme
   /// ayardaki sessizlik süresinden bu kadar daha geç bitsin.
@@ -211,14 +207,9 @@ class VoiceController extends ChangeNotifier {
     _setPhase(VoicePhase.processing);
     var command = classifyVoiceCommand(text);
 
-    if (command.intent.needsConfirmation) {
-      // Telefon eylemi başlatan komutlar: yanlış duyulmuşsa kullanıcı
-      // eylemden önce fark etsin.
-      _feedback.signal(FeedbackEvent.understood, text: Tr.heard(text));
-      await Future.delayed(confirmGap);
-    } else if (command.intent == PatikaIntent.bilinmiyor) {
-      // Teyit + "anlayamadım" iki cümle yerine tek cümle: duyulan metin
-      // sonuca ekleniyor (kullanıcı neyin yanlış duyulduğunu yine öğrenir).
+    if (command.intent == PatikaIntent.bilinmiyor) {
+      // Duyulan metin "anlayamadım" cümlesine ekleniyor (kullanıcı neyin
+      // yanlış duyulduğunu öğrenir).
       command = BleCommand(intent: PatikaIntent.bilinmiyor, entity: text);
     }
 

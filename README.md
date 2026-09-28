@@ -25,12 +25,22 @@ flutter analyze
 | `play` | Arama / SMS ekranı açılır, kullanıcı tuşa basar | Google Play `CALL_PHONE`/`SEND_SMS` izinlerini kısıtlıyor; bu türde izinler hiç yok |
 | `direct` | Doğrudan arar / gönderir | Kendi cihazlar ya da mağaza dışı dağıtım |
 
-API anahtarları (ileride) koda gömülmez:
+API anahtarları koda gömülmez, derleme sırasında `--dart-define` ile verilir:
 
 ```bash
-cp dart_defines.example.json dart_defines.json   # git'e girmez
-flutter run --dart-define-from-file=dart_defines.json
+cp dart_defines.example.json dart_defines.json   # git'e girmez; anahtarı buraya yazın
+flutter run --flavor play --dart-define-from-file=dart_defines.json
 ```
+
+| Anahtar | Ne için | Yoksa |
+|---|---|---|
+| `PATIKA_MAPS_API_KEY` | Sesli navigasyon: Google **Routes API** (yürüyüş rotası) ve **Places API (New)** (yer arama) | Navigasyon Google Haritalar uygulamasını açan yedek akışla çalışır (sesli soru aynı, rota Haritalar'da) |
+
+Google Cloud'da anahtarı **yalnızca bu iki API ile sınırlayın** ve günlük kota
+koyun. Anahtar uygulamanın içine gömülür ve APK'dan çıkarılabilir; bu bir
+geliştirme/dağıtım aşaması çözümü. Ürün aşamasında doğru çözüm, anahtarı
+sunucuda tutan ve isteği ileten küçük bir ara sunucudur. Anahtar istekte
+`X-Goog-Api-Key` başlığıyla gider (adrese yazılmaz) ve günlüklere basılmaz.
 
 Kısa sesleri yeniden üretmek için: `dart run tool/generate_earcons.dart`
 
@@ -43,7 +53,7 @@ süren konuşmayı da hemen susturur.
 |---|---|
 | **Konuş** sekmesi (ilk sekme) | Büyük buton. TalkBack açıkken ekranın tamamı tek buton |
 | Gözlük butonu: tek dokunuş | Dinlemeyi başlatır |
-| Gözlük butonu: çift dokunuş | Son söyleneni tekrarlar |
+| Gözlük butonu: çift dokunuş | Son söyleneni tekrarlar (karşıya geçiş duraklamasındayken navigasyonu devam ettirir) |
 | Gözlük butonu: uzun basış | Acil durum (Faz 7; şimdilik hazır değil der) |
 | Çift baş sallama | Ayarlardan açılırsa dinlemeyi başlatır (varsayılan kapalı) |
 
@@ -56,7 +66,8 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 |---|---|---|
 | ARA | "Ahmet'i ara", "annemi arar mısın" | Arama ekranını numarayla açar |
 | MESAJ | "Ayşe'ye mesaj gönder" | SMS ekranını açar |
-| NAVİGASYON | "Kadıköy iskelesine götür" | Google Maps yürüyüş yönlendirmesi |
+| NAVİGASYON | "Kadıköy iskelesine götür" | Yer sorulur/seçilir, rota özetlenip onay alınır ("… 1,2 kilometre, yaklaşık 15 dakika. Başlayayım mı?"), sonra uygulama içi sesli yönlendirme. Anahtar ya da konum yoksa Google Haritalar açılır |
+| NAVİGASYON KONTROLÜ | "Ne kadar kaldı", "navigasyonu bitir", "geçtim" | ✅ Kalan yol/süre; kapat; karşıya geçiş duraklamasını bitir |
 | SAAT | "Saat kaç" | ✅ |
 | NUMARA | "Mehmet'in numarasını söyle" | ✅ Numarayı rakam rakam okur |
 | TAKMA AD | "Annemi Fatma Yılmaz olarak kaydet", "takma adları oku", "annem takma adını sil" | ✅ |
@@ -69,10 +80,15 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | HAVA / HABER / MÜZİK / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (sonraki fazlar) |
 | OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
 
-"Şunu anladım: …" teyidi yalnızca telefon eylemi başlatan komutlarda (ara,
-mesaj gönder, götür) söylenir: yanlış duyulan bir isim yanlış kişiyi
-aratmasın. Bilgi, ayar ve kontrol komutları hemen uygulanır. "Yardım" kelimesi acil durum için ayrılmıştır; komut
-listesi "ne yapabilirim" ile açılır.
+Telefon eylemi başlatan komutlar (ara, mesaj gönder, götür) çok adımlı
+diyaloğa gider ve eylemden önce onay sorar ("Ahmet Yılmaz'ı arayayım mı?"):
+yanlış duyulan bir isim ya da yer yanlış eyleme yol açmasın. Bilgi, ayar ve
+kontrol komutları hemen uygulanır. "Yardım" kelimesi acil durum için
+ayrılmıştır; komut listesi "ne yapabilirim" ile açılır.
+
+Navigasyon cümleleri yalnızca bilgi verir, emir vermez ("30 metre sonra rota
+sağa sapıyor"). Karşıya geçiş noktalarında navigasyon susar; geçiş kararı
+navigasyonun değil, Kavşak Geçiş Asistanının işidir.
 
 ## Dokümanlar
 

@@ -3,34 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:patika_app/accessibility/announcement_queue.dart';
 import 'package:patika_app/accessibility/feedback_hub.dart';
-import 'package:patika_app/navigation/geo.dart';
 import 'package:patika_app/navigation/guidance_engine.dart';
 import 'package:patika_app/navigation/navigation_session.dart';
 import 'package:patika_app/navigation/route.dart';
-import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/permissions/location_access.dart';
 import 'package:patika_app/platform/location_service.dart';
 import 'package:patika_app/settings/settings.dart';
 
 import 'fakes.dart';
 import 'navigation_fixtures.dart';
-
-class FakePlanner implements RoutePlanner {
-  final calls = <({LatLng from, LatLng to, String name})>[];
-  WalkingRoute? result;
-  bool fail = false;
-
-  @override
-  Future<WalkingRoute> plan({
-    required LatLng from,
-    required LatLng to,
-    required String destinationName,
-  }) async {
-    calls.add((from: from, to: to, name: destinationName));
-    if (fail || result == null) throw const RoutePlanException('hesaplanamadı');
-    return result!;
-  }
-}
 
 class Rig {
   final FakeAsync async;

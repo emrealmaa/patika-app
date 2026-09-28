@@ -72,6 +72,27 @@ List<LatLng> decodePolyline(String encoded) {
   return (t: t, distance: math.sqrt(dx * dx + dy * dy));
 }
 
+/// [points] çizgisini başından [meters] uzaklıkta ikiye böler: baş kısım ve
+/// kalan kısım kesim noktasını paylaşır. [meters] çizginin dışındaysa kalan
+/// boş döner (bölünecek bir şey yok).
+({List<LatLng> head, List<LatLng> tail}) splitPolyline(List<LatLng> points, double meters) {
+  var remaining = meters;
+  for (var i = 1; i < points.length; i++) {
+    final a = points[i - 1], b = points[i];
+    final len = distanceMeters(a, b);
+    if (remaining <= len && len > 0) {
+      final t = remaining / len;
+      final cut = LatLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t);
+      return (
+        head: [...points.sublist(0, i), cut],
+        tail: [cut, ...points.sublist(i)],
+      );
+    }
+    remaining -= len;
+  }
+  return (head: points, tail: const []);
+}
+
 /// [a]'dan [b]'ye yön (radyan; kuzey 0, doğu π/2). Yürüme ölçeğinde düzlem
 /// yaklaşımı yeterli.
 double bearingRadians(LatLng a, LatLng b) {

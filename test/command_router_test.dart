@@ -61,11 +61,6 @@ void main() {
       expect(result.message, '"uçan halı" komutunu anlayamadım');
     });
 
-    test('"Şunu anladım" teyidi yalnızca NAVİGASYONda (ARA/MESAJda onay diyaloğu var)', () {
-      final confirmed = PatikaIntent.values.where((i) => i.needsConfirmation).toSet();
-      expect(confirmed, {PatikaIntent.navigasyon});
-    });
-
     test('Bilinmeyen bir wire değeri BİLİNMİYOR olarak ele alınır', () async {
       final result = await router.route(
         BleCommand.fromWire('YENİ_BİR_NİYET', null),

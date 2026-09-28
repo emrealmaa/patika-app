@@ -14,6 +14,30 @@ LatLng enu(double x, double y) => LatLng(
       _lng0 + x / (_metersPerDegree * math.cos(_lat0 * math.pi / 180)),
     );
 
+/// Google'ın kodlanmış çoklu çizgi biçimi (`decodePolyline`'ın tersi):
+/// Routes API örnek yanıtları üretmek için.
+String encodePolyline(List<LatLng> points) {
+  final out = StringBuffer();
+  var prevLat = 0, prevLng = 0;
+  void write(int value) {
+    var v = value < 0 ? ~(value << 1) : value << 1;
+    while (v >= 0x20) {
+      out.writeCharCode((0x20 | (v & 0x1f)) + 63);
+      v >>= 5;
+    }
+    out.writeCharCode(v + 63);
+  }
+
+  for (final p in points) {
+    final lat = (p.lat * 1e5).round(), lng = (p.lng * 1e5).round();
+    write(lat - prevLat);
+    write(lng - prevLng);
+    prevLat = lat;
+    prevLng = lng;
+  }
+  return out.toString();
+}
+
 final _t0 = DateTime(2026, 9, 28, 12);
 
 PositionFix fixAt(double x, double y, {double accuracy = 5, int seconds = 0}) =>

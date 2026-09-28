@@ -191,7 +191,6 @@ abstract final class Tr {
 
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';
-  static String heard(String text) => 'Şunu anladım: $text';
   static const listenCancelled = 'Dinleme iptal edildi';
   static const speechUnavailable =
       'Mikrofon izni verilmedi ya da konuşma tanıma bu cihazda kullanılamıyor';
@@ -421,6 +420,35 @@ abstract final class Tr {
   static const navRerouting = 'Yeni rota hesaplanıyor';
   static const navRerouteFailed = 'Yeni rota hesaplanamadı';
   static String navNewRoute(String summary) => 'Yeni rota. $summary';
+
+  // Navigasyonu başlatan diyalog (NavigationFlow).
+  static const navAskDestination = 'Nereye gitmek istiyorsunuz?';
+  static String navPlaceNotFound(String spoken) =>
+      '$spoken adında bir yer bulamadım. $navAskDestination';
+  static String navPlaceNotFoundFinal(String spoken) => '$spoken adında bir yer bulamadım';
+  static String navChoosePlace(List<String> names) {
+    const counts = {2: 'İki', 3: 'Üç'};
+    const ordinals = ['birinci', 'ikinci', 'üçüncü'];
+    final listed = [
+      for (var i = 0; i < names.length && i < ordinals.length; i++) '${ordinals[i]} ${names[i]}',
+    ];
+    return '${counts[names.length] ?? names.length} yer buldum: ${listed.join(', ')}. Hangisi?';
+  }
+
+  static const navChoiceHint = 'Birinci ya da ikinci deyin.';
+  static String navConfirmStart(String summary) => '$summary. Başlayayım mı?';
+  static String navConfirmMaps(String destination) =>
+      '$destination için harita uygulamasını açayım mı?';
+  static const navStartedReal = 'Navigasyon başladı';
+
+  // Uygulama içi navigasyona geçilemediğinde (harita uygulamasına düşerken)
+  // söylenen nedenler.
+  static const navNoticePermissionNeeded =
+      'Konum izni yok, uygulamayı açıp konum iznini verin';
+  static const navNoticePermissionDenied = 'Konum izni verilmedi';
+  static const navNoticeNoFix = 'Konumunuz alınamadı';
+  static const navNoticeSearchFailed = 'Yer araması yapılamadı';
+  static const navNoticeRouteFailed = 'Rota hesaplanamadı';
 
   static const navLocationOff = 'Telefonun konum servisi kapalı';
   static const navLocationDenied = 'Konum izni yok';

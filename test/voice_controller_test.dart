@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -63,7 +65,7 @@ void main() {
       });
     });
 
-    test('navigasyon teyitli: önce "Şunu anladım", beklemeden sonra eylem', () {
+    test('navigasyon "Şunu anladım" yerine onay sorusu sorar (yedek akış: anahtar yok)', () {
       fakeAsync((async) {
         final h = Harness();
         h.app.voice.startListening(ListenSource.screen);
@@ -71,14 +73,10 @@ void main() {
 
         h.speech.say('Kadıköy iskelesine götür');
         async.flushMicrotasks();
-        expect(h.tts.spoken, ['Şunu anladım: Kadıköy iskelesine götür']);
-        expect(h.app.voice.phase, VoicePhase.processing);
-        expect(h.app.log, isEmpty, reason: 'teyit bitmeden eylem başlamaz');
-
-        async.elapse(VoiceController.confirmGap);
-        h.speakAll(async);
-        expect(h.app.log.first.intent, PatikaIntent.navigasyon);
-        expect(h.app.voice.phase, VoicePhase.idle);
+        expect(h.tts.spoken, ['Kadıköy iskelesi için harita uygulamasını açayım mı?']);
+        expect(h.app.log, isEmpty, reason: 'onay gelmeden eylem başlamaz');
+        expect(h.opened, isEmpty);
+        expect(h.app.dialogs.active, isTrue);
         h.dispose();
       });
     });
@@ -155,17 +153,22 @@ void main() {
 
     test('komut işlenirken gelen tetiklemeler yok sayılır', () {
       fakeAsync((async) {
-        final h = Harness();
+        final h = Harness()..contactsGate = Completer<void>();
         h.app.voice.startListening(ListenSource.screen);
         async.elapse(listenDelay);
-        // Teyitli komut: teyit beklenirken "işleniyor" durumunda kalır.
-        h.speech.say('Kadıköy iskelesine götür');
+        // Rehberi bekleyen yavaş bir komut: "işleniyor" durumunda kalır.
+        h.speech.say("Mehmet'in numarasını söyle");
         async.flushMicrotasks();
+        expect(h.app.voice.phase, VoicePhase.processing);
 
         h.app.voice.startListening(ListenSource.glasses);
         async.flushMicrotasks();
         expect(h.speech.initCalls, 1);
         expect(h.app.voice.phase, VoicePhase.processing);
+
+        h.contactsGate!.complete();
+        async.flushMicrotasks();
+        expect(h.app.voice.phase, VoicePhase.idle);
         h.dispose();
       });
     });

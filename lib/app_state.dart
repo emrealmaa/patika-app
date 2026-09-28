@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'accessibility/a11y_announcer.dart' as a11y;
@@ -27,6 +28,7 @@ import 'commands/handlers/call_handler.dart';
 import 'commands/handlers/message_handler.dart';
 import 'commands/handlers/crossing_mode_handler.dart';
 import 'commands/handlers/message_history_handler.dart';
+import 'commands/handlers/navigation_handler.dart';
 import 'commands/handlers/navigation_control_handler.dart';
 import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
@@ -39,7 +41,11 @@ import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
+import 'navigation/google_client.dart';
+import 'navigation/maps_config.dart';
+import 'navigation/navigation_backend.dart';
 import 'navigation/navigation_session.dart';
+import 'navigation/place_search.dart';
 import 'navigation/route_planner.dart';
 import 'permissions/location_access.dart';
 import 'permissions/permission_explainer.dart';
@@ -159,7 +165,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     LoudMessagesNotice? loudMessagesNotice,
     PatikaLocationService? locationService,
     LocationAccess? locationAccess,
+    MapsConfig? mapsConfig,
     RoutePlanner? routePlanner,
+    PlaceSearch? placeSearch,
     bool Function()? isAppVisible,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
@@ -203,12 +211,24 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.locationService = locationService ?? GeolocatorLocationService();
     this.locationAccess = locationAccess ??
         PermissionLocationAccess(permissions, onGranted: _background.ensureLocationType);
+    // Google Routes/Places yalnızca `--dart-define=PATIKA_MAPS_API_KEY=...`
+    // ile derlendiyse kurulur (bkz. MapsConfig); yoksa navigasyon Google
+    // Haritalar uygulamasına düşen yedek akışla çalışır.
+    final maps = mapsConfig ?? const MapsConfig();
+    final planner = routePlanner ?? (maps.hasKey ? GoogleRoutePlanner(apiKey: maps.apiKey) : null);
+    final places = placeSearch ?? (maps.hasKey ? GooglePlaceSearch(apiKey: maps.apiKey) : null);
     navigation = NavigationSession(
       feedback: feedback,
       location: this.locationService,
-      planner: routePlanner,
+      planner: planner,
       access: this.locationAccess,
       isAppVisible: isAppVisible ?? _appIsVisible,
+    );
+    final navigationBackend = NavigationBackend(
+      session: navigation,
+      planner: planner,
+      places: places,
+      openMaps: openUrl ?? _openMapsApp,
     );
 
     final directActions = direct ?? MethodChannelDirectActions();
@@ -237,6 +257,7 @@ class AppState extends ChangeNotifier implements ControlActions {
       alias: AliasHandler(contacts: resolver),
       settings: SettingsHandler(this.settings),
       control: ControlHandler(this),
+      navigation: NavigationHandler(dialogs: dialogs, backend: navigationBackend),
       navigationControl: NavigationControlHandler(navigation),
       crossingMode: CrossingModeHandler(navigation),
     );
@@ -286,6 +307,10 @@ class AppState extends ChangeNotifier implements ControlActions {
     if (await locationAccess.isGranted()) return;
     await locationAccess.requestWithExplanation();
   }
+
+  /// Google Haritalar yedeği: yüklü haritayı (yoksa tarayıcıyı) açar.
+  static Future<bool> _openMapsApp(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   /// Uygulama şu an ön planda mı? Ekran kapalıyken/arka planda (ör.
   /// kulaklıktan sesle başlatma) izin penceresi görünmez ve konum türlü servis

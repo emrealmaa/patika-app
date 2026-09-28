@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 
 import 'package:patika_app/app_state.dart';
 import 'package:patika_app/commands/contact_resolver.dart';
 import 'package:patika_app/contacts/alias_store.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
+import 'package:patika_app/navigation/place_search.dart';
+import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/location_service.dart';
@@ -27,8 +31,15 @@ const harnessContacts = [
 ];
 
 class _HarnessContacts implements ContactSource {
+  final Completer<void>? Function() _gate;
+
+  _HarnessContacts(this._gate);
+
   @override
-  Future<List<ContactEntry>> loadAll() async => harnessContacts;
+  Future<List<ContactEntry>> loadAll() async {
+    await _gate()?.future; // yavaş komut taklidi için (bkz. Harness.contactsGate)
+    return harnessContacts;
+  }
 }
 
 class Harness {
@@ -40,9 +51,16 @@ class Harness {
   final SettingsStore settings;
   bool micGranted = true;
 
+  /// Doluysa rehber okuması bunu bekler: rehber kullanan bir komut (ör.
+  /// NUMARA) tamamlanana dek "işleniyor" durumunda kalır.
+  Completer<void>? contactsGate;
+
   /// Konum izni (varsayılan verilmiş) ve konum kaynağı: testte gerçek konum akmaz.
   final locationAccess = FakeLocationAccess(granted: true);
   final location = SimulatedLocationService();
+
+  /// Uygulama ön planda mı (izin yokken yedek akışın kararı için).
+  bool appVisible = true;
 
   /// Açılan tel:/sms: adresleri.
   final opened = <Uri>[];
@@ -54,6 +72,8 @@ class Harness {
     DirectActions direct = const NoDirectActions(),
     IncomingMessages incomingMessages = const NoIncomingMessages(),
     LoudMessagesNotice? loudMessagesNotice,
+    RoutePlanner? routePlanner,
+    PlaceSearch? placeSearch,
   }) : settings = SettingsStore(MemorySettingsPersistence()) {
     settings.update(initial);
     app = AppState(
@@ -67,7 +87,7 @@ class Harness {
       ensureMicPermission: () async => micGranted,
       tutorialProgress: tutorialProgress,
       contacts: ContactResolver(
-        source: _HarnessContacts(),
+        source: _HarnessContacts(() => contactsGate),
         aliases: MemoryAliasStore(),
         ensurePermission: () async => true,
       ),
@@ -83,7 +103,9 @@ class Harness {
       loudMessagesNotice: loudMessagesNotice ?? MemoryLoudMessagesNotice(),
       locationAccess: locationAccess,
       locationService: location,
-      isAppVisible: () => true,
+      routePlanner: routePlanner,
+      placeSearch: placeSearch,
+      isAppVisible: () => appVisible,
     );
   }
 

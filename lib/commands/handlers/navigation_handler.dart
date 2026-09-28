@@ -1,33 +1,35 @@
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 
 import '../../l10n/strings_tr.dart';
+import '../../navigation/navigation_backend.dart';
+import '../../voice/dialog_manager.dart';
+import '../../voice/dialogs/navigation_flow.dart';
 import '../action_result.dart';
 
-/// NAVİGASYON niyeti. phone_bridge.py'deki simüle "NAVIGATE" eyleminin
-/// gerçek karşılığı.
+/// NAVİGASYON niyeti (phone_bridge.py'deki simüle "NAVIGATE" eyleminin
+/// gerçek karşılığı). Çok adımlı sesli akışı ([NavigationFlow]) başlatır:
+/// yer eksikse sorar, belirsizse "hangisi?" der, başlamadan önce onay alır.
+/// Sonucu (navigasyon başladı / harita açıldı) diyalog bitince AppState
+/// kaydedip duyurur.
 ///
-/// Google Maps'in evrensel yönlendirme URL şeması kullanılıyor
-/// (`google.com/maps/dir/?api=1&destination=<serbest metin>`) - bu, ayrı bir
-/// geocoding API anahtarı gerektirmeden Google'ın kendi sunucusunda serbest
-/// metni (örn. "Kadıköy iskelesi") konuma çözmesini sağlıyor. Yüklüyse
-/// Google Maps uygulamasını, değilse tarayıcıyı açar - hem Android hem iOS'ta
-/// çalışır.
+/// Google anahtarı yoksa ya da konum hazır değilse [NavigationBackend] eski
+/// davranışa (Google Haritalar yürüyüş yönlendirmesi) düşer; sesli akış
+/// aynıdır. Diyalog ya da arka uç verilmemişse (yalnızca testlerdeki
+/// varsayılan yönlendirici) hiçbir şey açılmaz.
 class NavigationHandler {
+  final DialogManager? _dialogs;
+  final NavigationBackend? _backend;
+
+  NavigationHandler({DialogManager? dialogs, NavigationBackend? backend})
+      : _dialogs = dialogs,
+        _backend = backend;
+
   Future<ActionResult> handle(String? entity) async {
-    if (entity == null) {
-      return ActionResult.fail(Tr.navNoTarget);
-    }
+    final dialogs = _dialogs, backend = _backend;
+    if (dialogs == null || backend == null) return ActionResult.fail(Tr.mapsFailed);
 
-    final uri = Uri.https('www.google.com', '/maps/dir/', {
-      'api': '1',
-      'destination': entity,
-      'travelmode': 'walking',
-    });
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched) {
-      return ActionResult.fail(Tr.mapsFailed);
-    }
-    return ActionResult.ok(Tr.navStarted(entity), detail: Tr.navStartedDetail);
+    // Diyalog dakikalar sürebilir; router'ı bekletmiyoruz.
+    unawaited(dialogs.start(NavigationFlow(entity, backend)));
+    return ActionResult.handedOff('Navigasyon diyaloğu başladı');
   }
 }

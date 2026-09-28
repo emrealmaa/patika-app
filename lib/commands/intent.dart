@@ -58,17 +58,8 @@ enum PatikaIntent {
   sos,
   bilinmiyor;
 
-  /// Sesli komutta "Şunu anladım: ..." teyidi söylenecek niyetler: gerçek
-  /// bir telefon eylemi başlatanlar. Yanlış duyulan bir isim yanlış kişinin
-  /// aranmasına yol açmasın - bu bir güvenlik önlemi, bilgi tercihi değil
-  /// (ayrıntı seviyesinden bağımsız). Bilgi veren komutlarda sonucun kendisi
-  /// ("Saat 14:05") neyin anlaşıldığını zaten gösteriyor.
-  ///
-  /// ARA/MESAJ'da bu teyidin yerini Faz 3b'de gerçek onay diyaloğu aldı
-  /// ("Ahmet Yılmaz'ı arayayım mı?"). NAVİGASYON'da Faz 6'ya kadar kalıyor.
-  bool get needsConfirmation => this == navigasyon;
-
-  /// "Şunu anladım: ..." teyidi olmadan anında uygulanan kontrol niyetleri.
+  /// Anında (onay sorusu olmadan) uygulanan kontrol niyetleri. Telefon eylemi
+  /// başlatan ARA/MESAJ/NAVİGASYON çok adımlı diyalogla onay alır.
   bool get isControl =>
       this == dur || this == tekrar || this == komutlar || this == egitim || this == sos;
 

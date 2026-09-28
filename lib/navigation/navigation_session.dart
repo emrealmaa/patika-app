@@ -12,8 +12,8 @@ import 'guidance_speech.dart';
 import 'route.dart';
 import 'route_planner.dart';
 
-/// [NavigationSession.start] sonucu. Başlamadıysa nedeni: çağıran (6c'de
-/// `NavigationHandler`) Google Haritalar yedeğine düşüp nedeni söyler.
+/// [NavigationSession.start] sonucu. Başlamadıysa nedeni: çağıran
+/// (`NavigationBackend`) Google Haritalar yedeğine düşüp nedeni söyler.
 enum NavigationStart {
   started,
 
@@ -27,6 +27,28 @@ enum NavigationStart {
 
   /// Telefonun konum servisi kapalı.
   locationOff,
+}
+
+/// [NavigationSession.prepare] sonucu: rota kurmadan önce konum hazır mı?
+enum NavigationPrepareStatus {
+  ready,
+
+  /// [NavigationStart.permissionNeeded] ile aynı anlam.
+  permissionNeeded,
+  permissionDenied,
+  locationOff,
+
+  /// İzin ve servis tamam ama anlık konum alınamadı (GPS henüz sabitlenmedi).
+  noFix,
+}
+
+class NavigationPrepare {
+  final NavigationPrepareStatus status;
+
+  /// [NavigationPrepareStatus.ready] iken dolu: rotanın kalkış noktası.
+  final PositionFix? fix;
+
+  const NavigationPrepare(this.status, [this.fix]);
 }
 
 /// Çalışan bir navigasyon: rota + [GuidanceEngine] + konum kaynağı +
@@ -94,6 +116,36 @@ class NavigationSession extends ChangeNotifier {
     return e == null ? null : describeRemaining(e);
   }
 
+  /// Konum izni + servis + anlık konum: rota hesaplamadan (ve yer aramasında
+  /// yakın sonuç önceliği vermeden) önce çağrılır. İzin yoksa ve uygulama ön
+  /// plandaysa sesli açıklamayla ister; ön planda değilse sormaz
+  /// ([NavigationPrepareStatus.permissionNeeded]).
+  Future<NavigationPrepare> prepare() async {
+    final failure = await _ensureAccess();
+    if (failure != null) {
+      return NavigationPrepare(switch (failure) {
+        NavigationStart.permissionNeeded => NavigationPrepareStatus.permissionNeeded,
+        NavigationStart.permissionDenied => NavigationPrepareStatus.permissionDenied,
+        _ => NavigationPrepareStatus.locationOff,
+      });
+    }
+    final fix = await _location.currentPosition();
+    return fix == null
+        ? const NavigationPrepare(NavigationPrepareStatus.noFix)
+        : NavigationPrepare(NavigationPrepareStatus.ready, fix);
+  }
+
+  /// İzin ve konum servisi denetimi; sorun yoksa null.
+  Future<NavigationStart?> _ensureAccess({PatikaLocationService? override}) async {
+    final access = _access;
+    if (override == null && access != null && !await access.isGranted()) {
+      if (!_isAppVisible()) return NavigationStart.permissionNeeded;
+      if (!await access.requestWithExplanation()) return NavigationStart.permissionDenied;
+    }
+    if (!await (override ?? _location).isServiceEnabled()) return NavigationStart.locationOff;
+    return null;
+  }
+
   /// Navigasyonu başlatır. Rota özetini burada söylemiyoruz: onu komutun
   /// sonucu olarak çağıran taraf ([describeRouteSummary]) söyler.
   ///
@@ -101,12 +153,8 @@ class NavigationSession extends ChangeNotifier {
   /// gerçek konum izni aranmaz.
   Future<NavigationStart> start(WalkingRoute route, {PatikaLocationService? location}) async {
     final source = location ?? _location;
-    final access = _access;
-    if (location == null && access != null && !await access.isGranted()) {
-      if (!_isAppVisible()) return NavigationStart.permissionNeeded;
-      if (!await access.requestWithExplanation()) return NavigationStart.permissionDenied;
-    }
-    if (!await source.isServiceEnabled()) return NavigationStart.locationOff;
+    final failure = await _ensureAccess(override: location);
+    if (failure != null) return failure;
 
     await _teardown();
     _source = source;

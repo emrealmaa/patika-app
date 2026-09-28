@@ -83,6 +83,21 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   (c) Galaxy S24 FE / Android 16'da pil optimizasyonu servisi öldürüyor mu;
   (d) izin verilmemişse ya da uygulama ön planda değilken Haritalar yedeğine
   düşülüyor ve nedeni söyleniyor.
+- [ ] **Faz 6 (Google):** Gerçek anahtarla Routes ve Places: yanıt biçimi
+  belgelerden yazıldı, gerçek yanıtla **hiç sınanmadı**; Türkçe yer
+  adlarının (STT çıktısı "Kadıköy iskelesi") Places'te bulunma oranı, "hangisi?"
+  sorusu, 5 km yakın-sonuç önceliği; anahtar kısıtlaması (yalnız bu iki API) ve
+  kota; yeniden rota isteklerinin (30 sn aralık) maliyeti.
+- [ ] **Faz 6 (Google):** Karşıya geçiş tespiti Google'ın Türkçe talimat
+  metnindeki kalıplara ("karşıya", "yaya geçidi") dayanıyor - **varsayım**.
+  Gerçek rotalarda ne kadarını yakalıyor, yanlış pozitif (gereksiz duraklama)
+  var mı, 20 m bölme geçişi doğru yere oturtuyor mu?
+- [ ] **Faz 6 (Google):** Sokak adsız duyurular ("30 metre sonra rota sağa
+  sapıyor") kullanıcılar için yeterli mi, sokak adı isteniyor mu (isteniyorsa
+  Roads/Geocoding gibi ek kaynak gerekir)?
+- [ ] **Faz 6 (Google):** Anahtarsız yedek akış: Haritalar açılıyor mu, TalkBack
+  ile devam edilebiliyor mu; onay sorusundaki nedenler ("Konum izni yok,
+  uygulamayı açıp konum iznini verin") anlaşılır mı.
 - [ ] **Faz 6:** Konum izni akışı (melez): eğitimde sesli açıklamayla istenir;
   reddeden/atlayan için ilk navigasyonda açıklama; ön planda değilse yedek.
   TalkBack açıkken izin penceresi.
@@ -138,8 +153,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 
 ## Sıradaki
 
-1. Faz 6c (Sesli Navigasyon: Google istemcisi + akış). 6a ve 6b kodlandı,
-   onay bekliyor. Faz 5 iptal edildi (aşağıda).
+1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Sırada Faz 7 (SOS)
+   ve Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
@@ -147,14 +162,15 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 Alt fazlar: **6a** saf mantık (`lib/navigation/`, kodlandı) → **6b** konum
 servisi, `NavigationSession`, geçiş duraklaması, Test Modu, izin/servis türü,
 yeni niyetler ("navigasyonu bitir", "ne kadar kaldı", "geçtim"), yön teyidi
-(kodlandı, onay bekliyor; commit yok) → **6c** Google Routes/Places
-istemcisi, `--dart-define` anahtarı, `NavigationFlow` (NAVİGASYON'daki
-"Şunu anladım" teyidinin yerini alır), yedek akış (`NavigationStart`
-sonuçlarına göre Haritalar), `NavigationHandler`'ın oturuma bağlanması,
-belgeler (`architecture.md`, README).
+(commit'li) → **6c** Google Routes/Places istemcisi (`http`),
+`--dart-define` anahtarı, `NavigationFlow` (NAVİGASYON'daki "Şunu anladım"
+teyidinin yerini aldı; teyit kodu tamamen kaldırıldı), `NavigationBackend`
+(gerçek mod + her adımda Haritalar yedeği), belgeler (commit'li).
 
-6b'de navigasyonu başlatan tek yol Test Modu'ndaki simülasyondur; sesli
-"X'e götür" hâlâ eski Google Haritalar akışını açar (6c'de değişecek).
+Sesli "X'e götür" artık: yer sor/seç → rota özeti + onay → uygulama içi
+navigasyon. Anahtar yoksa ya da konum hazır değilse (izin yok, ön planda
+değil, servis kapalı, konum alınamadı, arama/rota hatası) aynı sesli akış
+Google Haritalar'a düşer ve nedeni söyler.
 
 1. **Bilgi kipi, emir yok** ("30 metre sonra rota sağa sapıyor"). İstisna
    yok. Yasaklı kelimeler `patika/MIMARI.md`'den; navigasyona ek olarak
@@ -177,7 +193,18 @@ belgeler (`architecture.md`, README).
    bilgisi yürümeye başlayınca gelecek" denir. Yasaklı kelime testine tabi.
 5. Paketler: `geolocator` (MIT), `http` (BSD-3) - ikisi de ticari kullanıma
    uygun; `geolocator_android` Google Play Hizmetleri'ne dayanır
-   (`forceLocationManager` yedeği bu yüzden).
+   (`forceLocationManager` yedeği bu yüzden). `geolocator` Linux'ta MPL-2.0
+   üç paket çeker (dbus, geoclue, gsettings); Android APK'ya girmiyor.
+6. **Sokak adı yok:** Google Routes API adımlarında yapısal sokak adı alanı
+   yok (yalnızca manevra + serbest metin `instructions`). Serbest metinden
+   sokak adı ayıklamak kırılgan olduğundan duyurular "30 metre sonra rota
+   sağa sapıyor" biçiminde, sokak adsız. Talimat metni yalnızca karşıya
+   geçiş tespiti (`looksLikeCrossing`, sezgisel) için okunur, seslendirilmez.
+   Geçiş adımı 30 m'den uzunsa yalnızca ilk 20 m geçiş sayılır.
+7. **Anahtar:** `--dart-define=PATIKA_MAPS_API_KEY` (`MapsConfig`); yoksa
+   Google istemcileri hiç kurulmaz. Anahtar yalnızca `X-Goog-Api-Key`
+   başlığında gider, hata mesajlarına ve günlüklere girmez. README'de
+   kısıtlama/kota ve "ürün aşamasında ara sunucu" notu var.
 
 ## Faz 4b kararları (geçerli, tekrar tartışma)
 
