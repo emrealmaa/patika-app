@@ -79,6 +79,18 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   (akıllı ağ değiştirici) davranışı ve internetsiz Wi-Fi uyarısı da
   bakılacak. Henüz kod yok, gözlük Wi-Fi'ı hazır olunca.
 
+- [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - gerçek cihazda uçtan uca:** SOS'un
+  **ikinci numarayla** denenmesi (asla gerçek 112 ile değil). Bakılacaklar:
+  (a) kişi aranınca **ses hoparlörden mi** çıkıyor (eller serbest gerekir;
+  `direct` aramasında hoparlör kendiliğinden açılmıyor olabilir);
+  (b) **çift SIM**: SMS ve arama hangi SIM'den gidiyor, varsayılan SIM
+  seçimi; (c) **şebeke yok / uçak modu**: gönderim başarısız raporu ve
+  "Gönderilemedi, 112'yi aramak için çift dokunun" cümlesi; (d) gönderim
+  sonucu raporu: "gönderildi" yalnızca `sent` iken, çok parçalı SMS'te tüm
+  parçalar; (e) konum izni yokken / konum gelmezken konumsuz gönderim ve
+  tek takip SMS'i; (f) ekran kilitli ve telefon cepteyken sesli "iptal" ve
+  gözlük dokunuşu; geri sayım bipinin mikrofona karışıp karışmadığı;
+  (g) SMS izni yokken sessiz kalmayıp nedenini söylemesi.
 - [ ] **Faz 6 - ANA SENARYO (ilk sırada): ekran kapalı/kilitliyken sesle
   navigasyon başlatma.** Kulaklık/gözlükten "X'e götür" denince navigasyonun
   başlaması ve konum duyurularının sürmesi. Doğrulanacaklar:
@@ -92,6 +104,10 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   (c) Galaxy S24 FE / Android 16'da pil optimizasyonu servisi öldürüyor mu;
   (d) izin verilmemişse ya da uygulama ön planda değilken Haritalar yedeğine
   düşülüyor ve nedeni söyleniyor.
+- [ ] **Faz 6 (Google):** Anahtar Android uygulama kısıtlamalıyken (paket +
+  SHA-1) istekler geçiyor mu; `X-Android-Package`/`X-Android-Cert` başlıkları
+  henüz gönderilmiyor (bkz. Faz 6 kararları, madde 7). debug, `direct` ve
+  Play imzası için ayrı SHA-1 satırları.
 - [ ] **Faz 6 (Google):** Gerçek anahtarla Routes ve Places: yanıt biçimi
   belgelerden yazıldı, gerçek yanıtla **hiç sınanmadı**; Türkçe yer
   adlarının (STT çıktısı "Kadıköy iskelesi") Places'te bulunma oranı, "hangisi?"
@@ -215,6 +231,95 @@ Google Haritalar'a düşer ve nedeni söyler.
    başlığında gider, hata mesajlarına ve günlüklere girmez. README'de
    kısıtlama/kota ve "ürün aşamasında ara sunucu" notu var.
 
+   **Anahtar kısıtlama kontrol listesi (Google Cloud Console, anahtarı
+   koymadan önce):**
+   - *Uygulama kısıtlaması:* Android uygulamaları. Paket adı
+     `com.patika.patika_app` (`play` ve `direct` aynı) + SHA-1 parmak izi.
+     SHA-1 sayısı kadar satır: debug keystore (`keytool -list -v -keystore
+     ~/.android/debug.keystore -alias androiddebugkey -storepass android`),
+     `direct` için kendi imza anahtarımız, Play dağıtımında ayrıca **Play
+     Console → Uygulama bütünlüğü'ndeki uygulama imzalama SHA-1'i**.
+   - *API kısıtlaması:* yalnızca **Routes API** ve **Places API (New)**.
+     Başka hiçbir API seçili olmasın.
+   - *Bütçe uyarısı:* Faturalandırma → Bütçeler ve uyarılar'da aylık bütçe
+     + %50/%90/%100 e-posta uyarısı. Uyarı harcamayı **durdurmaz**; asıl
+     sınır için API → Kotalar'dan günlük istek üst sınırı da konur.
+   - **Karar (onaylandı):** `X-Android-Package` ve `X-Android-Cert` başlıkları
+     eklenecek. Google Cloud kısıtına **hem debug hem release SHA-1'i**
+     (ve `direct`/Play imzaları) eklenecek; biri eksikse o derlemede
+     istekler 403 alır.
+   - **AÇIK İŞ (kodda eksik):** Android uygulama kısıtlamalı bir anahtarla
+     REST çağrısı yapan istemci, `X-Android-Package` ve `X-Android-Cert`
+     (SHA-1, büyük harfsiz onaltılık) başlıklarını kendisi göndermelidir;
+     `google_client.dart` şu an yalnızca `X-Goog-Api-Key` ve
+     `X-Goog-FieldMask` gönderiyor. Bu haliyle kısıtlı anahtar **403**
+     verir ve navigasyon sessizce Haritalar yedeğine düşer. Anahtarı
+     kısıtlamadan önce bu başlıklar eklenmeli (paket adı ve çalışan
+     imzanın SHA-1'i native taraftan okunur). Cihazda doğrulanacak.
+
+## Faz 7 kararları (SOS; Z20 nedeniyle hassas, tekrar tartışma)
+
+Alt fazlar: **7a** SOS çekirdeği (durum makinesi, geri sayım, acil kişi,
+gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılama
+(gölge modu, deneysel opt-in). Düşme algılama 7a'dan çıkarıldı.
+
+1. **Dağıtım:** İlk sürüm `direct` ile dağıtılır. Play istisna başvurusu
+   ilk sürümde açılmaz, Play için sonra karar verilir. **`play` türünde
+   SOS "desteklenmiyor" (Seçenek 2):** geri sayım başlamaz; uzun basış ve
+   "yardım" sessiz kalmaz, hemen "Bu sürümde acil durum mesajı
+   gönderilemiyor" der (112'yi aramak ya da telefonun kendi acil durum
+   özelliğini kullanmak da söylenir). Ekran açan yedek (Seçenek 1)
+   yapılmadı: mesajın gittiğini doğrulayamayız, yanıltıcı olurdu.
+2. **Geri sayım:** Elle SOS 7 sn, düşme 25 sn. İptal **varsayılanı
+   GÖNDER**: kullanıcı bir şey yapmazsa SOS gider. Geri sayım sesli, kısa
+   aralıklı bip. İptal kanalları: sesli iptal, gözlük dokunuşu, telefon
+   ekranı. **Sesli iptal listesi:** "iptal", "iptal et", "yanlış alarm",
+   "vazgeç", "gerek yok". **"dur" geri sayımı iptal ETMEZ** (ve evrensel
+   DUR, SOS'u durdurmaz). Gerekçe: yanlışlıkla iptal olan gerçek bir SOS,
+   yanlışlıkla giden bir SOS'tan çok daha kötüdür; "dur" başka bağlamda
+   söylenmiş ya da TTS'i kesmek için söylenmiş olabilir.
+3. **112:** Ayrı ayar, varsayılan kapalı. Test numarası yalnızca debug'da ve
+   enjekte edilebilir. Release'te 112 sabiti değiştirilemez; testlerde gerçek
+   112 hiçbir yolla aranamaz. Asılsız 112 ihbarı için idari para cezası var
+   (5326 md. 42/A; kanun metninde 15.000 TL, yıllık yeniden değerleme;
+   yayın öncesi mevzuat.gov.tr ve avukatla doğrulanacak). Ayar açılırken bu
+   sesle söylenir.
+4. **Konum:** Alma, geri sayım BAŞLARKEN başlar. Geri sayım bitince konum
+   varsa kullanılır; yoksa en fazla 2-3 sn beklenir; yine yoksa konumsuz
+   gönderilir ve konum gelirse **tek** takip SMS'i atılır. Konum izni yoksa
+   konumsuz gönderilir ve bu sesle söylenir.
+5. **Gönderim sırası:** SMS acil kişilerin **hepsine**; ardından **tek
+   arama**: 112 ayarı açıksa 112, kapalıysa ilk kişi. **Düşme kaynaklı
+   tetiklemede 112 hiç aranmaz** (yalnızca SMS + kişi araması).
+6. **Sonucu doğru söyle:** "SOS gönderildi" yalnızca gönderim sonucu
+   başarılıysa (`SmsSendStatus.sent`: mesaj operatöre ulaştı) söylenir.
+   "İletildi/ulaştı" denmez: teslim raporu yok, karıştırılmaz. Başarısızsa
+   "Gönderilemedi, 112'yi aramak için çift dokunun"; çift dokunuş onayıyla
+   112 aranır. İzin eksikse SOS sessiz kalmaz, nedenini söyler.
+7. **Acil kişi kurulumu:** SMS izni (yalnızca `direct`) acil kişi kurulumunda
+   sesli açıklamayla istenir. Kişi yoksa "Acil kişi kurulu değil" ile
+   bitmez: 112 ayarı kapalıysa "Acil kişi yok. 112'yi aramak için çift
+   dokunun" denir, çift dokunuş onayıyla 112 aranır. Rıza SMS'i isteğe bağlı
+   ve yalnızca `direct`. Canlı konum paylaşımı kapsam dışı.
+8. **Eğitim metni:** "Patika acil durum servisi değildir." cümlesi eğitime
+   girer (SOS anlatılırken).
+9. **Düşme algılama (7c):** Önce gölge modu: yalnızca yerel kayıt, hiçbir
+   mesaj göndermez. Sonra deneysel opt-in, varsayılan kapalı. Açarken sesli
+   uyarı: "deneysel, her düşmeyi algılamayabilir, güvenilmemeli". Telefon
+   cepteyken IMU güvenilirliği Z20'ye eklenecek (aşağıdaki not).
+10. **Uzun basış:** Doğrudan geri sayım başlatır; firmware'de 3 sn eşiği
+   (TODO.md madde 16, "firmware ile netleşecek"). 60 sn'de en fazla bir
+   SOS sınırı **iptal edilen ya da gönderilemeyen SOS'u saymaz**. Sesli
+   "yardım" her zaman erişilebilir kalır (sınırdan etkilenmez).
+
+**Z20 notu** (`patika/CLAUDE.md` Z20 maddesine eklenecek; o repo başka
+pencerede yönetiliyor, burada değiştirilmedi): *Telefon IMU'su cepte, çantada
+ya da masadayken güvenilir değildir: düşme ile telefonun kendisinin düşmesi,
+oturma, merdiven ve bastonla yürüme ayrılamaz; yanlış pozitif de yanlış
+negatif de artar. Bu yüzden telefon IMU'suna dayanan düşme algılama
+deneysel, varsayılan kapalı ve önce gölge modunda (mesaj göndermez)
+çalıştırılır.*
+
 ## Faz 4b kararları (geçerli, tekrar tartışma)
 
 1. Arayanın kimliği **NotificationListenerService** ile alınır,
@@ -263,12 +368,13 @@ kararları); firmware'de netleşecek.
    gönderen kod ve protokol satırları (`hap`, `GlassesHaptics`,
    `sendHapticPattern`, `encodeHaptic`, `wireId`, `CompositeHaptics`, yön
    desenleri) kaldırıldı. Telefonun kendi titreşimi (`PhoneHaptics`) kalır.
-2. **Engel uyarısı kanalı: AÇIK KARAR.** Telefondan bağımsız çalışma
-   gereksinimi geçerli (`ble_protocol.md` §5 duruyor), kanal belirlenmedi.
-   Önerilen yön: ESP32 ToF eşiği aşılınca yerel kısa bip (earbud), ayrıntılı
-   cümle telefondan. Alternatif: ToF verisi BLE ile telefona, telefon sesli
-   uyarır. Firmware/donanım tarafıyla netleşecek; o zamana dek varsayılan
-   telefon.
+2. **Engel uyarısı: gözlükte yerel earcon** (ESP32 flash'ı, ~50 ms, telefona
+   sormadan; 5 koşullu AND eşiği, telefon yalnızca susturabilir). Karar
+   `patika/MIMARI.md` ("Yerel earcon eşiği") ve `patika/NOTES.md`
+   (2026-09-17 revizyonu, karar 2) kaynaklı; **firmware'de doğrulanacak**.
+   `ble_protocol.md` §5 buna göre hizalandı. Açık: zon susturma mesajının
+   biçimi, eşik değerleri. Zemin/baston menzili engelleri earcon kapsamında
+   değil, telefondan sesle.
 3. **Kamera:** gözlük Wi-Fi SoftAP açar; MJPEG (HTTP) görüntü, WebSocket
    ses ve kontrol. Tespit ve karar mantığının tamamı telefonda. `frm`
    taslağı: akışı başlat/durdur (`ble_protocol.md` §7). Henüz kodlanmadı.

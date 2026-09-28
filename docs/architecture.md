@@ -45,7 +45,7 @@ göre veriliyor.
 | **BackgroundService** | `lib/background/foreground_service.dart` | Android foreground service. Yalnızca süreci canlı tutar, iş yapmaz. Mantık ana isolate'te kalır. Kalıcı bildirim: "Patika gözlüğe bağlı". |
 | **FeedbackHub** | `lib/accessibility/feedback_hub.dart` | Kullanıcıya giden tüm geri bildirimin tek kapısı. Olay → titreşim deseni + kısa ses + konuşma. Ayarları (şiddet, bildirim türü, ayrıntı) tek yerde uygular. |
 | **AnnouncementQueue** | `lib/accessibility/announcement_queue.dart` | Öncelikli TTS kuyruğu (`low` < `normal` < `high` < `critical`). Yüksek öncelik konuşulanı keser, 3 sn içindeki tekrarlar birleştirilir, bayat `low` duyurular atılır. `repeatLast`/`stopAll` Faz 2'deki "tekrar et"/"dur" için. |
-| **HapticPatterns** | `lib/accessibility/haptic_patterns.dart` | Ritimle ayrışan 10 desen, yalnızca telefonda (`PhoneHaptics`): gözlükte titreşim motoru yok. Park sensörü mantığında engel aralığı simülasyon içindir; gerçek engel uyarısı kanalı **açık karar** (bkz. ble_protocol.md §5). |
+| **HapticPatterns** | `lib/accessibility/haptic_patterns.dart` | Ritimle ayrışan 10 desen, yalnızca telefonda (`PhoneHaptics`): gözlükte titreşim motoru yok. Park sensörü mantığındaki engel aralığı yalnızca telefon simülasyonudur; gerçek engel uyarısı gözlükte yerel earcon'dur (bkz. ble_protocol.md §5, firmware'de doğrulanacak). |
 | **Earcon** | `lib/accessibility/earcons.dart` | 4 kısa ses. Dosyalar `tool/generate_earcons.dart` ile üretiliyor. |
 | **PermissionExplainer** | `lib/permissions/permission_explainer.dart` | "Önce sesli açıkla, sonra sor": izin penceresinden önce neden gerektiği TTS ile söylenir. |
 | **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü. Ayarlar sesle de değişir (AYAR niyeti). |
@@ -80,8 +80,8 @@ göre veriliyor.
 - **Asla çökme:** Platform eklentisi hataları (plugin yok, izin yok) yakalanır.
   Bozuk BLE mesajları atlanır.
 - **Sessiz kopma yok:** Bağlantı kaybı `high` öncelikle duyurulur. Engel
-  uyarısının telefondan bağımsız çalışması gereksinimi geçerli, ama kanalı
-  **belirlenmedi** (gözlükte titreşim motoru yok; bkz. protokol §5).
+  uyarısı telefondan bağımsız, gözlükte yerel earcon ile verilir (titreşim
+  motoru yok; bkz. protokol §5, firmware'de doğrulanacak).
 
 ## Kişi eşleştirme (`lib/contacts/`)
 

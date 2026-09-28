@@ -80,38 +80,62 @@ Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
 gözlüğe `hap` komutu göndermez; titreşim yalnızca telefonun kendi motorundan
 gelir (`lib/accessibility/haptic_patterns.dart`).
 
-## 5. ⚠️ Engel uyarısı: telefondan bağımsız olmalı (AÇIK KARAR: kanal belirlenmedi)
+## 5. ⚠️ Engel uyarısı: gözlükte yerel earcon, telefondan bağımsız
 
-**Engel algılama → kullanıcıyı uyarma döngüsü telefondan bağımsız
-çalışmalıdır.** BLE koparsa, telefon kapanırsa, uygulama çökerse veya
-telefonun pili biterse kullanıcı **yine de** engel uyarısı almalıdır. Bu
-gereksinim geçerli; ancak gözlükte titreşim motoru olmadığı için eski kanal
-(gözlükte titreşim) kalktı ve **yeni kanal henüz belirlenmedi.**
+**Karar:** Engel uyarısı gözlükte **yerel earcon** ile verilir. Kaynak:
+`patika/MIMARI.md` ("Çıkış kanalı: sadece ses + yerel earcon", "Yerel earcon
+eşiği") ve `patika/NOTES.md` "Sistem Tutarlılığı Revizyonu (2026-09-17)"
+karar 2. Earcon ESP32'nin flash'ında saklı kısa bir tondur, telefona
+sormadan ~50 ms'de çalar. Gözlükte titreşim motoru yoktur (bkz. §4), tek
+çıkış kanalı sestir. Ayrıntılı cümle ("baş hizasında ince engel") telefondan
+gelir.
 
-Adaylar (karar firmware/donanım tarafıyla netleşecek):
+> **Firmware'de doğrulanacak.** Bu bölüm patika reposundaki tasarım
+> kararının uygulama tarafındaki yansımasıdır; firmware kodu henüz yok
+> (MIMARI.md: "kod karşılığı henüz yok"). Aşağıdaki her madde firmware ekibiyle
+> teyit edilmeden kesin sayılmaz.
 
-- **Önerilen yön:** ESP32 ToF eşiği aşılınca telefondan bağımsız **yerel kısa
-  bip** çalar (kulaklık/earbud). Ayrıntılı cümle ("önünde engel var")
-  telefondan gelir.
-- **Alternatif (varsayılan, firmware yoksa):** ToF verisi BLE ile telefona
-  gider, telefon sesli uyarır. Bu yol telefona ve BLE'ye bağımlıdır; yukarıdaki
-  bağımsızlık gereksinimini karşılamaz.
+**Gereksinim (değişmedi):** Engel algılama → uyarı döngüsü telefondan
+bağımsız çalışmalıdır. BLE koparsa, telefon kapanırsa, uygulama çökerse ya
+da telefonun pili biterse kullanıcı **yine de** engel earcon'u almalıdır.
+ToF → eşik hesabı firmware'de yapılır.
 
-Değişmeyenler:
+**Earcon eşiği** (MIMARI.md; şu 5 koşulun **hepsi** sağlanınca çalar, AND):
 
-- ToF sensörü → mesafe → uyarı aralığı hesabı, bağımsız kanal seçilirse
-  firmware'de yapılır.
-- Önerilen mesafe eşlemesi (park sensörü mantığı; uygulamadaki telefon
-  simülasyonuyla aynı): 2,5 m ve ötesi uyarı yok; 0,4 m ve berisi 150 ms
-  aralık (neredeyse sürekli); arası 150–1000 ms doğrusal.
-- Heartbeat durursa gözlük engel uyarısını **kesmemelidir**.
-- Uygulama gözlüğe engel uyarısı komutu göndermez.
+1. Mesafe < 0,75–1,0 m.
+2. Yalnızca baş hizası zonları (zemin/baston menzili zonları hariç).
+3. Yaklaşma: mesafe azalıyor **veya** IMU başlığı o yöne dönük.
+4. Zon bazlı debounce: aynı zonda 2–3 sn içinde tekrar çalınmaz.
+5. Telefon o zonu geçici olarak **susturmamış** olmalı (telefon → gözlük
+   kontrol kanalı).
+
+Sonuçlar:
+
+- Telefon susturma **yalnızca bastırır**. Telefon yoksa ya da bağlantı
+  koptuysa susturma gelmez, earcon çalar (güvenli varsayılan).
+- Heartbeat durursa gözlük engel earcon'unu **kesmemelidir**.
+- Uygulama gözlüğe "engel earcon'u çal" komutu göndermez.
+- **Kapsam farkı:** Earcon yalnızca yakın (<~1 m) baş hizası içindir. Zemin
+  ve baston menzili engelleri gözlük earcon'u kapsamaz; onlar için uyarı
+  telefondan sesle gelir (ToF/tespit sonucu BLE ile).
+- **Eski taslak geçersiz:** Bu bölümün önceki sürümündeki park sensörü eşlemesi
+  (2,5 m'de başla, 0,4 m'de sürekli, 150–1000 ms aralık) titreşim içindi ve
+  kaldırıldı. Uygulamadaki telefon simülasyonu (`obstacleInterval`, Test Modu)
+  yalnızca geliştirme aracıdır; gerçek davranışı belirlemez.
+
+**Açık noktalar** (firmware ile):
+
+- Susturma mesajı: telefon → gözlük kontrol kanalında zon susturma için bir
+  mesaj gerekiyor (koşul 5). §2.2'de **henüz tanımlı değil**; biçim
+  belirlenmedi.
+- Earcon sesi, ses seviyesi (AGC üst sınırı) ve bağlantı koptu/geldi
+  tonlarından ayırt edilebilirliği.
+- Eşik değerleri (0,75 mi 1,0 m mi) gerçek ToF ölçüm hatasına göre.
 
 ## 6. Açık konular
 
 - Gerçek UUID'ler (firmware ile birlikte).
-- Engel uyarısı kanalı (§5): gözlükte yerel bip mi, ToF verisi BLE ile
-  telefona mı?
+- Engel earcon'u (§5): firmware'de doğrulama, zon susturma mesajı biçimi, eşik değerleri.
 - `frm` başlat/durdur mesajının biçimi ve Wi-Fi bilgisinin (SSID/parola,
   IP) nasıl paylaşılacağı (§7). Firmware'de netleşecek.
 - Gözlük pil yüzdesinin nasıl hesaplanacağı (voltaj eğrisi) firmware'e ait.
