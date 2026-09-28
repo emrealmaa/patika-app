@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart' as fble;
 import 'package:permission_handler/permission_handler.dart';
 
-import '../accessibility/haptic_patterns.dart';
 import '../l10n/strings_tr.dart';
 import '../permissions/permission_explainer.dart';
 import 'ble_connection_state.dart';
@@ -32,7 +31,10 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   /// Gözlük -> telefon (notify): komut, buton, jest, pil, heartbeat.
   static final fble.Uuid _eventCharacteristicUuid =
       fble.Uuid.parse('0000ff11-0000-1000-8000-00805f9b34fb');
-  /// Telefon -> gözlük (write without response): titreşim deseni vb.
+  /// Telefon -> gözlük (write without response). Şu an gönderilen mesaj yok
+  /// (titreşim motoru kalktı); Wi-Fi akışı başlat/durdur taslağı (`frm`,
+  /// bkz. docs/ble_protocol.md) için ayrılı.
+  // ignore: unused_field
   static final fble.Uuid _controlCharacteristicUuid =
       fble.Uuid.parse('0000ff12-0000-1000-8000-00805f9b34fb');
   /// 247 bayt MTU -> 244 bayt yük; en uzun JSON mesaj buna sığmalı.
@@ -52,7 +54,6 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   StreamSubscription<fble.ConnectionStateUpdate>? _connectionSub;
   StreamSubscription<List<int>>? _valueSub;
   final List<DiscoveredDevice> _found = [];
-  String? _connectedDeviceId;
 
   @override
   Stream<BleConnectionState> get connectionState => _connectionController.stream;
@@ -145,12 +146,10 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
       (update) {
         switch (update.connectionState) {
           case fble.DeviceConnectionState.connected:
-            _connectedDeviceId = deviceId;
             _connectionController.add(BleConnectionState.connected);
             _onConnected(deviceId);
             break;
           case fble.DeviceConnectionState.disconnected:
-            _connectedDeviceId = null;
             _connectionController.add(BleConnectionState.disconnected);
             break;
           case fble.DeviceConnectionState.connecting:
@@ -161,7 +160,6 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
         }
       },
       onError: (_) {
-        _connectedDeviceId = null;
         _connectionController.add(BleConnectionState.disconnected);
       },
     );
@@ -206,20 +204,6 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   }
 
   @override
-  Future<void> sendHapticPattern(HapticPatternId id, {required double scale}) async {
-    final deviceId = _connectedDeviceId;
-    if (deviceId == null) return;
-    try {
-      await _ble.writeCharacteristicWithoutResponse(
-        _characteristic(deviceId, _controlCharacteristicUuid),
-        value: GlassesProtocol.encodeHaptic(id, scale),
-      );
-    } catch (e) {
-      debugPrint('[BLE] titreşim gönderilemedi: $e');
-    }
-  }
-
-  @override
   Future<void> disconnect() async {
     await _valueSub?.cancel();
     _valueSub = null;
@@ -227,7 +211,6 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
     // etmek (bkz. yukarıdaki not) - ayrı bir disconnect() API'si yok.
     await _connectionSub?.cancel();
     _connectionSub = null;
-    _connectedDeviceId = null;
     _connectionController.add(BleConnectionState.disconnected);
   }
 

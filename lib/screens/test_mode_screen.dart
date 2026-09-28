@@ -240,15 +240,6 @@ class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
           value: !_sim.reachable,
           onChanged: (v) => setState(() => _sim.setReachable(!v)),
         ),
-        ValueListenableBuilder<HapticPatternId?>(
-          valueListenable: _sim.lastHaptic,
-          builder: (context, id, _) => id == null
-              ? const SizedBox.shrink()
-              : Semantics(
-                  container: true,
-                  child: Text(Tr.lastHaptic(Tr.hapticName(id.name))),
-                ),
-        ),
       ],
     );
   }

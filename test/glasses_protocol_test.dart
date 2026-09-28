@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/ble/glasses_protocol.dart';
 import 'package:patika_app/commands/intent.dart';
 
@@ -63,15 +62,4 @@ void main() {
     });
   });
 
-  group('telefon -> gözlük', () {
-    test('titreşim deseni ID ve yüzde şiddetle kodlanır', () {
-      final bytes = GlassesProtocol.encodeHaptic(HapticPatternId.turnLeft, 0.7);
-      expect(jsonDecode(utf8.decode(bytes)), {'t': 'hap', 'id': 9, 's': 70});
-    });
-
-    test('en uzun mesaj 244 baytlık BLE yüküne sığar', () {
-      final bytes = GlassesProtocol.encodeHaptic(HapticPatternId.turnRight, 1);
-      expect(bytes.length, lessThan(244));
-    });
-  });
 }

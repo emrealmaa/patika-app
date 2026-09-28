@@ -24,7 +24,7 @@ göre veriliyor.
                       FeedbackHub.result()
                ┌───────────┼─────────────┐
        AnnouncementQueue  HapticOutput  EarconPlayer
-         (TTS, öncelik)  (telefon+gözlük) (kısa ses)
+         (TTS, öncelik)   (telefon)     (kısa ses)
 ```
 
 ## Modüller
@@ -39,13 +39,13 @@ göre veriliyor.
 | **ControlHandler** | `lib/commands/handlers/control_handler.dart` | DUR / TEKRAR / KOMUTLAR / EĞİTİM / SOS (yer tutucu). `ActionResult.silent` ile "dur"un sonucu okunmaz. |
 | **DialogManager** | `lib/voice/dialog_manager.dart`, `lib/voice/dialogs/` | Çok adımlı sesli akışlar (ARA, MESAJ): kişi eksikse sorar, "iki Ahmet var, hangisi?", onay ("Ahmet Kaya'yı arayayım mı?"), mesaj dikte + geri okuma + düzelt. Soru bitince tetikleyici beklemeden dinler; "dur"/"tekrar et" her adımda; cevapsız soru bir kez tekrarlanır, sonra iptal. SOS diyaloğu keser (dikte sırasında yalnızca TÜM cümle SOS ise - DUR/TEKRAR gibi; aksi halde mesaj içeriğinde "yardım" gibi kelimeler geçince mesaj kaybolurdu). |
 | **Kişi eşleştirme** | `lib/contacts/` | Söylenen adı rehberdeki kişiye çözer (ARA/MESAJ/NUMARA). Bkz. aşağıdaki bölüm. |
-| **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları; titreşim gönderme. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
+| **PatikaBleService** | `lib/ble/patika_ble_service.dart` | Gözlük arayüzü: bağlantı durumu, komut, buton, jest, pil, heartbeat akışları. Gerçek (`RealBleService`) ve simülasyon (`SimulatedBleService`) uygulamaları birbirinin yerine geçer. |
 | **GlassesProtocol** | `lib/ble/glasses_protocol.dart` | JSON mesaj ayrıştırma ve kodlama. Bkz. [ble_protocol.md](ble_protocol.md). |
 | **ConnectionSupervisor** | `lib/ble/connection_supervisor.dart` | Açılışta otomatik bağlanma (son cihaz, yoksa tek bulunan gözlük), heartbeat izleme (6 sn), üstel geri çekilmeli yeniden bağlanma, 3 başarısızlıktan sonra tek uyarı. "Bağlı" ile "sağlıklı" ayrı tutulur. |
 | **BackgroundService** | `lib/background/foreground_service.dart` | Android foreground service. Yalnızca süreci canlı tutar, iş yapmaz. Mantık ana isolate'te kalır. Kalıcı bildirim: "Patika gözlüğe bağlı". |
 | **FeedbackHub** | `lib/accessibility/feedback_hub.dart` | Kullanıcıya giden tüm geri bildirimin tek kapısı. Olay → titreşim deseni + kısa ses + konuşma. Ayarları (şiddet, bildirim türü, ayrıntı) tek yerde uygular. |
 | **AnnouncementQueue** | `lib/accessibility/announcement_queue.dart` | Öncelikli TTS kuyruğu (`low` < `normal` < `high` < `critical`). Yüksek öncelik konuşulanı keser, 3 sn içindeki tekrarlar birleştirilir, bayat `low` duyurular atılır. `repeatLast`/`stopAll` Faz 2'deki "tekrar et"/"dur" için. |
-| **HapticPatterns** | `lib/accessibility/haptic_patterns.dart` | Ritimle ayrışan 10 desen. Park sensörü mantığında engel aralığı. `PhoneHaptics`, `GlassesHaptics` ve ikisini birleştiren `CompositeHaptics`. |
+| **HapticPatterns** | `lib/accessibility/haptic_patterns.dart` | Ritimle ayrışan 10 desen, yalnızca telefonda (`PhoneHaptics`): gözlükte titreşim motoru yok. Park sensörü mantığında engel aralığı simülasyon içindir; gerçek engel uyarısı kanalı **açık karar** (bkz. ble_protocol.md §5). |
 | **Earcon** | `lib/accessibility/earcons.dart` | 4 kısa ses. Dosyalar `tool/generate_earcons.dart` ile üretiliyor. |
 | **PermissionExplainer** | `lib/permissions/permission_explainer.dart` | "Önce sesli açıkla, sonra sor": izin penceresinden önce neden gerektiği TTS ile söylenir. |
 | **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü. Ayarlar sesle de değişir (AYAR niyeti). |
@@ -58,6 +58,18 @@ göre veriliyor.
 | **Konum** | `lib/platform/location_service.dart`, `lib/permissions/location_access.dart` | `PatikaLocationService` (gerçek: `geolocator`; simülasyon). Konum izni melez akışla: eğitimin sonunda sesli açıklamayla; reddeden/atlayan için ilk navigasyonda, yalnızca uygulama ön plandaysa. Arka plan servisi izin varsa ve uygulama görünürken konum türüyle (re)başlar; `ACCESS_BACKGROUND_LOCATION` yok. |
 | **IncomingMessages / IncomingMessageLog** | `lib/platform/incoming_messages.dart`, `lib/commands/incoming_message_log.dart` | Bildirimden yakalanan mesajlar (Faz 4b, gerçek yakalama: `PatikaNotificationListener.kt`). `AppState._onIncomingMessage` her mesajı (susturulmuş olsa bile) günlüğe ekler; ayar açıksa içeriği okur (ilk kez `LoudMessagesNotice` ile bir kerelik gizlilik uyarısı), kapalıysa yalnızca göndereni söyler. MESAJLARIM/SON_BİLDİRİMLER niyetleri (`MessageHistoryHandler`) aynı günlüğü sırasıyla "okunmamışları oku" ve "son 20'nin göndereni" için okur; AYAR'daki `notificationsMuted` yalnızca duyuruyu susturur, günlüğü değil. |
 
+## Gözlük kanalları (planlanan)
+
+- **BLE:** kontrol, buton, jest, pil, ToF, heartbeat (bkz.
+  [ble_protocol.md](ble_protocol.md)). Gözlükte titreşim motoru yok.
+- **Wi-Fi SoftAP:** gözlük kendi erişim noktasını açar, telefon bağlanır.
+  Kamera MJPEG (HTTP), ses ve kontrol WebSocket ile akar. Tespit ve karar
+  mantığının **tamamı telefonda** çalışır. Henüz kodlanmadı; `frm`
+  (akışı başlat/durdur) taslak (ble_protocol.md §7).
+- **Ağ riski:** SoftAP internetsizdir. Routes/Places gibi çağrıların mobil
+  veriden gitmesi için uygulamaya özel ağ bağlama (`WifiNetworkSpecifier`)
+  gerekecek; cihazda doğrulanacak.
+
 ## İlkeler
 
 - **Simülasyon önce:** Her gözlük özelliği önce `PatikaBleService` arayüzüne,
@@ -68,7 +80,8 @@ göre veriliyor.
 - **Asla çökme:** Platform eklentisi hataları (plugin yok, izin yok) yakalanır.
   Bozuk BLE mesajları atlanır.
 - **Sessiz kopma yok:** Bağlantı kaybı `high` öncelikle duyurulur. Engel
-  uyarısı ise gözlükte, telefondan bağımsız çalışır (bkz. protokol §5).
+  uyarısının telefondan bağımsız çalışması gereksinimi geçerli, ama kanalı
+  **belirlenmedi** (gözlükte titreşim motoru yok; bkz. protokol §5).
 
 ## Kişi eşleştirme (`lib/contacts/`)
 

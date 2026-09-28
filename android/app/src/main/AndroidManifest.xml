@@ -30,8 +30,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 14+: connectedDevice türündeki servis, Bluetooth izinlerinden
          biri YA DA bu (normal, onaysız) izin olmadan başlatılamıyor. Simülasyon
-         modunda Bluetooth izni istenmediği için gerekli; Faz 5'teki WiFi kare
-         aktarımında da kullanılacak. -->
+         modunda Bluetooth izni istenmediği için gerekli; gözlüğün Wi-Fi SoftAP
+         kamera akışına bağlanırken de kullanılacak. -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 

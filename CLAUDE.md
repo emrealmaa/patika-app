@@ -70,6 +70,15 @@ Faz 6 süresince yalnızca kod + otomatik test (`flutter analyze` +
 `flutter test`) seviyesinde ilerleniyor; gerçek cihaz testleri burada
 birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir.
 
+- [ ] **YÜKSEK ÖNCELİK - gözlük SoftAP'ına bağlıyken telefonun internet
+  erişimi.** SoftAP internetsizdir; Android buna bağlanınca mobil veriyi
+  bırakabilir. Etkilenenler: Routes/Places (navigasyon), Gemini, hava
+  durumu. Uygulamaya özel ağ bağlama (`WifiNetworkSpecifier`) denenecek:
+  akış SoftAP'tan, diğer istekler mobil veriden gitmeli. **Samsung One UI'da
+  (Galaxy S24 FE) doğrulanacak**; One UI'ın "ağ zayıfsa mobil veriye geç"
+  (akıllı ağ değiştirici) davranışı ve internetsiz Wi-Fi uyarısı da
+  bakılacak. Henüz kod yok, gözlük Wi-Fi'ı hazır olunca.
+
 - [ ] **Faz 6 - ANA SENARYO (ilk sırada): ekran kapalı/kilitliyken sesle
   navigasyon başlatma.** Kulaklık/gözlükten "X'e götür" denince navigasyonun
   başlaması ve konum duyurularının sürmesi. Doğrulanacaklar:
@@ -244,6 +253,24 @@ Faz 6–8 ilk şartnameye göre.
 
 Faz numaraları **kaydırılmadı** (6, 7, 8 aynı kalıyor, "Faz 5" boş) - diğer
 belgelerdeki "Faz 7 = SOS" gibi referanslar bozulmasın diye. OKU niyeti
-(`ocr_handler.dart`) yer tutucu olarak kalıyor. `frm` (WiFi kare) komutu
-ayrılmış kalıyor; görsel yardım için değil, Katman 1 görüntü kanalı için
-(Z7 taşımasıyla netleşecek).
+(`ocr_handler.dart`) yer tutucu olarak kalıyor. `frm` komutu ayrılmış
+kalıyor: taslak tanımı "kamera akışını başlat/durdur" (aşağıda, Donanım
+kararları); firmware'de netleşecek.
+
+## Donanım kararları (2026-09-28)
+
+1. **Gözlükte titreşim motoru yok** (tasarımdan çıkarıldı). Gözlüğe titreşim
+   gönderen kod ve protokol satırları (`hap`, `GlassesHaptics`,
+   `sendHapticPattern`, `encodeHaptic`, `wireId`, `CompositeHaptics`, yön
+   desenleri) kaldırıldı. Telefonun kendi titreşimi (`PhoneHaptics`) kalır.
+2. **Engel uyarısı kanalı: AÇIK KARAR.** Telefondan bağımsız çalışma
+   gereksinimi geçerli (`ble_protocol.md` §5 duruyor), kanal belirlenmedi.
+   Önerilen yön: ESP32 ToF eşiği aşılınca yerel kısa bip (earbud), ayrıntılı
+   cümle telefondan. Alternatif: ToF verisi BLE ile telefona, telefon sesli
+   uyarır. Firmware/donanım tarafıyla netleşecek; o zamana dek varsayılan
+   telefon.
+3. **Kamera:** gözlük Wi-Fi SoftAP açar; MJPEG (HTTP) görüntü, WebSocket
+   ses ve kontrol. Tespit ve karar mantığının tamamı telefonda. `frm`
+   taslağı: akışı başlat/durdur (`ble_protocol.md` §7). Henüz kodlanmadı.
+4. Antigravity artık kullanılmıyor; testleri ve dokümanı Claude Code
+   yazıyor (bu repoda kalıntı yok; `patika` reposu ayrıca temizlenecek).

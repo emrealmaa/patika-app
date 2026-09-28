@@ -3,24 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:vibration/vibration.dart';
 
-/// Titreşim dili. [wireId] gözlüğe BLE ile gönderilen desen numarası -
-/// firmware aynı tabloyu kullanacak (bkz. docs/ble_protocol.md, Faz 1b).
+/// Telefonun titreşim dili. Gözlükte titreşim motoru yok (tasarımdan
+/// çıkarıldı), bu desenler yalnızca telefonda çalar.
 enum HapticPatternId {
-  connected(1),
-  disconnected(2),
-  batteryLow(3),
-  listening(4),
-  understood(5),
-  notUnderstood(6),
-  error(7),
-  obstacle(8),
-  turnLeft(9),
-  turnRight(10),
-  incomingCall(11),
-  incomingMessage(12);
-
-  final int wireId;
-  const HapticPatternId(this.wireId);
+  connected,
+  disconnected,
+  batteryLow,
+  listening,
+  understood,
+  notUnderstood,
+  error,
+  obstacle,
+  incomingCall,
+  incomingMessage,
 }
 
 /// Android titreşim deseni: [timings] "bekle, titret, bekle, titret..."
@@ -65,10 +60,6 @@ abstract final class HapticPatterns {
     HapticPatternId.error: HapticPattern([0, 80, 50, 80, 50, 80], [0, 255, 0, 255, 0, 255]),
     // Tek vuruş; tekrar aralığını [obstacleInterval] belirler.
     HapticPatternId.obstacle: HapticPattern([0, 60], [0, 255]),
-    // Uzun-kısa: "sola".
-    HapticPatternId.turnLeft: HapticPattern([0, 300, 120, 80], [0, 220, 0, 220]),
-    // Kısa-uzun: "sağa".
-    HapticPatternId.turnRight: HapticPattern([0, 80, 120, 300], [0, 220, 0, 220]),
     // Çift-çift, aralarda duraklı: telefon zili gibi "brr-brr ... brr-brr".
     HapticPatternId.incomingCall:
         HapticPattern([0, 120, 100, 120, 400, 120, 100, 120], [0, 255, 0, 255, 0, 255, 0, 255]),
@@ -98,33 +89,14 @@ abstract final class HapticPatterns {
   }
 }
 
-/// Titreşimin nereye verileceği soyutlaması. Faz 1a'da telefon; Faz 1b'de
-/// gözlüğe BLE ile desen ID'si gönderen ikinci bir uygulama eklenecek.
+/// Titreşimin nereye verileceği soyutlaması (şimdilik yalnızca telefon;
+/// testlerde sahtesi kullanılır).
 abstract class HapticOutput {
   Future<void> play(HapticPatternId id, {required double scale});
 
   /// Engel mesafesine göre tekrarlayan titreşimi başlatır/günceller;
   /// null ya da uzak mesafe durdurur.
   void updateObstacle(double? distanceMeters, {required double scale});
-}
-
-/// Aynı deseni birden çok çıkışta (telefon + gözlük) çalar.
-class CompositeHaptics implements HapticOutput {
-  final List<HapticOutput> outputs;
-
-  CompositeHaptics(this.outputs);
-
-  @override
-  Future<void> play(HapticPatternId id, {required double scale}) async {
-    await Future.wait(outputs.map((o) => o.play(id, scale: scale)));
-  }
-
-  @override
-  void updateObstacle(double? distanceMeters, {required double scale}) {
-    for (final o in outputs) {
-      o.updateObstacle(distanceMeters, scale: scale);
-    }
-  }
 }
 
 class PhoneHaptics implements HapticOutput {

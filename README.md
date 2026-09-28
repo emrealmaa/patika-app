@@ -1,8 +1,8 @@
 # Patika Companion
 
-Patika akıllı gözlüğünün (ESP32-S3; kamera, ToF, IMU, titreşim, earbud, BLE,
-WiFi) Flutter companion uygulaması. Birincil kullanıcı görme engelli
-bireyler; uygulama ekrana bakmadan, sesle ve titreşimle kullanılacak şekilde
+Patika akıllı gözlüğünün (ESP32-S3; kamera, ToF, IMU, earbud, BLE,
+Wi-Fi SoftAP; titreşim motoru yok) Flutter companion uygulaması. Birincil kullanıcı görme engelli
+bireyler; uygulama ekrana bakmadan, sesle ve telefonun titreşimiyle kullanılacak şekilde
 tasarlanıyor. Android öncelikli, iOS şimdilik ertelendi.
 
 Gözlük donanımı henüz yok: her şey **Simülasyon modunda** çalışır ve

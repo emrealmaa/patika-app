@@ -280,7 +280,6 @@ abstract final class Tr {
   static const glassesUnreachable = 'Gözlük menzil dışında';
   static const glassesUnreachableHint =
       'Bağlantı kopar ve yeniden bağlanma denemeleri başarısız olur.';
-  static String lastHaptic(String name) => 'Gözlüğe giden son titreşim: $name';
   static const delayedTap = '5 saniye sonra dokun (arka plan testi)';
   static const delayedTapHint =
       'Bu sürede telefonu kilitleyin: ekran kapalıyken dinlemenin başlayıp başlamadığını dener.';
@@ -311,8 +310,6 @@ abstract final class Tr {
         'notUnderstood' => 'Anlaşılamadı',
         'error' => 'Hata',
         'obstacle' => 'Engel',
-        'turnLeft' => 'Sola dön',
-        'turnRight' => 'Sağa dön',
         'incomingCall' => 'Gelen arama',
         'incomingMessage' => 'Gelen mesaj',
         _ => id,

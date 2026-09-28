@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../accessibility/haptic_patterns.dart';
 import 'ble_command.dart';
 import 'ble_connection_state.dart';
 import 'glasses_protocol.dart';
@@ -34,9 +33,6 @@ abstract class PatikaBleService {
   Future<void> stopScan();
   Future<void> connect(String deviceId);
   Future<void> disconnect();
-
-  /// Gözlükte titreşim deseni çaldırır; bağlı değilse sessizce atlanır.
-  Future<void> sendHapticPattern(HapticPatternId id, {required double scale});
 
   void dispose();
 }

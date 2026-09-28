@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../accessibility/haptic_patterns.dart';
 import 'ble_command.dart';
 
 /// Gözlük butonu olayları.
@@ -107,17 +106,6 @@ abstract final class GlassesProtocol {
       entity is String ? entity : null,
     ));
   }
-
-  /// Gözlükte titreşim deseni çaldırır. [scale] 0..1 kullanıcı şiddeti,
-  /// yüzdeye çevrilerek gönderilir.
-  static List<int> encodeHaptic(HapticPatternId id, double scale) => _encode({
-        't': 'hap',
-        'id': id.wireId,
-        's': (scale.clamp(0.0, 1.0) * 100).round(),
-      });
-
-  static List<int> _encode(Map<String, Object> message) =>
-      utf8.encode(jsonEncode(message));
 
   static T? _byWire<T>(List<T> values, Object? wire, String Function(T) wireOf) {
     for (final v in values) {

@@ -15,7 +15,6 @@ import 'ble/ble_command.dart';
 import 'ble/ble_connection_state.dart';
 import 'ble/connection_supervisor.dart';
 import 'ble/device_memory.dart';
-import 'ble/glasses_haptics.dart';
 import 'ble/glasses_protocol.dart';
 import 'ble/patika_ble_service.dart';
 import 'ble/real_ble_service.dart';
@@ -177,11 +176,8 @@ class AppState extends ChangeNotifier implements ControlActions {
             ((simulated) => SharedPrefsDeviceMemory(simulated: simulated)) {
     feedback = FeedbackHub(
       queue: AnnouncementQueue(_speech),
-      // Desenler hem telefonda hem (bağlıysa) gözlükte çalar.
-      haptics: CompositeHaptics([
-        haptics ?? PhoneHaptics(),
-        GlassesHaptics(() => bleService),
-      ]),
+      // Gözlükte titreşim motoru yok; titreşim yalnızca telefonda.
+      haptics: haptics ?? PhoneHaptics(),
       earcons: earcons ?? AudioplayersEarconPlayer(),
       settings: () => this.settings.value,
     );

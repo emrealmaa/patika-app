@@ -1,8 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-
-import '../accessibility/haptic_patterns.dart';
 import 'ble_command.dart';
 import 'ble_connection_state.dart';
 import 'glasses_protocol.dart';
@@ -26,9 +23,6 @@ class SimulatedBleService with GlassesEventStreams implements PatikaBleService {
   bool _heartbeatPaused = false;
   bool _reachable = true;
   int _battery = 80;
-
-  /// Gözlüğe en son gönderilen titreşim deseni (test ekranında gösteriliyor).
-  final lastHaptic = ValueNotifier<HapticPatternId?>(null);
 
   static const _fakeDevice = DiscoveredDevice(
     id: 'SIM-ESP32-S3-0001',
@@ -83,13 +77,6 @@ class SimulatedBleService with GlassesEventStreams implements PatikaBleService {
   Future<void> disconnect() async {
     _stopHeartbeat();
     _setState(BleConnectionState.disconnected);
-  }
-
-  @override
-  Future<void> sendHapticPattern(HapticPatternId id, {required double scale}) async {
-    if (_state != BleConnectionState.connected) return;
-    lastHaptic.value = id;
-    debugPrint('[SimBLE] gözlük titreşimi: ${id.name} (%${(scale * 100).round()})');
   }
 
   /// Test ekranındaki komut girişi bunu çağırır. Bağlı değilken de çalışır
@@ -149,6 +136,5 @@ class SimulatedBleService with GlassesEventStreams implements PatikaBleService {
     _connectionController.close();
     _devicesController.close();
     closeGlassesStreams();
-    lastHaptic.dispose();
   }
 }

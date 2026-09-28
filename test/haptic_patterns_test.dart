@@ -23,11 +23,6 @@ void main() {
       expect(timings.toSet().length, timings.length);
     });
 
-    test('gözlük desen ID\'leri benzersiz', () {
-      final ids = HapticPatternId.values.map((p) => p.wireId).toList();
-      expect(ids.toSet().length, ids.length);
-    });
-
     test('şiddet ölçekleme: 0 dışı genlik en az 1 kalır, beklemeler 0', () {
       final p = HapticPatterns.of(HapticPatternId.connected).scaled(0.001);
       expect(p.amplitudes, [0, 1, 0, 1]);

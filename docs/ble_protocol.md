@@ -55,8 +55,8 @@ Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
 
 | `t` | Alanlar | Anlamı | Örnek |
 |---|---|---|---|
-| `hap` | `id` (desen no), `s` (şiddet %0–100) | Titreşim desenini çal | `{"t":"hap","id":9,"s":70}` |
-| `frm` | — | *(Ayrılmış)* Tek kare çek ve WiFi ile gönder | `{"t":"frm"}` |
+| ~~`hap`~~ | — | **Kaldırıldı** (gözlükte titreşim motoru yok, bkz. §4) | — |
+| `frm` | `on` (bool) | **TASLAK, firmware'de netleşecek.** Kamera akışını başlat/durdur (bkz. §7) | `{"t":"frm","on":true}` |
 
 ## 3. Heartbeat ve bağlantı sağlığı
 
@@ -74,53 +74,68 @@ Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
   (±%20 rastgele sapma). Art arda **3 başarısız** denemeden sonra kullanıcıya
   bir kez "Gözlüğe bağlanılamıyor, denemeye devam ediyorum" denir.
 
-## 4. Titreşim desenleri (`hap.id`)
+## 4. Titreşim desenleri
 
-Desenler şiddetle değil **ritimle** ayrışır; en hafif şiddette de ayırt
-edilebilmelidirler. Süreler milisaniye: `[bekle, titret, bekle, titret, …]`.
-Kaynak: `lib/accessibility/haptic_patterns.dart`.
+**Kaldırıldı: gözlükte titreşim motoru yok** (tasarımdan çıkarıldı). Telefon
+gözlüğe `hap` komutu göndermez; titreşim yalnızca telefonun kendi motorundan
+gelir (`lib/accessibility/haptic_patterns.dart`).
 
-| id | Ad | Zamanlama (ms) | Anlam |
-|---|---|---|---|
-| 1 | connected | 0, 60, 80, 140 (yükselen) | Bağlandı |
-| 2 | disconnected | 0, 220, 100, 220 (alçalan) | Bağlantı koptu |
-| 3 | batteryLow | 0, 150, 200, 150, 200, 150 | Pil düşük |
-| 4 | listening | 0, 40 | Dinliyorum |
-| 5 | understood | 0, 40, 70, 40 | Anlaşıldı / başarılı |
-| 6 | notUnderstood | 0, 350 | Anlaşılamadı |
-| 7 | error | 0, 80, 50, 80, 50, 80 | Hata |
-| 8 | obstacle | 0, 60 (tekrarlı) | Engel (bkz. §5) |
-| 9 | turnLeft | 0, 300, 120, 80 (uzun-kısa) | Sola dön |
-| 10 | turnRight | 0, 80, 120, 300 (kısa-uzun) | Sağa dön |
-| 11 | incomingCall | 0, 120, 100, 120, 400, 120, 100, 120 (çift-çift) | Gelen arama (Faz 4b) |
+## 5. ⚠️ Engel uyarısı: telefondan bağımsız olmalı (AÇIK KARAR: kanal belirlenmedi)
 
-Gözlükte iki motor varsa `turnLeft` sol, `turnRight` sağ motorda çalınabilir.
-Tek motorda ritim farkı yeterlidir.
-
-## 5. ⚠️ Firmware ekibi için kritik not: engel uyarısı telefondan bağımsızdır
-
-**Engel algılama → titreşim döngüsü gözlüğün içinde, telefondan bağımsız
+**Engel algılama → kullanıcıyı uyarma döngüsü telefondan bağımsız
 çalışmalıdır.** BLE koparsa, telefon kapanırsa, uygulama çökerse veya
-telefonun pili biterse kullanıcı **yine de** engel uyarısı almalıdır.
+telefonun pili biterse kullanıcı **yine de** engel uyarısı almalıdır. Bu
+gereksinim geçerli; ancak gözlükte titreşim motoru olmadığı için eski kanal
+(gözlükte titreşim) kalktı ve **yeni kanal henüz belirlenmedi.**
 
-- ToF sensörü → mesafe → titreşim aralığı hesabı firmware'de yapılır. Telefon
-  bu döngünün içinde **olmamalıdır** (BLE gecikmesi ve kopma riski).
-- Önerilen eşleme (uygulamadaki simülasyonla aynı, park sensörü mantığı):
-  - 2,5 m ve ötesi: titreşim yok
-  - 0,4 m ve berisi: 150 ms aralıkla (neredeyse sürekli)
-  - Aradaki mesafeler: 150 ms ile 1000 ms arasında doğrusal
-- Telefon yalnızca **ek sesli bilgi** verir ("önünde engel var" gibi). Uygulama
-  gözlüğe `hap id=8` **göndermez** (`GlassesHaptics.updateObstacle` bilerek
-  boş bırakıldı).
-- Heartbeat durursa gözlük engel titreşimini **kesmemelidir**.
+Adaylar (karar firmware/donanım tarafıyla netleşecek):
+
+- **Önerilen yön:** ESP32 ToF eşiği aşılınca telefondan bağımsız **yerel kısa
+  bip** çalar (kulaklık/earbud). Ayrıntılı cümle ("önünde engel var")
+  telefondan gelir.
+- **Alternatif (varsayılan, firmware yoksa):** ToF verisi BLE ile telefona
+  gider, telefon sesli uyarır. Bu yol telefona ve BLE'ye bağımlıdır; yukarıdaki
+  bağımsızlık gereksinimini karşılamaz.
+
+Değişmeyenler:
+
+- ToF sensörü → mesafe → uyarı aralığı hesabı, bağımsız kanal seçilirse
+  firmware'de yapılır.
+- Önerilen mesafe eşlemesi (park sensörü mantığı; uygulamadaki telefon
+  simülasyonuyla aynı): 2,5 m ve ötesi uyarı yok; 0,4 m ve berisi 150 ms
+  aralık (neredeyse sürekli); arası 150–1000 ms doğrusal.
+- Heartbeat durursa gözlük engel uyarısını **kesmemelidir**.
+- Uygulama gözlüğe engel uyarısı komutu göndermez.
 
 ## 6. Açık konular
 
 - Gerçek UUID'ler (firmware ile birlikte).
-- WiFi kare aktarımı (`frm`): SoftAP mi, telefon hotspot'u mu? Eskiden Faz 5
-  (görsel yardım) planındaydı; o faz iptal edildi. Kanal Katman 1 görüntü
-  işleme için yine gerekli, karar Python→Dart taşımasıyla (`patika/CLAUDE.md`
-  Z7) birlikte verilecek.
+- Engel uyarısı kanalı (§5): gözlükte yerel bip mi, ToF verisi BLE ile
+  telefona mı?
+- `frm` başlat/durdur mesajının biçimi ve Wi-Fi bilgisinin (SSID/parola,
+  IP) nasıl paylaşılacağı (§7). Firmware'de netleşecek.
 - Gözlük pil yüzdesinin nasıl hesaplanacağı (voltaj eğrisi) firmware'e ait.
 - Protokol sürümü alanı (`"v"`) şimdilik yok. İlk kırıcı değişiklikte
   bağlanınca `{"t":"hello","v":2}` eklenmesi öneriliyor.
+
+## 7. Kamera akışı: Wi-Fi SoftAP (taslak)
+
+BLE yalnızca kontrol, buton, ToF ve pil içindir. Kamera görüntüsü ayrı bir
+Wi-Fi kanalından gelir. Bu bölüm **taslaktır; firmware tarafında
+netleşecek.**
+
+- **Ağ:** Gözlük kendi Wi-Fi erişim noktasını (**SoftAP**) açar, telefon buna
+  bağlanır. Telefonun hotspot'u kullanılmaz.
+- **Görüntü:** MJPEG akışı (HTTP).
+- **Ses ve kontrol:** WebSocket.
+- **Karar mantığı telefonda:** Tespit ve karar mantığının tamamı telefonda
+  çalışır; gözlük yalnızca kamera/ses/sensör kaynağıdır.
+- **`frm` (taslak):** Tek kare çekme komutu değil, **akışı başlat/durdur**
+  komutudur. `{"t":"frm","on":true}` SoftAP'ı ve akışı açar, `on:false`
+  kapatır. SoftAP bilgisinin (SSID/parola veya sabit adres) BLE üzerinden mi
+  yoksa sabit mi paylaşılacağı açık.
+- **Telefon tarafı risk:** Android, internetsiz bir Wi-Fi'ye bağlanırken
+  mobil veriyi bırakabilir; Routes/Places gibi internet isteyen çağrılar bu
+  yüzden kırılabilir. Uygulamaya özel ağ bağlama (`WifiNetworkSpecifier`)
+  ile akış SoftAP'tan, diğer istekler mobil veriden gitmelidir. Cihazda
+  doğrulanacak (bkz. CLAUDE.md "Bekleyen telefon testleri").
