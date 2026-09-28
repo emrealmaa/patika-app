@@ -79,6 +79,18 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   (akıllı ağ değiştirici) davranışı ve internetsiz Wi-Fi uyarısı da
   bakılacak. Henüz kod yok, gözlük Wi-Fi'ı hazır olunca.
 
+- [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - konum, ekran kilitli ve cepteyken:**
+  ekran kilitli, telefon cepte, **gözlük uzun basışıyla** tetiklenen SOS'ta
+  konum alınıyor mu? Bakılacaklar: arka plan servisi **konum türüyle**
+  çalışıyor mu (`BackgroundService.ensureLocationType`), konum izni servis
+  BAŞLARKEN verilmiş mi (izin sonradan verilirse servis konum türüyle yeniden
+  başlıyor mu), `ACCESS_BACKGROUND_LOCATION` olmadan "kullanım sırasında"
+  erişimin ekran kilitliyken sürüp sürmediği (Faz 6 ana senaryosuyla aynı
+  varsayım), Galaxy S24 FE / Android 16'da pil optimizasyonu; konum
+  gelmezse "konumsuz gönder + tek takip SMS'i" akışı.
+- [ ] **Faz 7 (SOS):** arama sırasında konuşmama ve arama sonu özeti:
+  arama sürerken TTS hiç araya girmiyor mu; `SosCallMonitor` geçici (120 sn),
+  gerçek arama sonu tespiti yazılınca cihazda denenecek.
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - gerçek cihazda uçtan uca:** SOS'un
   **ikinci numarayla** denenmesi (asla gerçek 112 ile değil). Bakılacaklar:
   (a) kişi aranınca **ses hoparlörden mi** çıkıyor (eller serbest gerekir;
@@ -287,9 +299,22 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    varsa kullanılır; yoksa en fazla 2-3 sn beklenir; yine yoksa konumsuz
    gönderilir ve konum gelirse **tek** takip SMS'i atılır. Konum izni yoksa
    konumsuz gönderilir ve bu sesle söylenir.
-5. **Gönderim sırası:** SMS acil kişilerin **hepsine**; ardından **tek
-   arama**: 112 ayarı açıksa 112, kapalıysa ilk kişi. **Düşme kaynaklı
-   tetiklemede 112 hiç aranmaz** (yalnızca SMS + kişi araması).
+5. **Gönderim sırası:** SMS acil kişilerin **hepsine**; SMS sonuçları
+   söylenir; ardından **tek arama**: 112 ayarı açıksa 112, kapalıysa ilk
+   kişi. **Düşme kaynaklı tetiklemede 112 KENDİLİĞİNDEN hiç aranmaz** (SMS +
+   kişi araması). Ama düşmede (ve elle SOS'ta hiçbir SMS gitmediyse), SMS
+   sonuçlarından sonra kısa bir pencerede (6 sn, `offerDecisionWindow`)
+   onaylı teklif sunulur: "112'yi aramak için çift dokunun". Bu pencerede
+   çift dokunuş 112 onayıdır, "tekrar et" değil; onaylanırsa kişi aranmaz.
+   Ön kontrolde takılan SOS'ta (kişi yok, izin yok) aynı teklif 20 sn açık
+   kalır (her kaynakta).
+   **Arama sırasında konuşma yok:** SMS sonuçları arama BAŞLAMADAN, konuşma
+   bitince söylenir; arama başladıktan sonra TTS araya girmez; geç kalan
+   (10 sn'de bitmeyen) ve sonradan başarısız olan SMS sonuçları ile takip
+   SMS'i duyurusu arama BİTTİKTEN sonra özetlenir. Arama sonu tespiti
+   (`SosCallMonitor`) şimdilik **geçici**: aramadan 120 sn sonra bitmiş
+   sayılır; gerçeği `READ_PHONE_STATE` + `TelephonyManager` ile yazılacak
+   (gelen arama tespitiyle aynı izin).
 6. **Sonucu doğru söyle:** "SOS gönderildi" yalnızca gönderim sonucu
    başarılıysa (`SmsSendStatus.sent`: mesaj operatöre ulaştı) söylenir.
    "İletildi/ulaştı" denmez: teslim raporu yok, karıştırılmaz. Başarısızsa

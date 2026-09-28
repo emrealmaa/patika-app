@@ -481,4 +481,15 @@ abstract final class Tr {
   static const testNavStatusPaused = 'karşıya geçiş için duraklatıldı';
   static const testNavStatusOffRoute = 'rotanın dışında';
   static const testNavStatusWeakGps = 'konum belirsiz';
+
+  // --- Acil durum (Faz 7): acil kişilere giden SMS ----------------------------
+  // Alıcı kişiler okuyor (kullanıcı değil); kısa ve tek başına anlaşılır.
+  static String sosSmsInitial(String time) =>
+      'ACİL DURUM: Patika kullanıcısı yardım istedi (saat $time).';
+  static String sosSmsLocation(String link, int accuracyMeters) =>
+      'Konum: $link (yaklaşık $accuracyMeters metre doğrulukla).';
+  static const sosSmsNoLocation = 'Konum alınamadı.';
+  static String sosSmsFollowUp(String time, String link, int accuracyMeters) =>
+      'Acil durum mesajının devamı: güncel konum (saat $time): $link '
+      '(yaklaşık $accuracyMeters metre doğrulukla).';
 }

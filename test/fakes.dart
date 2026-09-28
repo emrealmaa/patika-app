@@ -109,6 +109,10 @@ class FakeSpeechInput implements SpeechInput {
 }
 
 /// "direct" derleme türünün sahte hali: aramalar/SMS'ler kaydedilir.
+///
+/// **Testte gerçek 112 hiçbir yolla aranamaz**: 112'ye giden her arama/SMS
+/// anında hata fırlatır (asılsız 112 aramasının idari para cezası var; bkz.
+/// CLAUDE.md Faz 7 kararları). SOS testleri sahte bir test numarası kullanır.
 class FakeDirectActions implements DirectActions {
   bool available = true;
   bool callSucceeds = true;
@@ -116,17 +120,25 @@ class FakeDirectActions implements DirectActions {
   final calls = <String>[];
   final sms = <(String, String)>[];
 
+  static void _refuseReal112(String number) {
+    if (number.replaceAll(RegExp(r'\D'), '') == '112') {
+      throw StateError('Testte gerçek 112 aranamaz');
+    }
+  }
+
   @override
   Future<bool> isAvailable() async => available;
 
   @override
   Future<bool> call(String number) async {
+    _refuseReal112(number);
     calls.add(number);
     return callSucceeds;
   }
 
   @override
   Future<SmsSendStatus> sendSms(String number, String body) async {
+    _refuseReal112(number);
     sms.add((number, body));
     return smsResult;
   }
