@@ -23,17 +23,6 @@ const testNumber = '0999 000 00 00';
 
 final fix = PositionFix(const LatLng(41.0, 29.0), 12, DateTime(2026, 9, 28, 14, 5));
 
-class FakeSosPermissions implements SosPermissions {
-  bool sms = true;
-  bool call = true;
-
-  @override
-  Future<bool> hasSms() async => sms;
-
-  @override
-  Future<bool> hasCall() async => call;
-}
-
 /// Sıra kontrolü için: aramalar ve SMS'ler ortak günlüğe yazılır.
 class LoggedDirect extends FakeDirectActions {
   final List<String> log;

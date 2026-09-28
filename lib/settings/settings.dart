@@ -62,6 +62,13 @@ class Settings {
   /// okunabilir). Gelen aramayı etkilemez. Varsayılan kapalı.
   final bool notificationsMuted;
 
+  /// Acil durumda (SOS) kişi yerine 112 aransın mı (Faz 7). Varsayılan
+  /// KAPALI: asılsız 112 araması idari para cezası gerektirebilir (bkz.
+  /// CLAUDE.md Faz 7 kararları). Sesle değil yalnızca ayarlar ekranından
+  /// açılır; açılırken sesli uyarı verilir. Düşme kaynaklı SOS bu ayardan
+  /// bağımsız olarak 112'yi kendiliğinden aramaz.
+  final bool emergencyCall112;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -72,6 +79,7 @@ class Settings {
     this.nodToListen = false,
     this.readMessagesAloud = true,
     this.notificationsMuted = false,
+    this.emergencyCall112 = false,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -95,6 +103,7 @@ class Settings {
     bool? nodToListen,
     bool? readMessagesAloud,
     bool? notificationsMuted,
+    bool? emergencyCall112,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -107,6 +116,7 @@ class Settings {
       nodToListen: nodToListen ?? this.nodToListen,
       readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
+      emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
     );
   }
 
@@ -137,6 +147,7 @@ class Settings {
         'nodToListen': nodToListen,
         'readMessagesAloud': readMessagesAloud,
         'notificationsMuted': notificationsMuted,
+        'emergencyCall112': emergencyCall112,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -162,6 +173,9 @@ class Settings {
       notificationsMuted: json['notificationsMuted'] is bool
           ? json['notificationsMuted'] as bool
           : d.notificationsMuted,
+      emergencyCall112: json['emergencyCall112'] is bool
+          ? json['emergencyCall112'] as bool
+          : d.emergencyCall112,
     );
   }
 
@@ -176,12 +190,13 @@ class Settings {
       other.feedbackMode == feedbackMode &&
       other.nodToListen == nodToListen &&
       other.readMessagesAloud == readMessagesAloud &&
-      other.notificationsMuted == notificationsMuted;
+      other.notificationsMuted == notificationsMuted &&
+      other.emergencyCall112 == emergencyCall112;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud, notificationsMuted);
+      readMessagesAloud, notificationsMuted, emergencyCall112);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

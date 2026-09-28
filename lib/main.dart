@@ -10,6 +10,7 @@ import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'theme/app_theme.dart';
 import 'voice/voice_controller.dart';
+import 'widgets/sos_countdown_banner.dart';
 
 void main() {
   runApp(const PatikaApp());
@@ -91,7 +92,13 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text(Tr.appTitle)),
-      body: screens[_tabIndex],
+      // Acil durum geri sayımı her sekmenin üstünde görünür (iptal düğmesi).
+      body: Column(
+        children: [
+          SosCountdownBanner(sos: _appState.sos),
+          Expanded(child: screens[_tabIndex]),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),

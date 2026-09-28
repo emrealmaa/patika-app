@@ -15,6 +15,9 @@ import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
+import 'package:patika_app/sos/emergency_contacts.dart';
+import 'package:patika_app/sos/emergency_number.dart';
+import 'package:patika_app/sos/sos_call_monitor.dart';
 import 'package:patika_app/tutorial/tutorial.dart';
 
 import 'fakes.dart';
@@ -66,6 +69,12 @@ class Harness {
   final opened = <Uri>[];
   late final AppState app;
 
+  /// Acil durum (Faz 7): kişiler bellekte, izinler verilmiş, arama sonu 40 sn.
+  /// Test numarası dışında hiçbir şey aranamaz (bkz. FakeDirectActions).
+  late final EmergencyContactStore emergencyContacts;
+  final sosPermissions = FakeSosPermissions();
+  final DirectActions directActions;
+
   /// Varsayılan "play" türü (doğrudan eylem yok); "direct" için sahte ver.
   Harness({
     Settings initial = const Settings(),
@@ -74,7 +83,11 @@ class Harness {
     LoudMessagesNotice? loudMessagesNotice,
     RoutePlanner? routePlanner,
     PlaceSearch? placeSearch,
-  }) : settings = SettingsStore(MemorySettingsPersistence()) {
+    List<EmergencyContact> emergencyContacts = const [],
+    Duration sosCallLength = const Duration(seconds: 40),
+  })  : settings = SettingsStore(MemorySettingsPersistence()),
+        directActions = direct {
+    this.emergencyContacts = MemoryEmergencyContactStore(emergencyContacts);
     settings.update(initial);
     app = AppState(
       autoStart: false,
@@ -106,6 +119,10 @@ class Harness {
       routePlanner: routePlanner,
       placeSearch: placeSearch,
       isAppVisible: () => appVisible,
+      emergencyContacts: this.emergencyContacts,
+      sosPermissions: sosPermissions,
+      emergencyNumber: const EmergencyNumber(debugTestNumber: '0999 000 00 00'),
+      sosCallMonitor: FixedDelayCallMonitor(sosCallLength),
     );
   }
 

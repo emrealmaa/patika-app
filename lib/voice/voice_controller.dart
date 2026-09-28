@@ -10,7 +10,7 @@ import 'dialog_manager.dart';
 import 'speech_input_service.dart';
 
 /// Dinlemeyi kim başlattı - davranış aynı, sadece kayıt/teşhis için.
-enum ListenSource { screen, glasses, gesture, tile, test, dialog }
+enum ListenSource { screen, glasses, gesture, tile, test, dialog, sos }
 
 enum VoicePhase { idle, preparing, listening, processing }
 
@@ -56,6 +56,13 @@ class VoiceController extends ChangeNotifier {
   /// Mikrofon izni ilk kez alındığında - arka plan servisi mikrofon
   /// türüyle yeniden başlatılsın diye (Android 14 kuralı).
   final VoidCallback? onMicrophoneGranted;
+
+  /// Acil durum geri sayımında (Faz 7) açılan SESSİZ dinleme oturumu: kısa ses
+  /// ya da "Dinliyorum" yok, sonuç sınıflandırıcıya/diyaloğa değil buraya gider
+  /// ve oturum sonuçsuz bitse bile "anlayamadım" denmez. Yalnızca iptal /
+  /// gönder komutları için (bkz. `classifySosVoice`).
+  void Function(String text)? onSosSpeech;
+  bool _sosSession = false;
 
   VoiceController({
     required SpeechInput speech,
@@ -110,6 +117,14 @@ class VoiceController extends ChangeNotifier {
     );
   }
 
+  /// Acil durum geri sayımı sürerken sessizce dinler ("iptal" için). Başka bir
+  /// dinleme/işlem sürüyorsa hiçbir şey yapmaz; çağıran (geri sayım tiki) bir
+  /// saniye sonra yeniden dener.
+  Future<void> listenForSos() async {
+    if (_phase != VoicePhase.idle) return;
+    await _listen(ListenSource.sos, dictation: false, dialogReply: false, sos: true);
+  }
+
   /// Diyalog sorusu bittiğinde: tetikleyici beklemeden cevabı dinler.
   Future<void> listenForReply({required bool dictation}) async {
     if (_phase != VoicePhase.idle) return;
@@ -120,16 +135,20 @@ class VoiceController extends ChangeNotifier {
     ListenSource source, {
     required bool dictation,
     required bool dialogReply,
+    bool sos = false,
   }) async {
     _source = source;
+    _sosSession = sos;
     debugPrint('[Voice] dinleme istendi: ${source.name}${dictation ? " (dikte)" : ""}');
     _setPhase(VoicePhase.preparing);
 
     final granted = await _ensureMicPermission();
     if (_phase != VoicePhase.preparing) return;
     if (!granted) {
+      _sosSession = false;
       _setPhase(VoicePhase.idle);
-      _feedback.signal(FeedbackEvent.error, text: Tr.micPermissionDenied);
+      // SOS geri sayımında izin penceresi/uyarı konuşması araya girmez.
+      if (!sos) _feedback.signal(FeedbackEvent.error, text: Tr.micPermissionDenied);
       return;
     }
     if (!_micEverGranted) {
@@ -141,13 +160,17 @@ class VoiceController extends ChangeNotifier {
     if (_phase != VoicePhase.preparing) return;
     if (!ready) {
       debugPrint('[Voice] tanıyıcı hazır değil');
+      _sosSession = false;
       _setPhase(VoicePhase.idle);
-      _feedback.signal(FeedbackEvent.error, text: Tr.speechUnavailable);
+      if (!sos) _feedback.signal(FeedbackEvent.error, text: Tr.speechUnavailable);
       return;
     }
 
-    _feedback.signal(FeedbackEvent.listening, statusText: Tr.listening);
-    await Future.delayed(_listenGap);
+    // SOS oturumunda dinleme sesi/sözü yok: geri sayım bipleriyle karışmasın.
+    if (!sos) {
+      _feedback.signal(FeedbackEvent.listening, statusText: Tr.listening);
+      await Future.delayed(_listenGap);
+    }
     // Beklerken iptal edildiyse dinlemeye başlama.
     if (_phase != VoicePhase.preparing) return;
 
@@ -171,8 +194,11 @@ class VoiceController extends ChangeNotifier {
   /// ("dinlerken dokunmak = iptal"); iptal duyurusunu diyalog yapar.
   Future<void> cancel() async {
     if (_phase != VoicePhase.preparing && _phase != VoicePhase.listening) return;
+    final wasSos = _sosSession;
+    _sosSession = false;
     _setPhase(VoicePhase.idle);
     await _speech.cancel();
+    if (wasSos) return; // sessiz SOS oturumu: "dinleme iptal edildi" denmez
     final dialog = this.dialog;
     if (dialog != null && dialog.active) {
       dialog.cancel();
@@ -189,6 +215,15 @@ class VoiceController extends ChangeNotifier {
     }
 
     _lastHeard = text;
+
+    // Acil durum dinlemesi: metin yalnızca SOS iptal/gönder komutu olarak
+    // yorumlanır; başka hiçbir komut çalışmaz.
+    if (_sosSession) {
+      _sosSession = false;
+      _setPhase(VoicePhase.idle);
+      onSosSpeech?.call(text);
+      return;
+    }
 
     final dialog = this.dialog;
     if (dialog != null && dialog.active) {
@@ -224,7 +259,11 @@ class VoiceController extends ChangeNotifier {
   void _onError(String message) {
     if (_phase != VoicePhase.listening) return;
     debugPrint('[Voice] dinleme bitti, sonuç yok: $message');
+    final wasSos = _sosSession;
+    _sosSession = false;
     _setPhase(VoicePhase.idle);
+    // SOS geri sayımında sessizlik/hata konuşulmaz; geri sayım tiki yeniden açar.
+    if (wasSos) return;
 
     final dialog = this.dialog;
     if (dialog != null && dialog.active) {

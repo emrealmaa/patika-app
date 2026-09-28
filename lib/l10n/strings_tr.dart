@@ -223,8 +223,6 @@ abstract final class Tr {
       'Kadıköy iskelesine götür. Konuşmamı kesmek için dur, '
       'son söylediğimi duymak için tekrar et deyin ya da gözlük butonuna iki kez dokunun.';
   static const nothingToRepeat = 'Tekrar edilecek bir şey yok';
-  static const sosNotReady = 'Acil durum özelliği henüz hazır değil. '
-      'Komutları duymak için ne yapabilirim deyin.';
 
   // --- Sesli eğitim --------------------------------------------------------
   static const tutorialSteps = [
@@ -239,6 +237,9 @@ abstract final class Tr {
     'Konuşmamı kesmek için dur deyin. Son söylediğimi tekrar duymak için tekrar et deyin '
         'ya da gözlük butonuna iki kez dokunun. Tüm komutlar için ne yapabilirim deyin.',
     'Konuşma hızımı daha hızlı konuş ya da daha yavaş konuş diyerek değiştirebilirsiniz.',
+    'Patika acil durum servisi değildir. Acil durumda yardım deyin ya da gözlüğün '
+        'butonuna uzun basın; yedi saniye içinde iptal etmezseniz acil kişilerinize mesaj gönderilir. '
+        'İptal etmek için iptal deyin ya da gözlüğe dokunun.',
   ];
   static const tutorialDone =
       'Eğitim bitti. Tekrar dinlemek için eğitimi başlat deyin.';
@@ -492,4 +493,61 @@ abstract final class Tr {
   static String sosSmsFollowUp(String time, String link, int accuracyMeters) =>
       'Acil durum mesajının devamı: güncel konum (saat $time): $link '
       '(yaklaşık $accuracyMeters metre doğrulukla).';
+
+  // --- Acil durum (Faz 7): kullanıcıya söylenenler ---------------------------
+  // Kural: "gönderildi" yalnızca gönderim sonucu başarılıysa (mesaj operatöre
+  // ulaştı); "iletildi/ulaştı" HİÇ denmez (teslim raporu yok).
+  static const sosUnsupported =
+      'Bu sürümde acil durum mesajı gönderilemiyor. 112\'yi arayın ya da '
+      'telefonunuzun kendi acil durum özelliğini kullanın';
+  static const sosCountdownStart =
+      'Acil durum çağrısı gönderilecek. İptal için iptal deyin ya da gözlüğe dokunun';
+  static const sosFallCountdownStart =
+      'Düşme algılandı. Acil durum çağrısı gönderilecek. İptal için iptal deyin ya da gözlüğe dokunun';
+  static const sosCancelled = 'Acil durum çağrısı iptal edildi';
+  static const sosTooLate = 'Gönderim başladı, artık iptal edilemiyor';
+  static const sosRateLimited = 'Acil durum çağrısı az önce gönderildi';
+  static const sosSending = 'Acil durum mesajı gönderiliyor';
+  static const sosSendingNoLocationPermission =
+      'Acil durum mesajı gönderiliyor. Konum izni yok, mesaj konumsuz gidecek';
+  static const sosSendingNoLocation =
+      'Acil durum mesajı gönderiliyor. Konum alınamadı, mesaj konumsuz gidecek';
+  static const sosOffer112 = '112\'yi aramak için çift dokunun';
+  static const sosNoContacts = 'Acil kişi yok';
+  static const sosNoContactsHint = 'Acil kişi eklemek için acil kişi ekle deyin';
+  static const sosNoSmsPermission = 'SMS izni yok, acil durum mesajı gönderilemez';
+  static const sosNoCallPermission = 'Arama izni yok, 112 aranamaz';
+  static const sosNoneSent = 'Gönderilemedi';
+  static String sosSentTo(int sent) =>
+      sent == 1 ? 'Acil durum mesajı bir kişiye gönderildi' : 'Acil durum mesajı $sent kişiye gönderildi';
+  static String sosNotSentTo(int failed) =>
+      failed == 1 ? 'Bir kişiye gönderilemedi' : '$failed kişiye gönderilemedi';
+  static String sosWaitingFor(int pending) =>
+      pending == 1 ? 'Bir kişi için sonuç bekleniyor' : '$pending kişi için sonuç bekleniyor';
+  static String sosCallingContact(String nameDative) => 'Şimdi $nameDative aranıyor';
+  static const sosCalling112Now = 'Şimdi 112 aranıyor';
+  static const sosCalling112 = '112 aranıyor';
+  static const sosCall112NoNumber = 'Bu derlemede gerçek 112 aranmaz';
+  static const sosCall112NoPermission = 'Arama izni yok, 112 aranamadı';
+  static const sosCall112Failed = '112 aranamadı';
+  static const sosCallFailed = 'Arama başlatılamadı';
+  static const sosCallNoPermission = 'Arama izni yok, arama yapılamadı';
+  static String sosLateSent(String name) => '$name için mesaj sonradan gönderildi';
+  static String sosLateFailed(String name) => '$name için mesaj gönderilemedi';
+  static const sosFollowUpSent = 'Güncel konumunuz da acil kişilere gönderildi';
+  static const sosFollowUpFailed = 'Güncel konum mesajı gönderilemedi';
+
+  // Ekran ve ayarlar
+  static String sosBannerTitle(int seconds) => 'Acil durum çağrısı: $seconds saniye sonra gönderilecek';
+  static const sosBannerSending = 'Acil durum mesajı gönderiliyor';
+  static const sosCancelButton = 'İptal et, gönderme';
+  static const sosSettingsSection = 'Acil durum';
+  static const sosCall112Title = 'Acil durumda 112\'yi ara';
+  static const sosCall112Hint =
+      'Kapalıyken acil durumda ilk acil kişi aranır. Açıkken 112 aranır. Asılsız '
+      '112 araması idari para cezası gerektirebilir.';
+  static const sosCall112EnabledWarning =
+      'Dikkat: acil durumda 112 aranacak. Asılsız 112 araması idari para cezası '
+      'gerektirebilir. Kapatmak için aynı düğmeye tekrar dokunun';
+  static const sosCall112DisabledInfo = 'Acil durumda 112 yerine ilk acil kişi aranacak';
 }

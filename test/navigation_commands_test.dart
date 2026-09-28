@@ -273,7 +273,7 @@ void main() {
         h.speakAll(async);
 
         expect(h.app.log.first.intent, PatikaIntent.sos);
-        expect(h.tts.spoken.last, startsWith('Acil durum özelliği henüz hazır değil'));
+        expect(h.tts.spoken.last, startsWith('Bu sürümde acil durum mesajı gönderilemiyor'));
         // SOS, navigasyonun duraklama durumunu kendiliğinden değiştirmez.
         expect(h.app.navigation.isPausedForCrossing, isTrue);
         h.dispose();
@@ -303,7 +303,7 @@ void main() {
         async.flushMicrotasks();
         h.speakAll(async);
 
-        expect(h.tts.spoken.last, startsWith('Acil durum özelliği henüz hazır değil'));
+        expect(h.tts.spoken.last, startsWith('Bu sürümde acil durum mesajı gönderilemiyor'));
         expect(h.app.navigation.isPausedForCrossing, isTrue);
         h.dispose();
       });

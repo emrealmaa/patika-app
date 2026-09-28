@@ -233,7 +233,7 @@ void main() {
         h.speakAll(async);
 
         expect(h.app.log.first.intent, PatikaIntent.sos);
-        expect(h.tts.spoken.single, contains('Acil durum özelliği henüz hazır değil'));
+        expect(h.tts.spoken.single, contains('Bu sürümde acil durum mesajı gönderilemiyor'));
         h.dispose();
       });
     });

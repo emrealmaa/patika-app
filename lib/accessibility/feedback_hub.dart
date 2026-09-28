@@ -17,7 +17,10 @@ enum FeedbackEvent {
   disconnected(HapticPatternId.disconnected, null),
   batteryLow(HapticPatternId.batteryLow, null),
   incomingCall(HapticPatternId.incomingCall, null),
-  incomingMessage(HapticPatternId.incomingMessage, null);
+  incomingMessage(HapticPatternId.incomingMessage, null),
+
+  /// Acil durum geri sayımının her saniyesi (Faz 7).
+  sosTick(HapticPatternId.listening, Earcon.sosTick);
 
   final HapticPatternId haptic;
   final Earcon? earcon;

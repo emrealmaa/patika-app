@@ -37,6 +37,7 @@ import 'commands/intent.dart';
 import 'commands/log_entry.dart';
 import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
+import 'commands/voice_intent_classifier.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
@@ -56,6 +57,14 @@ import 'platform/location_service.dart';
 import 'platform/notification_access.dart';
 import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
+import 'sos/emergency_contacts.dart';
+import 'sos/emergency_number.dart';
+import 'sos/feedback_sos_announcer.dart';
+import 'sos/sos_call_monitor.dart';
+import 'sos/sos_config.dart';
+import 'sos/sos_controller.dart';
+import 'sos/sos_delivery.dart';
+import 'sos/sos_permissions.dart';
 import 'tutorial/tutorial.dart';
 import 'voice/dialog_manager.dart';
 import 'voice/speech_input_service.dart';
@@ -99,6 +108,11 @@ class AppState extends ChangeNotifier implements ControlActions {
   late final PatikaLocationService locationService;
   late final LocationAccess locationAccess;
   late final NavigationSession navigation;
+
+  /// Acil durum (SOS, Faz 7): geri sayım, acil kişilere SMS + tek arama.
+  /// Yalnızca `direct` derlemesinde gönderir; `play`'de "desteklenmiyor" der.
+  late final SosController sos;
+  late final EmergencyContactStore emergencyContacts;
 
   /// Test Modu'nun navigasyon simülasyonu için: yalnızca simülasyon
   /// oturumları bunu kullanır, gerçek konum akmaz.
@@ -169,6 +183,11 @@ class AppState extends ChangeNotifier implements ControlActions {
     RoutePlanner? routePlanner,
     PlaceSearch? placeSearch,
     bool Function()? isAppVisible,
+    EmergencyContactStore? emergencyContacts,
+    SosDelivery? sosDelivery,
+    SosPermissions? sosPermissions,
+    EmergencyNumber? emergencyNumber,
+    SosCallMonitor? sosCallMonitor,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -278,6 +297,27 @@ class AppState extends ChangeNotifier implements ControlActions {
       onListenStart: tutorial.stop,
       onMicrophoneGranted: _background.ensureMicrophoneType,
     )..dialog = dialogs;
+
+    // Acil durum (Faz 7). Konum geri sayım başlarken aranır; izinler acil kişi
+    // kurulumunda istenir, burada yalnızca yoklanır.
+    this.emergencyContacts = emergencyContacts ?? SharedPrefsEmergencyContactStore();
+    sos = SosController(
+      delivery: sosDelivery ??
+          DirectSosDelivery(
+            direct: directActions,
+            contacts: this.emergencyContacts,
+            permissions: sosPermissions ?? const PermissionHandlerSosPermissions(),
+            emergency: emergencyNumber ?? const EmergencyNumber.fromDefines(),
+          ),
+      announcer: FeedbackSosAnnouncer(feedback, ensureListening: _ensureSosListening),
+      getLocation: () => this.locationService.currentPosition(),
+      hasLocationPermission: () => this.locationAccess.isGranted(),
+      call112Enabled: () => this.settings.value.emergencyCall112,
+      callMonitor: sosCallMonitor ?? const FixedDelayCallMonitor(),
+    );
+    sos.status.addListener(notifyListeners);
+    voice.onSosSpeech = _onSosSpeech;
+
     this.settings.addListener(_applySettings);
     this.settings.load();
     _applySettings();
@@ -410,12 +450,20 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   /// Gözlük butonu: tek dokunuş dinler (dinlerken iptal eder), çift dokunuş
   /// son duyuruyu tekrarlar (karşıya geçiş duraklamasındayken navigasyonu
-  /// devam ettirir), uzun basış SOS (Faz 7'ye kadar yer tutucu).
+  /// devam ettirir), uzun basış acil durum (SOS) geri sayımını başlatır.
   /// Telefon çalarken (bkz. [_ringingCall]) dokunma/uzun basış anlamı
   /// değişir: dokunma açar, uzun basış reddeder - SOS o sırada yalnızca
   /// sesle erişilebilir (bkz. CLAUDE.md Faz 4b kararları).
+  ///
+  /// SOS sürerken dokunuşlar ÖNCE SOS'a bakar: geri sayımda tek/çift dokunuş
+  /// iptaldir; "112 için çift dokunun" penceresinde çift dokunuş 112 onayıdır
+  /// ("tekrar et" değil).
   void _onButton(GlassesButton button) {
     lastGlassesEvent = _buttonName(button);
+    if (_onSosButton(button)) {
+      notifyListeners();
+      return;
+    }
     final ringing = _ringingCall;
     switch (button) {
       case GlassesButton.tap:
@@ -441,11 +489,55 @@ class AppState extends ChangeNotifier implements ControlActions {
           callService.reject();
           feedback.signal(FeedbackEvent.success, text: Tr.callRejected(ringing.callerName));
         } else {
-          feedback.signal(FeedbackEvent.error,
-              text: Tr.sosNotReady, priority: AnnouncementPriority.high);
+          _startSos(SosSource.glasses);
         }
     }
     notifyListeners();
+  }
+
+  /// SOS'u başlatır ve işlem geçmişine (yalnızca kayıt, ses/titreşim yok:
+  /// SOS kendi geri bildirimini verir) yazar.
+  void _startSos(SosSource source) {
+    _addLog(PatikaIntent.sos, null, ActionResult.silentOk('SOS'));
+    notifyListeners();
+    unawaited(sos.trigger(source));
+  }
+
+  /// SOS sürerken dokunuşu SOS'a yorar; yorduysa true.
+  bool _onSosButton(GlassesButton button) {
+    final touch = button == GlassesButton.tap || button == GlassesButton.doubleTap;
+    if (sos.offering112 && button == GlassesButton.doubleTap) {
+      unawaited(sos.confirm112());
+      return true;
+    }
+    if (sos.inCountdown && touch) {
+      sos.cancel(SosCancelSource.glasses);
+      return true;
+    }
+    // Gönderim başladı, iptal artık mümkün değil: bunu söyle (sessiz kalma).
+    // 112 penceresindeki tek dokunuş yine dinletir ("yardım" vb.).
+    if (sos.phase == SosPhase.sending && !sos.offering112 && touch) {
+      sos.cancel(SosCancelSource.glasses);
+      return true;
+    }
+    return false;
+  }
+
+  /// Geri sayım tiki mikrofonu "iptal" için açık tutar.
+  void _ensureSosListening() {
+    if (sos.inCountdown) voice.listenForSos();
+  }
+
+  /// Geri sayımda tanınan konuşma: yalnızca iptal / hemen gönder.
+  void _onSosSpeech(String text) {
+    switch (classifySosVoice(text)) {
+      case SosVoiceCommand.cancel:
+        sos.cancel(SosCancelSource.voice);
+      case SosVoiceCommand.sendNow:
+        sos.sendNow();
+      case null:
+        break;
+    }
   }
 
   /// Gelen arama başladığında/bittiğinde: [_ringingCall] güncellenir, çalmaya
@@ -511,6 +603,9 @@ class AppState extends ChangeNotifier implements ControlActions {
   @override
   void startTutorial() => tutorial.start();
 
+  @override
+  void triggerSos() => _startSos(SosSource.voice);
+
   static String _buttonName(GlassesButton b) => switch (b) {
         GlassesButton.tap => Tr.buttonTap,
         GlassesButton.doubleTap => Tr.buttonDoubleTap,
@@ -533,12 +628,16 @@ class AppState extends ChangeNotifier implements ControlActions {
   void _onDialogFinished(DialogFlow flow, ActionResult result) =>
       _record(flow.intent, flow.entityLabel, result);
 
-  void _record(PatikaIntent intent, String? entity, ActionResult result) {
+  void _addLog(PatikaIntent intent, String? entity, ActionResult result) {
     log.insert(
       0,
       LogEntry(time: DateTime.now(), intent: intent, entity: entity, result: result),
     );
     if (log.length > maxLogEntries) log.removeRange(maxLogEntries, log.length);
+  }
+
+  void _record(PatikaIntent intent, String? entity, ActionResult result) {
+    _addLog(intent, entity, result);
     // Sonuç hem sesle hem titreşimle (+ kısa sesle) bildiriliyor; uzun
     // ayrıntı modunda sonucun açıklaması da okunuyor.
     feedback.result(result);
@@ -584,6 +683,8 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   @override
   void dispose() {
+    sos.status.removeListener(notifyListeners);
+    sos.dispose();
     voice.dispose();
     tutorial.dispose();
     dialogs.cancel(null);

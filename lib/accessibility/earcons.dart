@@ -6,7 +6,11 @@ enum Earcon {
   listenStart('earcons/listen_start.wav'),
   listenEnd('earcons/listen_end.wav'),
   success('earcons/success.wav'),
-  error('earcons/error.wav');
+  error('earcons/error.wav'),
+
+  /// Acil durum geri sayımının kısa bipi (Faz 7): dinleme/başarı seslerinden
+  /// belirgin ayrışan tek yüksek nota.
+  sosTick('earcons/sos_tick.wav');
 
   final String asset;
   const Earcon(this.asset);

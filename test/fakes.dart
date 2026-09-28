@@ -9,6 +9,7 @@ import 'package:patika_app/navigation/route.dart';
 import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/permissions/location_access.dart';
 import 'package:patika_app/platform/direct_actions.dart';
+import 'package:patika_app/sos/sos_delivery.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/voice/speech_input_service.dart';
@@ -242,4 +243,16 @@ class FakePlaceSearch implements PlaceSearch {
     if (fail) throw const PlaceSearchException('arama başarısız');
     return results;
   }
+}
+
+/// Acil durum izin yoklamasının sahte hali (Faz 7).
+class FakeSosPermissions implements SosPermissions {
+  bool sms = true;
+  bool call = true;
+
+  @override
+  Future<bool> hasSms() async => sms;
+
+  @override
+  Future<bool> hasCall() async => call;
 }

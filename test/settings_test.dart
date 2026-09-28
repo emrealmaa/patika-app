@@ -19,6 +19,17 @@ void main() {
       expect(s.notificationsMuted, isFalse);
     });
 
+    test('acil durumda 112: varsayılan KAPALI, kayıt gidiş-dönüşü, eksik alan kapalı sayılır', () {
+      expect(const Settings().emergencyCall112, isFalse);
+      final on = const Settings().copyWith(emergencyCall112: true);
+      expect(Settings.fromJson(on.toJson()).emergencyCall112, isTrue);
+      expect(Settings.fromJson({}).emergencyCall112, isFalse);
+      expect(Settings.fromJson({'emergencyCall112': 'evet'}).emergencyCall112, isFalse);
+      expect(on == const Settings(), isFalse);
+      expect(const Settings().apply(SettingAction.hapticOff).emergencyCall112, isFalse,
+          reason: 'sesli ayar komutları 112 ayarını değiştiremez');
+    });
+
     test('sınırlar dışına çıkılamaz', () {
       const s = Settings();
       expect(s.copyWith(silenceTimeoutSeconds: 0).silenceTimeoutSeconds, 1);

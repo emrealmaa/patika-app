@@ -100,6 +100,19 @@ class SettingsScreen extends StatelessWidget {
           value: s.notificationsMuted,
           onChanged: (v) => _update(s.copyWith(notificationsMuted: v)),
         ),
+        _Header(Tr.sosSettingsSection),
+        SwitchListTile(
+          title: const Text(Tr.sosCall112Title),
+          subtitle: const Text(Tr.sosCall112Hint),
+          value: s.emergencyCall112,
+          onChanged: (v) {
+            _update(s.copyWith(emergencyCall112: v));
+            // Açarken sesli uyarı (asılsız 112 aramasının yaptırımı var);
+            // kapatınca da ne olacağı söylenir. Yeni değeri TalkBack
+            // "açık/kapalı" diye okuyor, uyarı içeriği TTS'ten.
+            feedback.say(v ? Tr.sosCall112EnabledWarning : Tr.sosCall112DisabledInfo);
+          },
+        ),
         _Header(Tr.settingsFeedback),
         _Choice<FeedbackMode>(
           title: Tr.feedbackMode,

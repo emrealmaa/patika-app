@@ -53,8 +53,9 @@ enum PatikaIntent {
   komutlar,
   egitim,
 
-  /// "Yardım", "imdat", "acil durum" - Faz 7'de SOS akışı; o zamana kadar
-  /// hazır olmadığını söyler. Diğer tüm niyetlerden önce denetlenir.
+  /// "Yardım", "imdat", "acil durum" - SOS geri sayımını başlatır (Faz 7,
+  /// `lib/sos/`). `play` derlemesinde "bu sürümde gönderilemiyor" der. Diğer
+  /// tüm niyetlerden önce denetlenir.
   sos,
   bilinmiyor;
 

@@ -17,6 +17,9 @@ const _earcons = {
   'success': [(784.0, 60), (988.0, 60), (1175.0, 110)],
   // Pes, iki kez: "hata".
   'error': [(220.0, 130), (0.0, 60), (196.0, 170)],
+  // Tek yüksek, kısa bip: acil durum geri sayımı (Faz 7). Kısa tutuldu ki
+  // aralarında mikrofon iptal komutunu duyabilsin.
+  'sos_tick': [(1320.0, 90)],
 };
 
 void main() {

@@ -191,8 +191,10 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 
 ## Sıradaki
 
-1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Sırada Faz 7 (SOS)
-   ve Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı) ve
+   7a-2 (uygulamaya bağlama) kodlandı; sırada 7a-3 (acil kişi kurulumu,
+   izin akışı), sonra 7b (pil + durum), 7c (düşme, gölge modu). Sonra Faz 8
+   (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)

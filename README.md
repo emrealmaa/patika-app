@@ -54,7 +54,7 @@ süren konuşmayı da hemen susturur.
 | **Konuş** sekmesi (ilk sekme) | Büyük buton. TalkBack açıkken ekranın tamamı tek buton |
 | Gözlük butonu: tek dokunuş | Dinlemeyi başlatır |
 | Gözlük butonu: çift dokunuş | Son söyleneni tekrarlar (karşıya geçiş duraklamasındayken navigasyonu devam ettirir) |
-| Gözlük butonu: uzun basış | Acil durum (Faz 7; şimdilik hazır değil der) |
+| Gözlük butonu: uzun basış | Acil durum (SOS): 7 sn geri sayım, iptal edilmezse acil kişilere SMS + tek arama. Yalnızca `direct` derlemesinde; `play`'de "gönderilemiyor" der |
 | Çift baş sallama | Ayarlardan açılırsa dinlemeyi başlatır (varsayılan kapalı) |
 
 Dinleme başlarken "Dinliyorum" yerine kısa bir ses çalar (Ayarlar'dan
@@ -76,7 +76,7 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | TEKRAR | "Tekrar et", "ne dedin" | ✅ Son söyleneni tekrarlar |
 | KOMUTLAR | "Ne yapabilirim", "komutlar" | ✅ Komut listesini okur |
 | EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
-| SOS | "Yardım", "imdat", "acil durum" | Faz 7 (şimdilik hazır değil der) |
+| SOS | "Yardım", "imdat", "acil durum" | ✅ Geri sayım; "iptal", "yanlış alarm", "vazgeç", "gerek yok" iptal eder ("dur" iptal etmez). Acil kişi kurulumu 7a-3'te |
 | HAVA / HABER / MÜZİK / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (sonraki fazlar) |
 | OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
 

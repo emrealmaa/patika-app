@@ -57,7 +57,7 @@ void main() {
         h.app.simulator!.injectButton(GlassesButton.longPress);
         async.flushMicrotasks();
         expect(h.tts.stops, 1, reason: 'yüksek öncelik sıradan duyuruyu keser');
-        expect(h.tts.spoken.last, contains('Acil durum özelliği henüz hazır değil'));
+        expect(h.tts.spoken.last, contains('Bu sürümde acil durum mesajı gönderilemiyor'));
         h.dispose();
       });
     });
@@ -120,7 +120,7 @@ void main() {
         async.flushMicrotasks();
 
         expect(h.tts.spoken.last, 'Ahmet Yılmaz için gelen arama reddedildi');
-        expect(h.tts.spoken, isNot(contains('Acil durum özelliği henüz hazır değil')));
+        expect(h.tts.spoken, isNot(contains('Bu sürümde acil durum mesajı gönderilemiyor')));
         expect(h.app.ringingCall, isNull);
         h.dispose();
       });
@@ -136,7 +136,7 @@ void main() {
 
         h.app.simulator!.injectButton(GlassesButton.longPress);
         async.flushMicrotasks();
-        expect(h.tts.spoken.last, contains('Acil durum özelliği henüz hazır değil'));
+        expect(h.tts.spoken.last, contains('Bu sürümde acil durum mesajı gönderilemiyor'));
         h.dispose();
       });
     });

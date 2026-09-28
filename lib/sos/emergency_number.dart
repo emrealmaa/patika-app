@@ -15,10 +15,20 @@ import 'package:flutter/foundation.dart';
 class EmergencyNumber {
   static const real = '112';
 
+  /// `--dart-define=PATIKA_SOS_TEST_NUMBER=<kendi ikinci numaranız>`: debug
+  /// derlemesinde "112 aranacak" durumunda bu numara aranır (uçtan uca deneme
+  /// için). Release derlemesinde tamamen yok sayılır.
+  static const _testNumberDefine = String.fromEnvironment('PATIKA_SOS_TEST_NUMBER');
+
   final String? _testNumber;
 
   const EmergencyNumber({String? debugTestNumber})
       : _testNumber = (kReleaseMode || debugTestNumber == real) ? null : debugTestNumber;
+
+  /// Uygulamadaki varsayılan: `dart-define` ile verilen test numarası (yoksa
+  /// release dışında hiçbir şey aranmaz).
+  const EmergencyNumber.fromDefines()
+      : this(debugTestNumber: _testNumberDefine == '' ? null : _testNumberDefine);
 
   /// Aranacak numara; aranamıyorsa (release dışı ve test numarası yok) null.
   String? get dialNumber => kReleaseMode ? real : _testNumber;

@@ -73,7 +73,7 @@ const _politeEnd = r'(?:\s+lütfen)?';
 ///
 /// SOS normalde cümlenin HERHANGİ bir yerinde eşleşiyor: acil durumdaki
 /// birinin yanlışlıkla başka bir komuta düşmesi, yardım isteyen birinin
-/// (Faz 7'de iptal edilebilir geri sayımlı) SOS'a düşmesinden çok daha kötü.
+/// (iptal edilebilir geri sayımlı, Faz 7) SOS'a düşmesinden çok daha kötü.
 ///
 /// DUR/TEKRAR ise yalnızca TÜM cümle o komutsa eşleşiyor: "durum", "Ahmet'e
 /// dur de" ya da "tekrar ara" gibi cümleler konuşmayı kesmesin.
@@ -100,6 +100,36 @@ final _controlRulesDictation = [
   ('^$_polite(?:yardım|imdat)$_politeEnd\$|^$_polite(?:acil\\s+durum)$_politeEnd\$', 'SOS'),
   ..._controlRuleDefs.skip(1),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
+
+/// Acil durum geri sayımı sürerken (Faz 7) mikrofonun anladığı TEK iki şey.
+enum SosVoiceCommand {
+  /// Geri sayımı iptal et.
+  cancel,
+
+  /// Beklemeden gönder ("yardım" tekrarı).
+  sendNow,
+}
+
+/// İptal listesi bilerek dar ve yalnızca TÜM cümle eşleşiyor: "iptal", "iptal
+/// et", "yanlış alarm", "vazgeç", "gerek yok" (nezaket sözcükleriyle birlikte
+/// olabilir). **"dur" iptal ETMEZ**: yanlışlıkla iptal olan gerçek bir SOS,
+/// yanlışlıkla giden bir SOS'tan çok daha kötüdür ve "dur" başka bağlamda
+/// (konuşmayı kesmek için) da söylenir. Bkz. CLAUDE.md Faz 7 kararları.
+final _sosCancelRule = RegExp(
+  '^$_polite(?:iptal(?:\\s+et)?|yanlış\\s+alarm\\p{L}*|vazgeç\\p{L}*|gerek\\s+yok)$_politeEnd\$',
+  unicode: true,
+);
+final _sosSendNowRule = RegExp(
+  '^$_polite(?:yardım|imdat|acil\\s+durum|gönder)$_politeEnd\$',
+  unicode: true,
+);
+
+SosVoiceCommand? classifySosVoice(String text) {
+  final lowered = _turkishLower(_normalizeSpacing(text));
+  if (_sosCancelRule.hasMatch(lowered)) return SosVoiceCommand.cancel;
+  if (_sosSendNowRule.hasMatch(lowered)) return SosVoiceCommand.sendNow;
+  return null;
+}
 
 /// Telefon ayarları (AYAR niyeti) - entity metinden değil kalıptan geliyor.
 /// Diğer kurallardan ÖNCE denetleniyor; hiçbiriyle çakışmıyorlar.
