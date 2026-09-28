@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'app_identity.dart';
 import 'geo.dart';
 import 'google_parsing.dart';
 import 'place_search.dart';
@@ -25,9 +26,15 @@ class GoogleRoutePlanner implements RoutePlanner {
   final String apiKey;
   final http.Client _client;
   final Duration timeout;
+  final AppIdentitySource? _identity;
 
-  GoogleRoutePlanner({required this.apiKey, http.Client? client, this.timeout = const Duration(seconds: 10)})
-      : _client = client ?? http.Client();
+  GoogleRoutePlanner({
+    required this.apiKey,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 10),
+    AppIdentitySource? identity,
+  })  : _client = client ?? http.Client(),
+        _identity = identity;
 
   @override
   Future<WalkingRoute> plan({
@@ -49,6 +56,7 @@ class GoogleRoutePlanner implements RoutePlanner {
       },
       timeout,
       (message) => RoutePlanException(message),
+      await androidRestrictionHeaders(_identity),
     );
     return parseRoutesResponse(json, destinationName: destinationName);
   }
@@ -74,9 +82,15 @@ class GooglePlaceSearch implements PlaceSearch {
   final String apiKey;
   final http.Client _client;
   final Duration timeout;
+  final AppIdentitySource? _identity;
 
-  GooglePlaceSearch({required this.apiKey, http.Client? client, this.timeout = const Duration(seconds: 10)})
-      : _client = client ?? http.Client();
+  GooglePlaceSearch({
+    required this.apiKey,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 10),
+    AppIdentitySource? identity,
+  })  : _client = client ?? http.Client(),
+        _identity = identity;
 
   @override
   Future<List<PlaceCandidate>> search(String query, {LatLng? near}) async {
@@ -100,6 +114,7 @@ class GooglePlaceSearch implements PlaceSearch {
       },
       timeout,
       (message) => PlaceSearchException(message),
+      await androidRestrictionHeaders(_identity),
     );
     return parsePlacesResponse(json);
   }
@@ -113,6 +128,7 @@ Future<Map<String, dynamic>> _post(
   Map<String, dynamic> body,
   Duration timeout,
   Exception Function(String message) fail,
+  Map<String, String> extraHeaders,
 ) async {
   final http.Response response;
   try {
@@ -120,6 +136,7 @@ Future<Map<String, dynamic>> _post(
         .post(
           url,
           headers: {
+            ...extraHeaders,
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
             'X-Goog-FieldMask': fieldMask,

@@ -106,8 +106,9 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   düşülüyor ve nedeni söyleniyor.
 - [ ] **Faz 6 (Google):** Anahtar Android uygulama kısıtlamalıyken (paket +
   SHA-1) istekler geçiyor mu; `X-Android-Package`/`X-Android-Cert` başlıkları
-  henüz gönderilmiyor (bkz. Faz 6 kararları, madde 7). debug, `direct` ve
-  Play imzası için ayrı SHA-1 satırları.
+  artık gönderiliyor (bkz. Faz 6 kararları, madde 7) ama cihazda
+  doğrulanmadı. debug, release/`direct` ve Play imzası için ayrı SHA-1
+  satırları Cloud kısıtına eklenmeli.
 - [ ] **Faz 6 (Google):** Gerçek anahtarla Routes ve Places: yanıt biçimi
   belgelerden yazıldı, gerçek yanıtla **hiç sınanmadı**; Türkçe yer
   adlarının (STT çıktısı "Kadıköy iskelesi") Places'te bulunma oranı, "hangisi?"
@@ -248,14 +249,12 @@ Google Haritalar'a düşer ve nedeni söyler.
      eklenecek. Google Cloud kısıtına **hem debug hem release SHA-1'i**
      (ve `direct`/Play imzaları) eklenecek; biri eksikse o derlemede
      istekler 403 alır.
-   - **AÇIK İŞ (kodda eksik):** Android uygulama kısıtlamalı bir anahtarla
-     REST çağrısı yapan istemci, `X-Android-Package` ve `X-Android-Cert`
-     (SHA-1, büyük harfsiz onaltılık) başlıklarını kendisi göndermelidir;
-     `google_client.dart` şu an yalnızca `X-Goog-Api-Key` ve
-     `X-Goog-FieldMask` gönderiyor. Bu haliyle kısıtlı anahtar **403**
-     verir ve navigasyon sessizce Haritalar yedeğine düşer. Anahtarı
-     kısıtlamadan önce bu başlıklar eklenmeli (paket adı ve çalışan
-     imzanın SHA-1'i native taraftan okunur). Cihazda doğrulanacak.
+   - **Yapıldı (Adım 0):** `google_client.dart` her Routes/Places isteğine
+     `X-Android-Package` ve `X-Android-Cert` (SHA-1, iki nokta yok, büyük
+     harf) ekler. Değerler çalışan imzadan native kanaldan (`patika/identity`,
+     `AppIdentity.kt`) okunur; okunamazsa istek başlıksız gider (kısıtlı
+     anahtarla 403 → Haritalar yedeği). Parmak izi günlüğe ve hata
+     mesajlarına yazılmaz. Cihazda doğrulanacak (bekleyen telefon testleri).
 
 ## Faz 7 kararları (SOS; Z20 nedeniyle hassas, tekrar tartışma)
 

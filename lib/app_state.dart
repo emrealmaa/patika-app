@@ -40,6 +40,7 @@ import 'commands/url_opener.dart';
 import 'contacts/alias_store.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
+import 'navigation/app_identity.dart';
 import 'navigation/google_client.dart';
 import 'navigation/maps_config.dart';
 import 'navigation/navigation_backend.dart';
@@ -211,8 +212,13 @@ class AppState extends ChangeNotifier implements ControlActions {
     // ile derlendiyse kurulur (bkz. MapsConfig); yoksa navigasyon Google
     // Haritalar uygulamasına düşen yedek akışla çalışır.
     final maps = mapsConfig ?? const MapsConfig();
-    final planner = routePlanner ?? (maps.hasKey ? GoogleRoutePlanner(apiKey: maps.apiKey) : null);
-    final places = placeSearch ?? (maps.hasKey ? GooglePlaceSearch(apiKey: maps.apiKey) : null);
+    // Anahtar Android uygulama kısıtlamalıysa (paket + SHA-1) istekler
+    // X-Android-Package / X-Android-Cert başlıklarını taşımalı.
+    final identity = MethodChannelAppIdentity();
+    final planner = routePlanner ??
+        (maps.hasKey ? GoogleRoutePlanner(apiKey: maps.apiKey, identity: identity) : null);
+    final places = placeSearch ??
+        (maps.hasKey ? GooglePlaceSearch(apiKey: maps.apiKey, identity: identity) : null);
     navigation = NavigationSession(
       feedback: feedback,
       location: this.locationService,

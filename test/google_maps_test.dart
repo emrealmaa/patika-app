@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:patika_app/navigation/app_identity.dart';
 import 'package:patika_app/navigation/geo.dart';
 import 'package:patika_app/navigation/google_client.dart';
 import 'package:patika_app/navigation/google_parsing.dart';
@@ -355,6 +356,96 @@ void main() {
       await expectLater(
         search.search('Taksim'),
         throwsA(isA<PlaceSearchException>().having((e) => e.toString(), 'toString', isNot(contains(key)))),
+      );
+    });
+  });
+
+  group('Android uygulama kısıtlaması başlıkları', () {
+    const key = 'TEST-ANAHTAR-123';
+    const identity = FixedAppIdentity(AppIdentity('com.patika.patika_app', 'AB12CD34'));
+    final routesResponse = jsonEncode(routesJson());
+    final placesResponse = jsonEncode({
+      'places': [
+        {
+          'displayName': {'text': 'Kadıköy İskelesi'},
+          'location': {'latitude': 40.9925, 'longitude': 29.0245},
+        },
+      ],
+    });
+    const jsonHeaders = {'content-type': 'application/json; charset=utf-8'};
+
+    test('Routes: paket adı ve SHA-1 başlıkla gider, anahtar hâlâ yalnızca başlıkta', () async {
+      late http.Request seen;
+      final planner = GoogleRoutePlanner(
+        apiKey: key,
+        identity: identity,
+        client: MockClient((request) async {
+          seen = request;
+          return http.Response(routesResponse, 200, headers: jsonHeaders);
+        }),
+      );
+      await planner.plan(from: enu(0, 0), to: enu(170, 300), destinationName: 'Yer');
+
+      expect(seen.headers['X-Android-Package'], 'com.patika.patika_app');
+      expect(seen.headers['X-Android-Cert'], 'AB12CD34');
+      expect(seen.headers['X-Goog-Api-Key'], key);
+      expect(seen.url.toString(), isNot(contains('AB12CD34')));
+      expect(seen.body, isNot(contains('AB12CD34')));
+    });
+
+    test('Places: aynı başlıklar gider', () async {
+      late http.Request seen;
+      final search = GooglePlaceSearch(
+        apiKey: key,
+        identity: identity,
+        client: MockClient((request) async {
+          seen = request;
+          return http.Response(placesResponse, 200, headers: jsonHeaders);
+        }),
+      );
+      await search.search('Kadıköy iskelesi');
+
+      expect(seen.headers['X-Android-Package'], 'com.patika.patika_app');
+      expect(seen.headers['X-Android-Cert'], 'AB12CD34');
+    });
+
+    test('kimlik yoksa (null) ya da SHA-1 okunamadıysa istek yine gider', () async {
+      Future<http.Request> plan(AppIdentitySource? source) async {
+        late http.Request seen;
+        final planner = GoogleRoutePlanner(
+          apiKey: key,
+          identity: source,
+          client: MockClient((request) async {
+            seen = request;
+            return http.Response(routesResponse, 200, headers: jsonHeaders);
+          }),
+        );
+        await planner.plan(from: enu(0, 0), to: enu(1, 1), destinationName: 'Yer');
+        return seen;
+      }
+
+      final none = await plan(null);
+      expect(none.headers.containsKey('X-Android-Package'), isFalse);
+      expect(none.headers.containsKey('X-Android-Cert'), isFalse);
+
+      final unreadable = await plan(const FixedAppIdentity(null));
+      expect(unreadable.headers.containsKey('X-Android-Package'), isFalse);
+
+      final noSha = await plan(const FixedAppIdentity(AppIdentity('com.patika.patika_app')));
+      expect(noSha.headers['X-Android-Package'], 'com.patika.patika_app');
+      expect(noSha.headers.containsKey('X-Android-Cert'), isFalse);
+    });
+
+    test('kimlik başlıkları hata mesajına sızmaz', () async {
+      final planner = GoogleRoutePlanner(
+        apiKey: key,
+        identity: identity,
+        client: MockClient((_) async => http.Response('AB12CD34 $key', 403)),
+      );
+      await expectLater(
+        planner.plan(from: enu(0, 0), to: enu(1, 1), destinationName: 'Yer'),
+        throwsA(isA<RoutePlanException>().having(
+            (e) => e.toString(), 'toString', allOf(isNot(contains('AB12CD34')), isNot(contains(key))))),
       );
     });
   });

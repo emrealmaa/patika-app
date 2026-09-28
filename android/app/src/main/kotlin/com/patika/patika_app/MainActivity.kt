@@ -85,6 +85,7 @@ class MainActivity : FlutterActivity() {
         // planda da (ekran kilitliyken) çalışabilmeli.
         DirectActions(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         NotificationAccess(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        AppIdentity(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
