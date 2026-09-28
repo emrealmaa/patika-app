@@ -111,6 +111,9 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   `adb backup`/Google hesap yedeği alıp geri yüklendiğinde acil kişilerin
   GELMEDİĞİ, ayarların/takma adların geldiği; cihazdan cihaza aktarımda
   (Android "Switch") aynı davranış.
+- [ ] **Faz 7 (SOS) - adım adım deneme listesi:**
+  [docs/sos_phone_test_checklist.md](docs/sos_phone_test_checklist.md).
+  Aşağıdaki SOS maddeleri bu listenin ayrıntılarıdır.
 - [ ] **Faz 7 (SOS) - acil kişi kurulumu:** "acil kişi ekle" ile gerçek
   rehberden ekleme; `direct`de SMS izni penceresinin kurulum sırasında
   açılması (TalkBack'le); rıza SMS'inin **ikinci numaraya** gerçekten
