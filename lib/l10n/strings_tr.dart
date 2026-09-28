@@ -364,4 +364,96 @@ abstract final class Tr {
   static String settingUnchanged(String setting, String value) =>
       '$setting zaten ${value.toLowerCase()}';
   static const hapticOff = 'Titreşim kapatıldı';
+
+  // --- Navigasyon (Faz 6) ------------------------------------------------------
+  // KURAL: yalnızca bilgi kipi ("rota sağa sapıyor"), emir yok. patika/MIMARI.md
+  // "Çıktı Dilbilgisi" yasaklı kelimeleri (dur, bekle, geç, dön, ilerle,
+  // dikkat...) bu bölümde HİÇ geçmez; test/navigation_language_test.dart bu
+  // bölümü kaynaktan okuyup tarar. Bu bölüme yeni metin eklerken başlığı
+  // "// --- " ile başlayan satırlarla sınırlı tutun.
+  static String navMeters(int n) => '$n metre';
+  static String navKilometers(String n) => '$n kilometre';
+  static const navUnderMinute = 'bir dakikadan az';
+  static String navAboutMinutes(int n) => 'yaklaşık $n dakika';
+  static String navAboutHours(int h, int m) =>
+      m == 0 ? 'yaklaşık $h saat' : 'yaklaşık $h saat $m dakika';
+
+  static String navSummary(String dest, String distance, String duration) =>
+      '$dest, $distance, $duration';
+  static String navFirstStreet(String street, String distance) =>
+      'Rota $street boyunca $distance';
+  static String navRemaining(String distance, String duration) =>
+      'Hedefe $distance, $duration kaldı';
+
+  static const navTurnLeft = 'rota sola sapıyor';
+  static const navTurnSlightLeft = 'rota hafifçe sola sapıyor';
+  static const navTurnSharpLeft = 'rota keskin sola sapıyor';
+  static const navTurnRight = 'rota sağa sapıyor';
+  static const navTurnSlightRight = 'rota hafifçe sağa sapıyor';
+  static const navTurnSharpRight = 'rota keskin sağa sapıyor';
+  static const navTurnUTurn = 'rota ters yöne sapıyor';
+  static const navTurnOther = 'rota yön değiştiriyor';
+  static String navManeuverAhead(String distance, String turn, String? street) =>
+      street == null || street.isEmpty ? '$distance sonra $turn' : '$distance sonra $turn, $street';
+
+  /// Dönüş tam burada (5 m'den yakın): mesafe söylenmez.
+  static String navManeuverNow(String turn, String? street) =>
+      street == null || street.isEmpty ? turn : '$turn, $street';
+
+  static String navCrossingAhead(String distance) => '$distance sonra karşıya geçiş noktası';
+  static const navCrossingPoint =
+      'Karşıya geçiş noktası. Navigasyon duraklatıldı. Karşıya ulaşınca "geçtim" deyin '
+      'ya da gözlüğe çift dokunun';
+  static const navCrossingResumed = 'Navigasyon devam ediyor';
+  static const navCrossingTimedOut = 'Süre doldu, navigasyon devam ediyor';
+
+  static String navNearDestination(String distance) => 'Hedefe $distance kaldı';
+  static const navArrived = 'Hedef çevresindesiniz';
+  static const navOffRoute = 'Rotanın dışındasınız';
+  static const navBackOnRoute = 'Yeniden rotadasınız';
+  static const navDirectionAlong = 'Rota yönündesiniz';
+  static const navDirectionOpposite = 'Rotanın tersi yönündesiniz';
+  static const navDirectionAcross = 'Rotaya yan yöndesiniz';
+  static const navDirectionNote = 'Yön bilgisi yürümeye başlayınca gelecek';
+  static const navGpsWeak = 'Konum belirsiz';
+  static const navGpsRecovered = 'Konum yeniden alındı';
+
+  static const navRerouting = 'Yeni rota hesaplanıyor';
+  static const navRerouteFailed = 'Yeni rota hesaplanamadı';
+  static String navNewRoute(String summary) => 'Yeni rota. $summary';
+
+  static const navLocationOff = 'Telefonun konum servisi kapalı';
+  static const navLocationDenied = 'Konum izni yok';
+  static const navStopped = 'Navigasyon kapatıldı';
+  static const navNotActive = 'Şu an çalışan bir navigasyon yok';
+  static const navNotPaused = 'Duraklatılmış bir navigasyon yok';
+  static const navCrossingModeNotReady =
+      'Karşıya geçiş modu henüz hazır değil. Navigasyon duraklatıldı. Devam '
+      'etmek için "geçtim" deyin ya da gözlüğe çift dokunun';
+  static const locationPermissionWhy =
+      'Yürüyüş yönlendirmesi için konumunuza ihtiyacım var. Şimdi konum izni '
+      'sorulacak, izin verin.';
+
+  // --- Test Modu: navigasyon simülasyonu ---------------------------------------
+  // Ekranda görünen etiketler (konuşulan cümleler değil, yasaklı kelime
+  // taramasının dışında).
+  static const testNavTitle = 'Navigasyon simülasyonu';
+  static const testNavHint =
+      'Gerçek konum olmadan navigasyonu dener: deneme rotasında yürür, '
+      'rotadan sapar, konumu zayıflatır. Rotadan sapmak için düğmeye bir kez '
+      'basmak yeter, üç okuma kendiliğinden gönderilir.';
+  static const testNavStart = 'Deneme rotasını başlat';
+  static const testNavWalk10 = 'Rotada 10 metre yürü';
+  static const testNavWalk50 = 'Rotada 50 metre yürü';
+  static const testNavOffRoute = 'Rotadan sap (40 metre)';
+  static const testNavBackOnRoute = 'Rotaya dön';
+  static const testNavWeakGps = 'Konumu zayıflat';
+  static const testNavCrossed = 'Geçtim (duraklamayı bitir)';
+  static const testNavStop = 'Navigasyonu bitir';
+  static String testNavStatus(String status) => 'Navigasyon durumu: $status';
+  static const testNavStatusIdle = 'çalışmıyor';
+  static const testNavStatusRunning = 'çalışıyor';
+  static const testNavStatusPaused = 'karşıya geçiş için duraklatıldı';
+  static const testNavStatusOffRoute = 'rotanın dışında';
+  static const testNavStatusWeakGps = 'konum belirsiz';
 }
