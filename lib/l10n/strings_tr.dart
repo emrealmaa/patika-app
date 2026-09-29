@@ -218,9 +218,10 @@ abstract final class Tr {
 
   // --- Evrensel komutlar ---------------------------------------------------
   static const helpShort = 'Şunları söyleyebilirsiniz: bir kişiyi ara, mesaj gönder, '
-      'bir yere götür, saat kaç, daha hızlı konuş, tekrar et, dur ve eğitimi başlat.';
+      'bir yere götür, saat kaç, durum, daha hızlı konuş, tekrar et, dur ve eğitimi başlat.';
   static const helpDetail = 'Örneğin: Ahmet\'i ara. Ayşe\'ye mesaj gönder. '
-      'Kadıköy iskelesine götür. Konuşmamı kesmek için dur, '
+      'Kadıköy iskelesine götür. Gözlük ve telefon pili için durum ya da pil ne kadar deyin. '
+      'Konuşmamı kesmek için dur, '
       'son söylediğimi duymak için tekrar et deyin ya da gözlük butonuna iki kez dokunun.';
   static const nothingToRepeat = 'Tekrar edilecek bir şey yok';
 
@@ -598,10 +599,25 @@ abstract final class Tr {
   static const phoneChargeStarted = 'Telefon şarja takıldı';
   static const phoneChargeFull = 'Telefon pili doldu';
 
-  // Test Modu: telefon pili taklidi.
+  // --- Durum komutu (Faz 7b) ---------------------------------------------------
+  // "durum" / "pil ne kadar" özeti. Bilgi kipi; bilinmeyen değer uydurulmaz.
+  // test/status_command_test.dart bu bölümü yasaklı kelimeler için tarar.
+  static const statusSosCountdown = 'Acil durum geri sayımı sürüyor';
+  static const statusSosSending = 'Acil durum mesajı gönderiliyor';
+  static String statusGlassesBattery(int percent) => 'Gözlük bağlı, pili yüzde $percent';
+  static const statusGlassesNoBattery = 'Gözlük bağlı, pil bilgisi yok';
+  static const statusGlassesDisconnected = 'Gözlük bağlı değil';
+  static String statusPhoneBattery(int percent) => 'Telefon pili yüzde $percent';
+  static String statusPhoneCharging(int percent) => 'Telefon pili yüzde $percent, şarj oluyor';
+  static const statusPhoneUnknown = 'Telefon pili okunamadı';
+  static const statusNavRunning = 'Navigasyon çalışıyor';
+  static const statusNavPaused = 'Navigasyon karşıya geçiş için duraklatıldı';
+  static const statusNavNone = 'Çalışan bir navigasyon yok';
+
+  // --- Test Modu: telefon pili taklidi (Faz 7b) --------------------------------
   static const testPhoneBattery = 'Telefon pil seviyesi';
   static const testPhoneCharging = 'Telefon şarjda';
-  static const testPhoneBatteryReal = 'Gerçek pil değerine dön';
+  static const testPhoneBatteryReal = 'Gerçek pil değerini kullan';
   static String testPhoneBatteryPercent(int percent) => '$testPhoneBattery: %$percent';
 
   // --- Acil durum geçmişi (Faz 7) ---------------------------------------------

@@ -63,6 +63,11 @@ enum PatikaIntent {
   /// telefon mikrofonundan. Entity: "ekle|X", "sil|X", "liste"
   /// (`EmergencyContactHandler`).
   acilKisi,
+
+  /// "durum", "pil ne kadar" (Faz 7b): gözlük bağlantısı + iki pil + çalışan
+  /// navigasyon özeti. Python tarafında yok, yalnızca telefon mikrofonundan.
+  /// Kontrol niyeti değil (anında uygulanan DUR/SOS gibi değil), sıradan sorgu.
+  durum,
   bilinmiyor;
 
   /// Anında (onay sorusu olmadan) uygulanan kontrol niyetleri. Telefon eylemi
@@ -129,6 +134,8 @@ enum PatikaIntent {
       case 'ACIL_KİŞİ':
       case 'ACIL_KISI':
         return PatikaIntent.acilKisi;
+      case 'DURUM':
+        return PatikaIntent.durum;
       default:
         return PatikaIntent.bilinmiyor;
     }

@@ -32,9 +32,10 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
-## Nerede kaldık (2026-09-28)
+## Nerede kaldık (2026-09-29)
 
-**Bitenler** (hepsi commit'li ve push'lu, son kod commit'i `d8d4ac8`, 260 test):
+**Bitenler** (7a'ya kadar commit'li ve push'lu; 7b-1 commit'li `c4dcafe`,
+push'lanmadı; 7b-2 henüz commit'lenmedi; 601 test):
 
 | Faz | İçerik |
 |---|---|
@@ -46,6 +47,9 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 3b | Diyalog yönetimi: ARA/MESAJ çok adımlı (kişi sor, "hangisi?", onay, mesaj dikte + geri okuma) |
 | 4a | `play`/`direct` derleme türleri, doğrudan arama (`TelecomManager.placeCall`) ve SMS, "gönderdiğim son mesajı oku" |
 | 4b | Gelen arama simülasyonu (`PatikaCallService`/`SimulatedCallService`); bildirim erişimi izni + `PatikaNotificationListener.kt` (varsayılan SMS + WhatsApp mesajları); gelen mesaj duyurusu + bir kerelik gizlilik uyarısı (`LoudMessagesNotice`); ayrılma hali eki ("Ayşe'den"); "mesajlarımı oku", "son bildirimleri oku" (`IncomingMessageLog`, bellekte son 20), "bildirimleri sustur/aç" (`Settings.notificationsMuted`) |
+| 6 | Navigasyon: saf mantık (6a), konum servisi + `NavigationSession` + karşıya geçiş duraklaması (6b), Google Routes/Places + `NavigationFlow` (6c) |
+| 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
+| 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
@@ -106,6 +110,15 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   konuşma). **Ek, adreslenmemiş soru:** kendi STT'mizin Bluetooth SCO'yu
   açması, gerçek aramanın ses kanalıyla (aynı SCO) çakışıp arama sesinde
   kesinti yaratır mı - tespit mantığından bağımsız bir donanım sorusu.
+- [ ] **Faz 7b (pil):** `BatteryProbe.kt` Galaxy S24 FE'de doğru yüzdeyi ve
+  şarj durumunu veriyor mu (sticky `ACTION_BATTERY_CHANGED`); ekran kilitli ve
+  uygulama arka plandayken 30 sn'lik yoklama sürüyor mu (Dart zamanlayıcısı,
+  pil optimizasyonu); şarja takma/çıkarma ve %100'de "doldu" duyurusu;
+  Test Modu taklidinin (kaydırıcı + "şarjda") gerçek cihazda uyarıyı tetiklemesi.
+- [ ] **Faz 7b (pil, kullanıcı):** Eşikler (telefon 30/15/5, gözlük 20/10/5)
+  gerçek kullanımda erken/geç mi; %5'te 5 dk'lık titreşim hatırlatması
+  rahatsız ediyor mu; gözlük eşikleri gerçek pil süresi ölçülünce (TODO madde
+  15) yeniden ayarlanacak.
 - [ ] **Faz 7 (SOS):** Acil kişi listesinin Android yedeğine girmediği
   (`Context.getNoBackupFilesDir`, kanal `patika/emergency_contacts`):
   `adb backup`/Google hesap yedeği alıp geri yüklendiğinde acil kişilerin
@@ -223,8 +236,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı), 7a-2
    (uygulamaya bağlama) ve 7a-3 (acil kişi kurulumu: sesle ekle/sil/liste,
    izin akışı kurulum sırasında, isteğe bağlı rıza SMS'i) kodlandı; SOS
-   çekirdeği (7a) tamamlandı. Sırada 7b (pil + durum), 7c (düşme, gölge
-   modu). Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+   çekirdeği (7a) tamamlandı. 7b (pil + durum) kodlandı. Sırada 7c (düşme,
+   gölge modu). Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
@@ -422,6 +435,42 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    (`ContactMatcher` yeniden kullanılır, isim yoksa/bulunamazsa mevcut
    kişiler söylenir). "acil kişiler kim" diyalogsuz tek adımda okur.
    Testlerde gerçek SMS/arama gitmez (`FakeDirectActions`, 112 koruması).
+
+## Faz 7b kararları (pil + durum; geçerli, tekrar tartışma)
+
+1. **Pil yalnızca uyarır, hiçbir şeyi durdurmaz.** Kritik pilde bile SOS,
+   navigasyon ya da arka plan servisi kendi kendine kapanmaz ("yardım etmeyi
+   keseyim" kararını sistem vermez). `battery_wiring_test.dart` kilitler.
+2. **Telefon pili:** kendi kanalımız (`patika/battery`, `BatteryProbe.kt`),
+   `battery_plus` değil (yeni bağımlılık yok). Sticky `ACTION_BATTERY_CHANGED`,
+   izin gerekmez; Dart 30 sn'de bir yoklar (`BroadcastReceiver` değil: motor
+   etkinlikten ayrık, ek ömür yönetimi istemedik). Okunamazsa "bilinmiyor",
+   değer uydurulmaz.
+3. **Eşikler:** telefon %30/%15/%5, gözlük %20/%10/%5. Her eşik bir kez;
+   eşiğin +5 puan üstüne çıkınca yeniden kurulur (gözlük her %1'de yazar).
+   İlk okuma eşiğin altındaysa tek cümle. %5'te 5 dk'da bir **yalnızca
+   titreşim** hatırlatması. Şarjdayken düşük pil uyarısı yok.
+4. **Öncelik:** düşük/kritik pil `high` (`critical` SOS ve engel için).
+   Şarj olayları ("şarja takıldı", "doldu") `low`, `say` ile, **titreşimsiz**
+   (`signal` titreşimi kuyruğa bakmadan çalar); kritik ya da normal bir
+   duyurunun önüne geçmez, bayat kalırsa (10 sn) atılır. Gözlükte şarj durumu
+   protokolde yok, şarj olayı üretilmez.
+5. **Meşgul kuralı:** SOS geri sayımı/gönderimi, SOS'un başlattığı arama
+   (`SosController.callInProgress`), gelen arama ve karşıya geçiş
+   duraklamasında düşük pil uyarısı konuşmaz, **ertelenir**; meşguliyet bitince
+   SOS duyurusundan **ayrı, sıralı** bir duyuru olarak gelir (testle kilitli).
+   Şarj olayı ve hatırlatma ertelenmez, atılır. Pil olayları işlem geçmişine
+   yazılmaz.
+6. **DURUM niyeti:** "durum", "durum ne", "pil", "pil(im) ne kadar (kaldı)",
+   "gözlüğün pili kaç" - yalnızca **tüm cümle**; SOS ve DUR'dan sonra, "ne
+   kadar kaldı"dan önce denetlenir ("acil durum" SOS, "hava durumu" HAVA
+   kalır). Dikte sırasında hiç denetlenmez (diyalog cevabı sınıflandırıcıya
+   gitmez). "Pil" ayrı niyet değil, aynı özet.
+7. **Durum özeti (seçenek 2):** SOS sürüyorsa en başta; gözlük bağlı mı +
+   pili; telefon pili (+ şarj); navigasyon (çalışıyor + "ne kadar kaldı"
+   cümlesi / karşıya geçiş duraklaması / yok). **Geçmiş SOS özeti yok**
+   (bellekteki geçmiş kalıcı değil, yanıltıcı olabilir). Bağlı değilken eski
+   gözlük pili söylenmez. Yasaklı kelime testi Pil ve Durum bölümlerini tarar.
 
 **Z20 notu** (`patika/CLAUDE.md` Z20 maddesine eklenecek; o repo başka
 pencerede yönetiliyor, burada değiştirilmedi): *Telefon IMU'su cepte, çantada

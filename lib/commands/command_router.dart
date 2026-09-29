@@ -22,6 +22,7 @@ import 'handlers/news_handler.dart';
 import 'handlers/number_handler.dart';
 import 'handlers/ocr_handler.dart';
 import 'handlers/settings_handler.dart';
+import 'handlers/status_handler.dart';
 import 'handlers/time_handler.dart';
 import 'handlers/unknown_handler.dart';
 import 'handlers/weather_handler.dart';
@@ -49,6 +50,7 @@ class CommandRouter {
   final LastMessageHandler _lastMessage;
   final MessageHistoryHandler _messageHistory;
   final EmergencyContactHandler _emergencyContact;
+  final StatusHandler _status;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -69,6 +71,7 @@ class CommandRouter {
     LastMessageHandler? lastMessage,
     MessageHistoryHandler? messageHistory,
     EmergencyContactHandler? emergencyContact,
+    StatusHandler? status,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
@@ -89,6 +92,7 @@ class CommandRouter {
         _messageHistory = messageHistory ?? MessageHistoryHandler(IncomingMessageLog()),
         _emergencyContact =
             emergencyContact ?? EmergencyContactHandler(store: MemoryEmergencyContactStore()),
+        _status = status ?? StatusHandler(),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -138,6 +142,8 @@ class CommandRouter {
           return await _navigationControl.crossed();
         case PatikaIntent.acilKisi:
           return await _emergencyContact.handle(command.entity);
+        case PatikaIntent.durum:
+          return await _status.handle();
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

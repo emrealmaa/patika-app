@@ -49,6 +49,11 @@ BleCommand classifyVoiceCommand(String text) {
     return BleCommand.fromWire('SON_BİLDİRİMLER', null);
   }
 
+  // Durum/pil sorgusu (Faz 7b): yalnızca TÜM cümle. Kontrol katmanından SONRA
+  // ("acil durum" SOS, "dur" DUR kalır), "ne kadar kaldı"dan ÖNCE ("pilim ne
+  // kadar kaldı" navigasyon sorusu değil).
+  if (_statusQuery.hasMatch(lowered)) return BleCommand.fromWire('DURUM', null);
+
   // Navigasyon kontrolü (Faz 6): katı kalıplar, anahtar kelime puanlamasından
   // ÖNCE - "geçtim" GECIS_MODU'nun "geç" fiiline, "kaç dakika kaldı" başka
   // bir niyete kaymasın.
@@ -163,6 +168,21 @@ final _newMessages = RegExp(r'mesaj\p{L}*\s+oku', unicode: true);
 
 /// "son bildirimleri oku", "bildirimlerimi oku" - Faz 4b.
 final _recentNotifications = RegExp(r'bildirim\p{L}*\s+oku', unicode: true);
+
+// --- Durum / pil (Faz 7b) -------------------------------------------------------
+
+/// "durum", "durum ne", "genel durum", "pil", "pilim ne kadar", "pil durumu",
+/// "gözlüğün pili kaç", "şarjım ne kadar kaldı". YALNIZCA tüm cümle bu olduğunda:
+/// "hava durumu" HAVA'da, "acil durum" SOS'ta kalır. Dikte sırasında hiç
+/// denetlenmez (diyalog cevabı sınıflandırıcıya gitmez; mesaj gövdesindeki
+/// "pil" kelimesi mesajın parçasıdır).
+final _statusQuery = RegExp(
+    '^$_polite'
+    r'(?:(?:genel\s+)?durum(?:um|umuz)?(?:\s+(?:ne|nedir|nasıl|raporu|bilgisi))?'
+    r'|(?:(?:gözlüğün|gözlük|telefonun|telefon)\s+)?(?:pil|şarj)\p{L}*'
+    r'(?:\s+(?:durumu|seviyesi|nedir|ne|kaç|ne\s+kadar)(?:\s+(?:kaldı|var|oldu))?)?)'
+    '$_politeEnd\$',
+    unicode: true);
 
 // --- Navigasyon kontrolü (Faz 6) ------------------------------------------------
 

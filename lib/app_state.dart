@@ -35,6 +35,7 @@ import 'commands/handlers/navigation_control_handler.dart';
 import 'commands/handlers/number_handler.dart';
 import 'commands/handlers/control_handler.dart';
 import 'commands/handlers/settings_handler.dart';
+import 'commands/handlers/status_handler.dart';
 import 'commands/incoming_message_log.dart';
 import 'commands/intent.dart';
 import 'commands/log_entry.dart';
@@ -314,6 +315,17 @@ class AppState extends ChangeNotifier implements ControlActions {
       navigation: NavigationHandler(dialogs: dialogs, backend: navigationBackend),
       navigationControl: NavigationControlHandler(navigation),
       crossingMode: CrossingModeHandler(navigation),
+      // Çağrı anında okunur (sos bu noktada henüz kurulmadı, sorun değil).
+      status: StatusHandler(() => StatusSnapshot(
+            glassesConnected: isHealthy,
+            glassesBattery: glassesBattery,
+            phoneBattery: phoneBatteryPercent,
+            phoneCharging: phoneCharging ?? false,
+            sosPhase: sos.phase,
+            navigationActive: navigation.active,
+            navigationPaused: navigation.isPausedForCrossing,
+            navigationRemaining: navigation.remainingText(),
+          )),
     );
     tutorial = Tutorial(
       feedback,

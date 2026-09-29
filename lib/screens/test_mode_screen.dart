@@ -47,6 +47,7 @@ class _TestModeScreenState extends State<TestModeScreen> {
     'GECIS_MODU',
     'NAVİGASYON',
     'AYAR',
+    'DURUM',
     'BİLİNMİYOR',
   ];
 
