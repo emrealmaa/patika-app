@@ -6,6 +6,7 @@ import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
 import '../app_state.dart';
 import '../ble/glasses_protocol.dart';
+import '../battery/phone_battery.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../l10n/strings_tr.dart';
@@ -131,6 +132,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
           _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
         const SizedBox(height: 24),
+        _PhoneBatterySimulationSection(state: state),
+        const SizedBox(height: 24),
         _NavigationSimulationSection(state: state),
         const SizedBox(height: 24),
         _NotificationAccessSection(
@@ -239,6 +242,73 @@ class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
           subtitle: const Text(Tr.glassesUnreachableHint),
           value: !_sim.reachable,
           onChanged: (v) => setState(() => _sim.setReachable(!v)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Telefon pilini taklit eder (Faz 7b): gerçek telefonu boşaltmadan düşük/kritik
+/// pil uyarılarını, şarj olaylarını ve SOS sırasında ertelenmelerini dener.
+/// Taklit, gerçek okumanın yerine geçer; "gerçek değere dön" ile kalkar.
+class _PhoneBatterySimulationSection extends StatefulWidget {
+  final AppState state;
+
+  const _PhoneBatterySimulationSection({required this.state});
+
+  @override
+  State<_PhoneBatterySimulationSection> createState() => _PhoneBatterySimulationSectionState();
+}
+
+class _PhoneBatterySimulationSectionState extends State<_PhoneBatterySimulationSection> {
+  late double _level = (widget.state.phoneBatteryPercent ?? 80).toDouble();
+  late bool _charging = widget.state.phoneCharging ?? false;
+
+  AppState get _state => widget.state;
+
+  void _apply() {
+    _state.phoneBatteryTest.force(PhoneBatteryReading(_level.round(), charging: _charging));
+    _state.pollPhoneBattery();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(Tr.testPhoneBattery, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        // Görsel başlık; TalkBack aynı bilgiyi kaydırıcının kendisinden duyar.
+        ExcludeSemantics(
+          child: Text(Tr.testPhoneBatteryPercent(_level.round()),
+              style: Theme.of(context).textTheme.titleSmall),
+        ),
+        Slider(
+          min: 0,
+          max: 100,
+          divisions: 20,
+          value: _level,
+          semanticFormatterCallback: (v) => Tr.testPhoneBatteryPercent(v.round()),
+          onChanged: (v) => setState(() => _level = v),
+          onChangeEnd: (_) => _apply(),
+        ),
+        SwitchListTile(
+          title: const Text(Tr.testPhoneCharging),
+          value: _charging,
+          onChanged: (v) {
+            setState(() => _charging = v);
+            _apply();
+          },
+        ),
+        OutlinedButton(
+          onPressed: () {
+            _state.phoneBatteryTest.clear();
+            _state.pollPhoneBattery();
+          },
+          child: const Text(Tr.testPhoneBatteryReal),
         ),
       ],
     );

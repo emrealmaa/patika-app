@@ -587,6 +587,23 @@ abstract final class Tr {
   static String emergencyContactList(List<String> names) => 'Acil kişileriniz: ${names.join(', ')}';
   static const emergencyContactNotUnderstood = 'Acil kişi komutunu anlayamadım';
 
+  // --- Pil uyarıları (Faz 7b) --------------------------------------------------
+  // Bilgi kipi, emir yok ("şarj edin" denmez). Yalnızca uyarır; hiçbir şeyi durdurmaz.
+  static String glassesBatteryLow(int percent) => 'Gözlük pili yüzde $percent';
+  static String glassesBatteryCritical(int percent) =>
+      'Gözlük pili çok düşük, yüzde $percent';
+  static String phoneBatteryLow(int percent) => 'Telefon pili yüzde $percent';
+  static String phoneBatteryCritical(int percent) =>
+      'Telefon pili çok düşük, yüzde $percent';
+  static const phoneChargeStarted = 'Telefon şarja takıldı';
+  static const phoneChargeFull = 'Telefon pili doldu';
+
+  // Test Modu: telefon pili taklidi.
+  static const testPhoneBattery = 'Telefon pil seviyesi';
+  static const testPhoneCharging = 'Telefon şarjda';
+  static const testPhoneBatteryReal = 'Gerçek pil değerine dön';
+  static String testPhoneBatteryPercent(int percent) => '$testPhoneBattery: %$percent';
+
   // --- Acil durum geçmişi (Faz 7) ---------------------------------------------
   // İşlem geçmişine yazılan satırlar: YALNIZCA isim ve sonuç durumu. Telefon
   // numarası ve konum (koordinat, bağlantı) HİÇ yazılmaz.

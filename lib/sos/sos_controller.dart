@@ -202,6 +202,11 @@ class SosController {
   /// Geri sayım ya da gönderim sürüyor mu (yeni tetikleme yok sayılır)?
   bool get busy => _phase != SosPhase.idle;
 
+  /// SOS'un başlattığı bir arama sürüyor mu? Faz, arama başlar başlamaz `idle`
+  /// olur; o sırada uygulamanın konuşmaması gerektiğinden (pil uyarıları gibi
+  /// SOS dışı duyurular da dahil) [busy] tek başına yetmez.
+  bool get callInProgress => _callEnded != null;
+
   /// "112'yi aramak için çift dokunun" teklifi geçerli mi?
   bool get offering112 => _offer112;
 

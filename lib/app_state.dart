@@ -11,6 +11,8 @@ import 'accessibility/feedback_hub.dart';
 import 'accessibility/haptic_patterns.dart';
 import 'accessibility/speech_output.dart';
 import 'background/foreground_service.dart';
+import 'battery/battery_monitor.dart';
+import 'battery/phone_battery.dart';
 import 'ble/ble_command.dart';
 import 'ble/ble_connection_state.dart';
 import 'ble/connection_supervisor.dart';
@@ -140,6 +142,21 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// Gözlüğün bildirdiği son pil yüzdesi (bağlı değilken null).
   int? glassesBattery;
 
+  /// Telefon pili (Faz 7b): 30 sn'de bir yoklanır, okunamazsa null. Yalnızca
+  /// UYARIR - hiçbir şeyi (SOS, navigasyon, servis) durdurmaz.
+  int? phoneBatteryPercent;
+  bool? phoneCharging;
+
+  /// Test Modu'nun telefon pilini taklit edebilmesi için: gerçek okumanın
+  /// yerine geçer ([OverridablePhoneBattery.force]).
+  late final OverridablePhoneBattery phoneBatteryTest;
+  late final BatteryMonitor _batteryMonitor;
+  Timer? _batteryTimer;
+
+  /// SOS/arama/karşıya geçiş sırasında söylenemeyen düşük pil uyarıları: kaynak
+  /// başına en yenisi. Meşguliyet bitince sırayla, AYRI duyurular olarak gider.
+  final Map<BatterySource, BatteryAlert> _heldBattery = {};
+
   /// Gözlükten gelen son buton/jest olayı (test ekranında gösteriliyor).
   String? lastGlassesEvent;
 
@@ -189,6 +206,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     SosPermissions? sosPermissions,
     EmergencyNumber? emergencyNumber,
     SosCallMonitor? sosCallMonitor,
+    PhoneBattery? phoneBattery,
+    BatteryMonitor? batteryMonitor,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -336,7 +355,13 @@ class AppState extends ChangeNotifier implements ControlActions {
       },
     );
     sos.status.addListener(notifyListeners);
+    // SOS bitince (arama sürmüyorsa) bekleyen pil uyarıları söylenir.
+    sos.status.addListener(_flushBattery);
     voice.onSosSpeech = _onSosSpeech;
+
+    // Pil uyarıları (Faz 7b): yalnızca uyarır, hiçbir şeyi durdurmaz.
+    phoneBatteryTest = OverridablePhoneBattery(phoneBattery ?? MethodChannelPhoneBattery());
+    _batteryMonitor = batteryMonitor ?? BatteryMonitor();
 
     this.settings.addListener(_applySettings);
     this.settings.load();
@@ -358,6 +383,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   Future<void> start() async {
     await permissions.ensure(Permission.notification, Tr.notificationPermissionWhy);
     await _background.start(_notificationText);
+    _batteryTimer ??= Timer.periodic(batteryPollInterval, (_) => pollPhoneBattery());
+    unawaited(pollPhoneBattery());
     await _supervisor.start();
     await tutorial.startIfFirstRun();
   }
@@ -428,7 +455,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     _subs
       ..add(service.connectionState.listen((state) {
         connectionState = state;
-        if (state != BleConnectionState.connected) glassesBattery = null;
+        if (state != BleConnectionState.connected) _clearGlassesBattery();
         _refresh();
       }))
       ..add(service.discoveredDevices.listen((found) {
@@ -438,6 +465,7 @@ class AppState extends ChangeNotifier implements ControlActions {
       ..add(service.commands.listen(_process))
       ..add(service.batteryLevel.listen((percent) {
         glassesBattery = percent;
+        _onBattery(BatterySource.glasses, percent);
         notifyListeners();
       }))
       ..add(service.buttonEvents.listen(_onButton))
@@ -456,6 +484,90 @@ class AppState extends ChangeNotifier implements ControlActions {
   void _refresh() {
     _background.update(_notificationText);
     notifyListeners();
+  }
+
+  // --- Pil uyarıları (Faz 7b) -------------------------------------------------
+
+  /// Telefon pilinin yoklama aralığı.
+  static const batteryPollInterval = Duration(seconds: 30);
+
+  /// Telefon pilini okur ve uyarıları değerlendirir (30 sn'lik zamanlayıcı ve
+  /// testler çağırır). Okunamazsa sessiz kalır, uydurma değer söylenmez.
+  Future<void> pollPhoneBattery() async {
+    final reading = await phoneBatteryTest.read();
+    if (reading == null) {
+      phoneBatteryPercent = null;
+      phoneCharging = null;
+      _flushBattery();
+      return;
+    }
+    phoneBatteryPercent = reading.percent;
+    phoneCharging = reading.charging;
+    _onBattery(BatterySource.phone, reading.percent, charging: reading.charging);
+    notifyListeners();
+  }
+
+  void _clearGlassesBattery() {
+    glassesBattery = null;
+    _batteryMonitor.reset(BatterySource.glasses);
+    _heldBattery.remove(BatterySource.glasses);
+  }
+
+  /// SOS (geri sayım, gönderim, SOS'un başlattığı arama), gelen arama ya da
+  /// karşıya geçiş duraklaması sürerken pil uyarıları konuşmaz; ertelenir.
+  bool get _batteryAlertsHeld =>
+      sos.busy || sos.callInProgress || _ringingCall != null || navigation.isPausedForCrossing;
+
+  void _onBattery(BatterySource source, int percent, {bool? charging}) {
+    // Önce eskiden bekleyenler: sıra korunsun.
+    _flushBattery();
+    if (charging == true) _heldBattery.remove(source);
+    final alert = _batteryMonitor.update(source, percent, charging: charging);
+    if (alert == null) return;
+    if (!_batteryAlertsHeld) {
+      _announceBattery(alert);
+    } else if (!alert.isChargeEvent && alert.kind != BatteryAlertKind.reminder) {
+      // Şarj olayı ve hatırlatma bayat kalır, atılır; düşük pil uyarısı ertelenir.
+      _heldBattery[source] = alert;
+    }
+  }
+
+  void _flushBattery() {
+    if (_heldBattery.isEmpty || _batteryAlertsHeld) return;
+    final alerts = _heldBattery.values.toList();
+    _heldBattery.clear();
+    for (final alert in alerts) {
+      _announceBattery(alert);
+    }
+  }
+
+  /// Düşük/kritik pil `high` öncelikte (bağlantı kopması gibi): `critical` SOS ve
+  /// engel içindir. Şarj olayları `low`: titreşimsiz, `signal` yerine `say` ile,
+  /// çünkü `signal` titreşimi kuyruğa bakmadan hemen çalar ve kritik bir
+  /// duyurunun üstüne biner.
+  void _announceBattery(BatteryAlert alert) {
+    final glasses = alert.source == BatterySource.glasses;
+    switch (alert.kind) {
+      case BatteryAlertKind.low:
+        feedback.signal(FeedbackEvent.batteryLow,
+            text: glasses
+                ? Tr.glassesBatteryLow(alert.percent)
+                : Tr.phoneBatteryLow(alert.percent),
+            priority: AnnouncementPriority.high);
+      case BatteryAlertKind.critical:
+        feedback.signal(FeedbackEvent.batteryLow,
+            text: glasses
+                ? Tr.glassesBatteryCritical(alert.percent)
+                : Tr.phoneBatteryCritical(alert.percent),
+            priority: AnnouncementPriority.high);
+      case BatteryAlertKind.reminder:
+        // Yalnızca titreşim: yürürken ya da konuşurken sesle bölmez.
+        feedback.haptics.play(HapticPatternId.batteryLow, scale: settings.value.hapticScale);
+      case BatteryAlertKind.chargeStarted:
+        feedback.say(Tr.phoneChargeStarted, priority: AnnouncementPriority.low);
+      case BatteryAlertKind.chargeFull:
+        feedback.say(Tr.phoneChargeFull, priority: AnnouncementPriority.low);
+    }
   }
 
   String get _notificationText {
@@ -680,7 +792,7 @@ class AppState extends ChangeNotifier implements ControlActions {
 
     isSimulated = simulated;
     devices = [];
-    glassesBattery = null;
+    _clearGlassesBattery();
     connectionState = BleConnectionState.disconnected;
     _attach(simulated
         ? SimulatedBleService()
@@ -710,6 +822,8 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   @override
   void dispose() {
+    _batteryTimer?.cancel();
+    sos.status.removeListener(_flushBattery);
     sos.status.removeListener(notifyListeners);
     sos.dispose();
     voice.dispose();

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:fake_async/fake_async.dart';
 
 import 'package:patika_app/app_state.dart';
+import 'package:patika_app/battery/battery_monitor.dart';
+import 'package:patika_app/battery/phone_battery.dart';
 import 'package:patika_app/commands/contact_resolver.dart';
 import 'package:patika_app/contacts/alias_store.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
@@ -75,6 +77,10 @@ class Harness {
   final sosPermissions = FakeSosPermissions();
   final DirectActions directActions;
 
+  /// Telefon pili (Faz 7b): varsayılan %80, şarjda değil. Yoklama testte elle
+  /// (`app.pollPhoneBattery()`); `autoStart` kapalıyken zamanlayıcı yok.
+  final phoneBattery = FakePhoneBattery(const PhoneBatteryReading(80));
+
   /// Varsayılan "play" türü (doğrudan eylem yok); "direct" için sahte ver.
   Harness({
     Settings initial = const Settings(),
@@ -86,6 +92,7 @@ class Harness {
     List<EmergencyContact> emergencyContacts = const [],
     SosCallMonitor? sosCallMonitor,
     Future<bool> Function()? ensureSmsPermission,
+    BatteryMonitor? batteryMonitor,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     this.emergencyContacts = MemoryEmergencyContactStore(emergencyContacts);
@@ -124,6 +131,8 @@ class Harness {
       sosPermissions: sosPermissions,
       emergencyNumber: const EmergencyNumber(debugTestNumber: '0999 000 00 00'),
       sosCallMonitor: sosCallMonitor ?? FakeCallMonitor(),
+      phoneBattery: phoneBattery,
+      batteryMonitor: batteryMonitor,
     );
   }
 

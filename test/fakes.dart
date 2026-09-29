@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/haptic_patterns.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
+import 'package:patika_app/battery/phone_battery.dart';
 import 'package:patika_app/navigation/geo.dart';
 import 'package:patika_app/navigation/place_search.dart';
 import 'package:patika_app/navigation/route.dart';
@@ -280,4 +281,15 @@ class FakeCallMonitor implements SosCallMonitor {
     log?.add('callEnded(${end.name})');
     return end;
   }
+}
+
+/// Telefon pilinin sahte hali (Faz 7b): [reading] elle değiştirilir, null
+/// "okunamadı" demektir.
+class FakePhoneBattery implements PhoneBattery {
+  PhoneBatteryReading? reading;
+
+  FakePhoneBattery([this.reading]);
+
+  @override
+  Future<PhoneBatteryReading?> read() async => reading;
 }
