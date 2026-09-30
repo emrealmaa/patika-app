@@ -187,14 +187,14 @@ açık modu kapı bozulunca da kullanıcı yardımsız kalmamalı.
 
 **Sentetik kaynak köprüye BAĞLANMAZ (KARAR 2026-09-30, kilitli testle).** Aksi halde bir
 Test Modu düğmesi gerçek acil kişilere gerçek SMS atardı.
-- Açık modun uçtan uca denemesi: debug derlemesinde, acil kişi olarak **ikinci
-  numarayla** (mevcut SOS deneme listesi yaklaşımı, asla gerçek 112 değil),
-  telefonu gerçekten düşürerek ya da elle sallayarak. `docs/sos_phone_test_checklist.md`
-  benzeri bir liste 7c-2'de yazılır.
+- **KARAR (2026-09-30):** Açık modun uçtan uca doğrulaması **yalnızca gerçek
+  düşme benzeri hareketle ve ikinci numarayla** yapılır (mevcut SOS deneme
+  listesi yaklaşımı, asla gerçek 112 değil); sentetik düğmelerle yapılmaz.
+  `docs/sos_phone_test_checklist.md` benzeri bir liste 7c-2'de yazılır.
 - Alternatif: "deneme geri sayımı" (mesaj göndermeyen kuru çalıştırma) için
   `SosDelivery`'ye kuru-çalıştırma kipi. Artı: telefonsuz denenebilir. Eksi:
   SOS yoluna test amaçlı bir dal eklemek, SOS'un en sade kalması gerektiği
-  yerde risk. **Önerilmez.**
+  yerde risk. **Seçilmedi.**
 
 ## 5. Ayarlar ekranında görünürlük
 
@@ -261,7 +261,7 @@ Test Modu'nda.
 | 7 | Bastırma | İptal anından başlar, yalnızca düşme kaynaklı, bellekte; uygulama kapanıp açılınca sıfırlanması sorun değil (§2d) |
 | 8 | Meşgulken gelen aday | Yalnızca SIRADAN diyalogları (acil kişi kurulumu, dikte vb.) keser. Aktif SOS gönderimi sürüyorsa (arama sürüyor) yeni aday onu kesmez, `alreadyRunning` (§2e) |
 | 9 | Ön kontrol başarısızlığı | 112 teklifi Faz 7 madde 5 ile aynı (her kaynakta) (§2f) |
-| 11 | Sentetik kaynak | Köprüye bağlanmaz, kilitli testle (§4) |
+| 11 | Sentetik kaynak, uçtan uca doğrulama | Sentetik kaynak köprüye bağlanmaz, kilitli testle. Açık modun uçtan uca doğrulaması yalnızca gerçek düşme benzeri hareketle ve ikinci numarayla yapılır (asla gerçek 112 ile) (§4) |
 | 12b | Engellenmiş durum | "Açık modu aç" düğmesi etkin kalır; basınca nedeni sesle ve yazıyla söyler (§5) |
 | 13 | Uyarı metni | "Patika acil durum servisi değildir" cümlesi açık mod uyarısına girer, tam metnin sonuna (§7) |
 
@@ -269,10 +269,6 @@ Test Modu'nda.
 
 14. Wake-up sensör / wakelock: 7c-1 telefon testi sonucunu bekliyor; **7c-2'nin
     ön koşulu** (§0/1).
-
-Not: Madde 11'de kararda yalnızca "köprüye bağlanmaz" var; §4'teki "uçtan
-uca deneme ikinci numarayla, debug derlemesinde" yaklaşımı önerilmiş
-haliyle duruyor, ayrıca onaylanmadı.
 
 ## 9. Önerilen sıra (karar sonrası, her adım tek tek gösterilir)
 
