@@ -43,6 +43,13 @@ import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'commands/voice_intent_classifier.dart';
 import 'contacts/alias_store.dart';
+import 'fall/fall_candidate_source.dart';
+import 'fall/fall_mode.dart';
+import 'fall/fall_detector.dart';
+import 'fall/fall_monitor.dart';
+import 'fall/fall_shadow_log.dart';
+import 'fall/synthetic_signals.dart';
+import 'fall/motion_source.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
 import 'navigation/app_identity.dart';
@@ -154,6 +161,20 @@ class AppState extends ChangeNotifier implements ControlActions {
   late final BatteryMonitor _batteryMonitor;
   Timer? _batteryTimer;
 
+  /// Düşme algılama (Faz 7c-1): yalnızca gölge kaydı. SOS'a HİÇBİR bağlantısı
+  /// yok (bkz. [FallMonitor]); mod ayarlardan ([Settings.fallMode]) gelir.
+  late final FallShadowLog fallLog;
+  late final FallMonitor fall;
+
+  /// Test Modu'nun sentetik düğmeleri için AYRI kaynak ve monitör: sentetik
+  /// örnekler gerçek sensör akışına karışmaz (zaman eksenleri çakışır); kayda
+  /// `synthetic` kaynak adıyla girer. Gerçek modun kapalı olması bunu
+  /// engellemez: düğmeye basmak açık bir test eylemidir.
+  late final SyntheticMotionSource _fallSyntheticMotion;
+  late final PhoneImuFallCandidateSource _fallSyntheticSource;
+  late final FallMonitor _fallSyntheticMonitor;
+  int _fallSyntheticClockMs = 0;
+
   /// SOS/arama/karşıya geçiş sırasında söylenemeyen düşük pil uyarıları: kaynak
   /// başına en yenisi. Meşguliyet bitince sırayla, AYRI duyurular olarak gider.
   final Map<BatterySource, BatteryAlert> _heldBattery = {};
@@ -209,6 +230,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     SosCallMonitor? sosCallMonitor,
     PhoneBattery? phoneBattery,
     BatteryMonitor? batteryMonitor,
+    FallCandidateSource? fallSource,
+    FallLogStore? fallLogStore,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -325,6 +348,8 @@ class AppState extends ChangeNotifier implements ControlActions {
             navigationActive: navigation.active,
             navigationPaused: navigation.isPausedForCrossing,
             navigationRemaining: navigation.remainingText(),
+            fallMode: fall.mode,
+            fallSensorUnavailable: fall.sensorUnavailable,
           )),
     );
     tutorial = Tutorial(
@@ -374,6 +399,24 @@ class AppState extends ChangeNotifier implements ControlActions {
     // Pil uyarıları (Faz 7b): yalnızca uyarır, hiçbir şeyi durdurmaz.
     phoneBatteryTest = OverridablePhoneBattery(phoneBattery ?? MethodChannelPhoneBattery());
     _batteryMonitor = batteryMonitor ?? BatteryMonitor();
+
+    // Düşme algılama (Faz 7c-1): gölge kaydı + monitör. Sensör yalnızca mod
+    // kapalı değilken açılır ([_applySettings]).
+    fallLog = FallShadowLog(fallLogStore ?? MethodChannelFallLogStore());
+    fall = FallMonitor(
+      source: fallSource ?? PhoneImuFallCandidateSource(MethodChannelMotionSource()),
+      log: fallLog,
+      earconEnabled: () => this.settings.value.fallShadowEarcon,
+      playCandidateEarcon: () => unawaited(feedback.earcons.play(Earcon.success)),
+    )..addListener(notifyListeners);
+    _fallSyntheticMotion = SyntheticMotionSource();
+    _fallSyntheticSource = PhoneImuFallCandidateSource(_fallSyntheticMotion, sourceId: 'synthetic');
+    _fallSyntheticMonitor = FallMonitor(
+      source: _fallSyntheticSource,
+      log: fallLog,
+      earconEnabled: () => this.settings.value.fallShadowEarcon,
+      playCandidateEarcon: () => unawaited(feedback.earcons.play(Earcon.success)),
+    );
 
     this.settings.addListener(_applySettings);
     this.settings.load();
@@ -427,7 +470,27 @@ class AppState extends ChangeNotifier implements ControlActions {
   void _applySettings() {
     final s = settings.value;
     _speech.configure(rate: s.speechRate, pitch: s.pitch);
+    final fallMode = effectiveFallMode(s.fallMode);
+    if (fallMode != fall.mode) unawaited(fall.setMode(fallMode));
     notifyListeners();
+  }
+
+  /// Test Modu: sentetik düşme senaryosunu çalıştırır ve biten değerlendirmeleri
+  /// döndürür (boşsa dedektör hiçbir değerlendirme başlatmadı, ör. yürüme).
+  /// Gölge kaydı kurallarına aynen tabidir (yalnızca darbeye ulaşanlar yazılır).
+  /// SOS'a hiçbir etkisi yoktur.
+  Future<List<FallEvaluation>> runFallScenario(SyntheticScenario scenario) async {
+    await _fallSyntheticMonitor.setMode(FallMode.shadow);
+    final seen = <FallEvaluation>[];
+    final sub = _fallSyntheticSource.evaluations.listen(seen.add);
+    // Her senaryo öncekinden sonra başlar: sensör zamanı tek yönde akar.
+    _fallSyntheticMotion.push(syntheticScenario(scenario, startMs: _fallSyntheticClockMs));
+    _fallSyntheticClockMs += 100000;
+    await Future<void>.delayed(Duration.zero);
+    unawaited(sub.cancel());
+    await _fallSyntheticMonitor.setMode(FallMode.off);
+    notifyListeners();
+    return seen;
   }
 
   /// Sadece simülasyon modunda dolu - test ekranı olay enjekte etmek için.
@@ -838,6 +901,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     sos.status.removeListener(_flushBattery);
     sos.status.removeListener(notifyListeners);
     sos.dispose();
+    fall.dispose();
+    _fallSyntheticMonitor.dispose();
     voice.dispose();
     tutorial.dispose();
     dialogs.cancel(null);

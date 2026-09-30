@@ -1,3 +1,4 @@
+import '../../fall/fall_mode.dart';
 import '../../l10n/strings_tr.dart';
 import '../../sos/sos_controller.dart';
 import '../action_result.dart';
@@ -16,6 +17,10 @@ class StatusSnapshot {
   /// "Hedefe 450 metre, yaklaşık 6 dakika kaldı" ("ne kadar kaldı" ile aynı cümle).
   final String? navigationRemaining;
 
+  /// Düşme algılama modu (Faz 7c) ve gölge modunda sensörün açılamadığı.
+  final FallMode fallMode;
+  final bool fallSensorUnavailable;
+
   const StatusSnapshot({
     this.glassesConnected = false,
     this.glassesBattery,
@@ -25,6 +30,8 @@ class StatusSnapshot {
     this.navigationActive = false,
     this.navigationPaused = false,
     this.navigationRemaining,
+    this.fallMode = FallMode.off,
+    this.fallSensorUnavailable = false,
   });
 }
 
@@ -65,6 +72,9 @@ String describeStatus(StatusSnapshot s) {
       Tr.statusNavRunning,
       ?s.navigationRemaining,
     ],
+    // Yalnızca mod kapalı değilse (Faz 7c kararı 2).
+    if (s.fallMode == FallMode.shadow)
+      s.fallSensorUnavailable ? Tr.statusFallShadowNoSensor : Tr.statusFallShadow,
   ];
   return parts.join('. ');
 }

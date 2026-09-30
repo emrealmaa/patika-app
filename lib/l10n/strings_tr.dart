@@ -614,6 +614,64 @@ abstract final class Tr {
   static const statusNavPaused = 'Navigasyon karşıya geçiş için duraklatıldı';
   static const statusNavNone = 'Çalışan bir navigasyon yok';
 
+  // --- Düşme algılama (Faz 7c) -------------------------------------------------
+  // Gölge modu: yalnızca yerel kayıt, hiçbir mesaj göndermez. Bilgi kipi.
+  // test/fall_monitor_test.dart bu bölümü yasaklı kelimeler için tarar.
+  static const fallShadowWarning =
+      'Düşme algılama gölge modunda açıldı. Bu modda hiçbir mesaj gönderilmez, '
+      'acil durum çağrısı başlamaz. Telefon olası düşmeleri yalnızca kendi içinde '
+      'kaydeder, kayıtlarda konum yoktur. Kayıtlar, özelliğin ne kadar doğru '
+      'çalıştığını ölçmek için kullanılacak.';
+  static const statusFallShadow = 'Düşme algılama gölge modunda, yalnızca kayıt tutuyor';
+  static const statusFallShadowNoSensor =
+      'Düşme algılama gölge modunda ama telefonun hareket sensörü açılamadı';
+
+  static const fallShadowDisabled = 'Düşme algılama kapatıldı';
+
+  // --- Test Modu: düşme algılama (Faz 7c-1) ------------------------------------
+  // Gölge modu: yalnızca kayıt. Sentetik düğmeler gerçek düşme verisi DEĞİLDİR.
+  // test/fall_monitor_test.dart bu bölümü yasaklı kelimeler için tarar.
+  static const testFallTitle = 'Düşme algılama (gölge)';
+  static const testFallHint =
+      'Gölge modu yalnızca kayıt tutar, hiçbir mesaj göndermez. Sentetik düğmeler '
+      'gerçek düşme verisi değil, şematik sinyallerdir; kayıtta "synthetic" olarak görünür.';
+  static const testFallMode = 'Düşme algılama (gölge modu)';
+  static const testFallModeHint = 'Açarken kısa bir açıklama okunur';
+  static const testFallEarcon = 'Düşme adayında test sesi çal';
+  static const testFallEarconHint = 'Yalnızca deneme için, varsayılan kapalı';
+  static const testFallSynthetic = 'Sentetik sinyal';
+  static const testFallRecords = 'Gölge kayıtları';
+  static const testFallNoRecords = 'Henüz kayıt yok';
+  static const testFallClear = 'Kayıtları sil';
+  static const testFallCleared = 'Gölge kayıtları silindi';
+  static String testFallCounters(int noImpact, int gaps) =>
+      'Darbesiz düşüş: $noImpact, sensör kesintisi: $gaps';
+  static const testFallSensorUnavailable = 'Telefonun hareket sensörü açılamadı';
+  static String testFallScenarioResult(String scenario, String result) => '$scenario: $result';
+  static const testFallNoEvaluation = 'değerlendirme oluşmadı';
+  static const testFallScenarioRealisticFall = 'Gerçekçi düşme';
+  static const testFallScenarioDroppedAndPickedUp = 'Telefon düştü, hemen alındı';
+  static const testFallScenarioHardSit = 'Sert oturma';
+  static const testFallScenarioNoImpact = 'Düşüş, darbe yok';
+  static const testFallScenarioNoOrientation = 'Darbe var, yön değişmedi';
+  static const testFallScenarioWalking = 'Yürüme';
+  static const fallOutcomeCandidate = 'düşme adayı';
+  static const fallOutcomeMovement = 'elendi: hareket sürdü';
+  static const fallOutcomeNoOrientation = 'elendi: duruş değişmedi';
+  static const fallOutcomeNoImpact = 'elendi: darbe yok';
+  static String fallRecordLine({
+    required String time,
+    required String source,
+    required String outcome,
+    required int freeFallMs,
+    required double peakG,
+    double? degrees,
+    double? stillnessStd,
+  }) =>
+      '$time, $source: $outcome. Düşüş $freeFallMs ms, tepe ${peakG.toStringAsFixed(1)} g'
+      '${degrees == null ? '' : ', açı ${degrees.round()} derece'}'
+      '${stillnessStd == null ? '' : ', hareket ${stillnessStd.toStringAsFixed(2)}'}';
+
   // --- Test Modu: telefon pili taklidi (Faz 7b) --------------------------------
   static const testPhoneBattery = 'Telefon pil seviyesi';
   static const testPhoneCharging = 'Telefon şarjda';

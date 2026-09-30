@@ -32,10 +32,10 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
-## Nerede kaldık (2026-09-29)
+## Nerede kaldık (2026-09-30)
 
-**Bitenler** (7a'ya kadar commit'li ve push'lu; 7b-1 commit'li `c4dcafe`,
-push'lanmadı; 7b-2 henüz commit'lenmedi; 601 test):
+**Bitenler** (7b dahil hepsi commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
+`849bcce`; 601 test):
 
 | Faz | İçerik |
 |---|---|
@@ -50,6 +50,7 @@ push'lanmadı; 7b-2 henüz commit'lenmedi; 601 test):
 | 6 | Navigasyon: saf mantık (6a), konum servisi + `NavigationSession` + karşıya geçiş duraklaması (6b), Google Routes/Places + `NavigationFlow` (6c) |
 | 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
 | 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
+| 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; SOS'a bağlantısı YOK (testle kilitli). Kodlandı, commit'lenmedi |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
@@ -73,6 +74,29 @@ push'lanmadı; 7b-2 henüz commit'lenmedi; 601 test):
 Faz 6 süresince yalnızca kod + otomatik test (`flutter analyze` +
 `flutter test`) seviyesinde ilerleniyor; gerçek cihaz testleri burada
 birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir.
+
+- [ ] **Faz 7c-1 (düşme algılama, gölge) - gerçek sensör:**
+  `MotionProbe.kt` cihazda hiç çalıştırılmadı. Bakılacaklar: (a) Galaxy S24
+  FE'de ~50 Hz gerçekten tutuyor mu (Samsung güç tasarrufunda düşebilir);
+  (b) **ekran kilitli ve telefon cepteyken örnek kesintisi** (wakelock
+  bilerek yok): Test Modu'ndaki "sensör kesintisi" sayacı kaç? Çoksa
+  wakelock ya da sensör toplu okuma (batching) gerekir; (c) **pil etkisi**
+  (bir gün gölge açık, pil grafiği); (d) jiroskop gerekli mi (yön değişimi
+  yalnızca yerçekimi vektöründen); (e) arka plan servisi yokken/varken
+  sensör akışı sürüyor mu (Dart motoru etkinlikten ayrık, sensör kanalı
+  motora bağlı); (f) bir hafta günlük kullanımda kayıt dağılımı: günde kaç
+  `candidate`, kaçı gerçek düşme değil (yürüme, sandalyeye oturma, telefonu
+  masaya bırakma, merdiven, bastonla yürüme) - açık moda geçiş ölçütü
+  (CLAUDE.md "Faz 7c kararları" madde 5); (g) **`MotionProbe.kt`
+  uyandırmayan (non-wake-up) ivmeölçeri kullanıyor**: ekran kapalı, cepte
+  telefonda olay kesilebilir (varsayım). Kesinti yüksekse wake-up varyantı
+  (`getDefaultSensor(TYPE_ACCELEROMETER, true)`) ya da kısmi wakelock
+  denenecek; 7c-2 (`docs/fall_open_mode_plan.md`) buna bağlı. Sentetik
+  düğmeler gerçek düşme verisi DEĞİLDİR; eşikleri bunlarla ayarlamayın.
+- [ ] **Faz 7c-1:** `FallShadowLogStorage.kt` dosyasının yedeğe girmediği
+  (acil kişi listesiyle aynı yöntem, bkz. Faz 7 kararları madde 13) ve
+  "Kayıtları sil"in dosyayı gerçekten sildiği; geçici dosyaya yazıp
+  yeniden adlandırma Samsung dosya sisteminde sorunsuz mu.
 
 - [ ] **YÜKSEK ÖNCELİK - gözlük SoftAP'ına bağlıyken telefonun internet
   erişimi.** SoftAP internetsizdir; Android buna bağlanınca mobil veriyi
@@ -236,8 +260,13 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı), 7a-2
    (uygulamaya bağlama) ve 7a-3 (acil kişi kurulumu: sesle ekle/sil/liste,
    izin akışı kurulum sırasında, isteğe bağlı rıza SMS'i) kodlandı; SOS
-   çekirdeği (7a) tamamlandı. 7b (pil + durum) kodlandı. Sırada 7c (düşme,
-   gölge modu). Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+   çekirdeği (7a) tamamlandı. 7b (pil + durum) bitti, push'lu. 7c:
+   kararlar alındı ("Faz 7c kararları"); 7c-1 (yalnızca gölge modu)
+   kodlandı, commit onayı bekliyor. Sırada 7c-2 (açık mod + SOS'a bağlama,
+   iki adımlı açma) - ÖNCE gölge verisi toplanmalı (en az bir hafta).
+   7c-2 keşfi ve kararları: `docs/fall_open_mode_plan.md` (altı karar
+   verildi, kalanlar açık); kodlama 7c-1 telefon testini (wake-up sensör)
+   bekliyor. Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
@@ -384,6 +413,7 @@ gönderim) · **7b** pil uyarıları + "durum" komutu · **7c** düşme algılam
    mesaj göndermez. Sonra deneysel opt-in, varsayılan kapalı. Açarken sesli
    uyarı: "deneysel, her düşmeyi algılamayabilir, güvenilmemeli". Telefon
    cepteyken IMU güvenilirliği Z20'ye eklenecek (aşağıdaki not).
+   Ayrıntılar: "Faz 7c kararları".
 10. **Uzun basış:** Doğrudan geri sayım başlatır; firmware'de 3 sn eşiği
    (TODO.md madde 16, "firmware ile netleşecek"). 60 sn'de en fazla bir
    SOS sınırı **iptal edilen ya da gönderilemeyen SOS'u saymaz**. Sesli
@@ -479,6 +509,50 @@ oturma, merdiven ve bastonla yürüme ayrılamaz; yanlış pozitif de yanlış
 negatif de artar. Bu yüzden telefon IMU'suna dayanan düşme algılama
 deneysel, varsayılan kapalı ve önce gölge modunda (mesaj göndermez)
 çalıştırılır.*
+
+## Faz 7c kararları (düşme algılama; geçerli, tekrar tartışma)
+
+Modlar: **kapalı** · **gölge** (yalnızca yerel kayıt, hiçbir mesaj
+göndermez, SOS tetiklemez) · **açık** (deneysel opt-in, SOS tetikler).
+Alt fazlar: **7c-1** yalnızca gölge modu · **7c-2** açık mod + SOS'a
+bağlama.
+
+1. **Gölge modu varsayılanı (A + C):** kullanıcı (release) derlemesinde
+   kapalı, debug derlemesinde gölge. Kayıt **kalıcı dosyada**
+   (`Context.getNoBackupFilesDir()`, yedeğe girmez), en fazla **200 kayıt /
+   14 gün** (hangisi önce dolarsa, eskiler atılır). **Konum ve ham sensör
+   verisi yazılmaz**; yalnızca zaman + özet değerler (ör. serbest düşüş
+   süresi, tepe ivme, yön değişimi açısı, hareketsizlik süresi) + sonuç
+   etiketi (hangi adımda elendi / aday oldu).
+2. **Görünürlük:** Test Modu'nda kayıt listesi; "durum" komutuna **tek
+   cümle**, yalnızca mod kapalı değilse; isteğe bağlı test ses işareti
+   (aday oluşunca kısa earcon), **varsayılan kapalı**.
+3. **Uyarı metinleri:** gölge ve açık mod için ayrı tam metin (`Tr`'de;
+   taslaklar 7c-1 planında onaya sunulur). Açık mod metni **yalnızca ilk
+   açılışta** tam okunur; sonradan kapatıp yeniden açınca kısa hatırlatma
+   ("Düşme algılama deneysel, hâlâ güvenilmemeli"). Açık mod **iki
+   adımlı** açılır (uyarı + "anladım, aç" onayı) ve **acil kişi yoksa açık
+   mod açılmaz**.
+4. **Sensör kaynağı:** kendi native kanalımız (`MotionProbe.kt`);
+   `sensors_plus` kullanılmıyor (yeni bağımlılık yok).
+5. **Algoritma:** eşik tabanlı, 4 adımlı durum makinesi: serbest düşüş →
+   darbe → yön değişimi → hareketsizlik.
+   **EŞİKLER TAMAMEN TAHMİNİDİR.** Literatürden ve sağduyudan alınmış
+   başlangıç değerleridir; hiçbir gerçek düşme ya da gerçek kullanım
+   verisiyle doğrulanmamıştır. Gölge verisiyle ayarlanacaktır.
+   **Açık moda geçiş ölçütü sayı değil süre şartıdır:** gölge modu en az
+   **bir hafta, günlük kullanım koşullarında** çalışmış olmalı. Kesin
+   yanlış pozitif eşiği ("X günde 1'den az") bu veri toplandıktan sonra
+   belirlenecek; o zamana kadar açık mod kullanıcıya sunulmaz.
+   Gerçek çözüm muhtemelen **gözlük IMU'su** (başa bağlı, cepten bağımsız;
+   TODO.md madde 18). Aday kaynağı `FallCandidateSource` arayüzü arkasında:
+   telefon IMU'su bir uygulaması, gözlük IMU'su ileride ikinci bir
+   uygulaması olur, durum makinesi ve kayıt değişmez.
+6. **Tetikleme (açık mod, 7c-2):** mevcut `SosController.trigger(SosSource.fall)`
+   + 25 sn geri sayım (7a'da var, 112 kendiliğinden aranmaz) + iptal
+   edilen bir düşme adayından sonra **2 dakikalık bastırma** (yeni aday
+   SOS tetiklemez, gölge kaydına yine yazılır) + geri sayım sırasında **10
+   sn'de bir tekrarlanan** sesli geri sayım duyurusu.
 
 ## Faz 4b kararları (geçerli, tekrar tartışma)
 

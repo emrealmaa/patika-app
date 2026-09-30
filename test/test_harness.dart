@@ -17,6 +17,10 @@ import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
+import 'package:patika_app/fall/fall_candidate_source.dart';
+import 'package:patika_app/fall/fall_mode.dart';
+import 'package:patika_app/fall/fall_shadow_log.dart';
+import 'package:patika_app/fall/motion_source.dart';
 import 'package:patika_app/sos/emergency_contacts.dart';
 import 'package:patika_app/sos/emergency_number.dart';
 import 'package:patika_app/sos/sos_call_monitor.dart';
@@ -81,9 +85,17 @@ class Harness {
   /// (`app.pollPhoneBattery()`); `autoStart` kapalıyken zamanlayıcı yok.
   final phoneBattery = FakePhoneBattery(const PhoneBatteryReading(80));
 
+  /// Düşme algılama (Faz 7c-1): sentetik hareket kaynağı + bellekte kayıt;
+  /// gerçek sensör/kanal hiç kullanılmaz. [fallMotion.push] ile sinyal verilir.
+  final fallMotion = SyntheticMotionSource();
+  final fallLogStore = MemoryFallLogStore();
+
   /// Varsayılan "play" türü (doğrudan eylem yok); "direct" için sahte ver.
   Harness({
-    Settings initial = const Settings(),
+    // Düşme algılama varsayılanı testte kapalı: debug derlemesinde gölge
+    // olurdu (kDebugMode) ve eski testlerin durum cümlesini değiştirirdi.
+    // Düşme testleri modu açıkça seçer.
+    Settings initial = const Settings(fallMode: FallMode.off),
     DirectActions direct = const NoDirectActions(),
     IncomingMessages incomingMessages = const NoIncomingMessages(),
     LoudMessagesNotice? loudMessagesNotice,
@@ -133,6 +145,8 @@ class Harness {
       sosCallMonitor: sosCallMonitor ?? FakeCallMonitor(),
       phoneBattery: phoneBattery,
       batteryMonitor: batteryMonitor,
+      fallSource: PhoneImuFallCandidateSource(fallMotion),
+      fallLogStore: fallLogStore,
     );
   }
 

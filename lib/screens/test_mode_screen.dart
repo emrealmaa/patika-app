@@ -9,6 +9,10 @@ import '../ble/glasses_protocol.dart';
 import '../battery/phone_battery.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
+import '../fall/fall_detector.dart';
+import '../fall/fall_mode.dart';
+import '../fall/fall_shadow_log.dart';
+import '../fall/synthetic_signals.dart';
 import '../l10n/strings_tr.dart';
 import '../navigation/guidance_speech.dart';
 import '../navigation/navigation_session.dart';
@@ -134,6 +138,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
         ],
         const SizedBox(height: 24),
         _PhoneBatterySimulationSection(state: state),
+        const SizedBox(height: 24),
+        _FallShadowSection(state: state),
         const SizedBox(height: 24),
         _NavigationSimulationSection(state: state),
         const SizedBox(height: 24),
@@ -312,6 +318,150 @@ class _PhoneBatterySimulationSectionState extends State<_PhoneBatterySimulationS
           child: const Text(Tr.testPhoneBatteryReal),
         ),
       ],
+    );
+  }
+}
+
+/// Düşme algılamanın gölge modu (Faz 7c-1): mod anahtarı (açarken uyarı
+/// okunur), test sesi, sentetik sinyal düğmeleri, kayıt listesi, sayaçlar.
+/// Gölge modu yalnızca kayıt tutar; buradan hiçbir şey SOS'a gitmez.
+class _FallShadowSection extends StatefulWidget {
+  final AppState state;
+
+  const _FallShadowSection({required this.state});
+
+  @override
+  State<_FallShadowSection> createState() => _FallShadowSectionState();
+}
+
+class _FallShadowSectionState extends State<_FallShadowSection> {
+  static const _shown = 20;
+  String? _lastResult;
+
+  AppState get _state => widget.state;
+
+  static const _scenarios = [
+    (SyntheticScenario.realisticFall, Tr.testFallScenarioRealisticFall),
+    (SyntheticScenario.droppedAndPickedUp, Tr.testFallScenarioDroppedAndPickedUp),
+    (SyntheticScenario.hardSit, Tr.testFallScenarioHardSit),
+    (SyntheticScenario.fallNoImpact, Tr.testFallScenarioNoImpact),
+    (SyntheticScenario.impactNoOrientationChange, Tr.testFallScenarioNoOrientation),
+    (SyntheticScenario.walking, Tr.testFallScenarioWalking),
+  ];
+
+  void _setShadow(bool on) {
+    final settings = _state.settings;
+    settings.update(settings.value.copyWith(fallMode: on ? FallMode.shadow : FallMode.off));
+    // Açarken uyarı sesle (ekranı görmeyen kullanıcı için); kapatınca kısa bilgi.
+    _state.feedback.say(on ? Tr.fallShadowWarning : Tr.fallShadowDisabled);
+  }
+
+  Future<void> _run(SyntheticScenario scenario, String label) async {
+    final results = await _state.runFallScenario(scenario);
+    if (!mounted) return;
+    final text = results.isEmpty
+        ? Tr.testFallNoEvaluation
+        : results.map((e) => _outcomeText(e.outcome)).join(', ');
+    setState(() => _lastResult = Tr.testFallScenarioResult(label, text));
+  }
+
+  static String _outcomeText(FallOutcome o) => switch (o) {
+        FallOutcome.candidate => Tr.fallOutcomeCandidate,
+        FallOutcome.movement => Tr.fallOutcomeMovement,
+        FallOutcome.noOrientationChange => Tr.fallOutcomeNoOrientation,
+        FallOutcome.noImpact => Tr.fallOutcomeNoImpact,
+      };
+
+  static String _two(int v) => v.toString().padLeft(2, '0');
+
+  static String _recordText(FallShadowRecord r) {
+    final t = r.at;
+    return Tr.fallRecordLine(
+      time: '${_two(t.day)}.${_two(t.month)} ${_two(t.hour)}:${_two(t.minute)}',
+      source: r.source,
+      outcome: _outcomeText(r.outcome),
+      freeFallMs: r.freeFallMs,
+      peakG: r.peakG,
+      degrees: r.orientationDegrees,
+      stillnessStd: r.stillnessStdG,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([_state.settings, _state.fall, _state.fallLog]),
+      builder: (context, _) {
+        final settings = _state.settings.value;
+        final shadowOn = effectiveFallMode(settings.fallMode) == FallMode.shadow;
+        final records = _state.fallLog.records.reversed.take(_shown).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(Tr.testFallTitle, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            Semantics(container: true, child: const Text(Tr.testFallHint)),
+            SwitchListTile(
+              title: const Text(Tr.testFallMode),
+              subtitle: const Text(Tr.testFallModeHint),
+              value: shadowOn,
+              onChanged: _setShadow,
+            ),
+            SwitchListTile(
+              title: const Text(Tr.testFallEarcon),
+              subtitle: const Text(Tr.testFallEarconHint),
+              value: settings.fallShadowEarcon,
+              onChanged: (v) => _state.settings.update(settings.copyWith(fallShadowEarcon: v)),
+            ),
+            if (shadowOn && _state.fall.sensorUnavailable)
+              Semantics(container: true, child: const Text(Tr.testFallSensorUnavailable)),
+            Semantics(
+              container: true,
+              child: Text(Tr.testFallCounters(_state.fall.noImpactCount, _state.fall.gapCount)),
+            ),
+            const SizedBox(height: 12),
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(Tr.testFallSynthetic, style: Theme.of(context).textTheme.titleSmall),
+            ),
+            const SizedBox(height: 8),
+            for (final (scenario, label) in _scenarios) ...[
+              OutlinedButton(onPressed: () => _run(scenario, label), child: Text(label)),
+              const SizedBox(height: 8),
+            ],
+            if (_lastResult case final r?) Semantics(container: true, liveRegion: true, child: Text(r)),
+            const SizedBox(height: 12),
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(Tr.testFallRecords, style: Theme.of(context).textTheme.titleSmall),
+            ),
+            if (records.isEmpty)
+              Semantics(container: true, child: const Text(Tr.testFallNoRecords))
+            else
+              for (final r in records)
+                Semantics(
+                  container: true,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(_recordText(r)),
+                  ),
+                ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () async {
+                await _state.fallLog.clear();
+                _state.feedback.say(Tr.testFallCleared);
+              },
+              child: const Text(Tr.testFallClear),
+            ),
+          ],
+        );
+      },
     );
   }
 }
