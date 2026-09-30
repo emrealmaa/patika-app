@@ -34,9 +34,8 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 
 ## Nerede kaldık (2026-09-30)
 
-**Bitenler** (7c-1'e kadar commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
-`849bcce`, 7c-1 `a4c49b5`; 7c-2 kodlandı, tek pakette commit'lenecek;
-903 test):
+**Bitenler** (hepsi commit'li; 7b-1 `c4dcafe`, 7b-2 `849bcce`, 7c-1
+`a4c49b5` push'lu; 7c-2 `c632967` commit'li, push onayı bekliyor; 903 test):
 
 | Faz | İçerik |
 |---|---|
@@ -52,7 +51,7 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
 | 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
 | 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; gölge modunda SOS'a bağlantı YOK (testle kilitli). Commit'li ve push'lu (`a4c49b5`) |
-| 7c-2 | Düşme algılama **açık mod** (deneysel, opt-in): iki adımlı açma (`FallEnableSession`; ses + ekran aynı oturum), kapılar, cihaza özgü onay (`FallOpenConsentStorage.kt`), guard (kapı bozulursa gölgeye düşer ve söyler), `FallSosBridge` (bastırma, süren SOS'u kesmez, diyalog kesme), `SosController.onOutcome`, tekrar duyuru (kalan 15/5 sn), `act` kayıt etiketi, Ayarlar bölümü, sesli komutlar, "durum" cümlesi; plan ve sapmalar: `docs/fall_open_mode_plan.md` §10; telefon listesi: `docs/fall_open_mode_phone_checklist.md`. Kodlandı, commit'lenmedi |
+| 7c-2 | Düşme algılama **açık mod** (deneysel, opt-in): iki adımlı açma (`FallEnableSession`; ses + ekran aynı oturum), kapılar, cihaza özgü onay (`FallOpenConsentStorage.kt`), guard (kapı bozulursa gölgeye düşer ve söyler), `FallSosBridge` (bastırma, süren SOS'u kesmez, diyalog kesme), `SosController.onOutcome`, tekrar duyuru (kalan 15/5 sn), `act` kayıt etiketi, Ayarlar bölümü, sesli komutlar, "durum" cümlesi; plan ve sapmalar: `docs/fall_open_mode_plan.md` §10; telefon listesi: `docs/fall_open_mode_phone_checklist.md`. Commit'li (`c632967`) |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
@@ -281,8 +280,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 
 1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a (SOS çekirdeği) ve 7b
    (pil + durum) bitti, push'lu. 7c (düşme algılama): 7c-1 (gölge modu)
-   `a4c49b5` ile push'landı; **7c-2 (açık mod) kodlandı, commit onayı
-   bekliyor** ("Faz 7c-2 kararları"). Sırada: 7c-1 + 7c-2 telefon testleri
+   `a4c49b5` ile push'landı; **7c-2 (açık mod) `c632967` ile commit'li,
+   push onayı bekliyor** ("Faz 7c-2 kararları"). Sırada: 7c-1 + 7c-2 telefon testleri
    (özellikle sensör kesintisi, diyalog/mikrofon kesme, cihaza özgü onay);
    açık mod kullanıcıya ANCAK gölge verisi (en az bir hafta) toplandıktan
    ve eşikler ayarlandıktan sonra sunulur. Sonra Faz 8 (ilk şartnameye
