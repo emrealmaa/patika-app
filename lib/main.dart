@@ -87,6 +87,7 @@ class _HomePageState extends State<HomePage> {
         store: _appState.settings,
         feedback: _appState.feedback,
         onStartTutorial: _appState.startTutorial,
+        fall: _appState.fallSettings,
       ),
     ];
 

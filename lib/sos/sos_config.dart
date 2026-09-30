@@ -29,6 +29,11 @@ abstract final class SosConfig {
   /// sonra yalnızca onaylı teklif ([offerDecisionWindow]) sunulur.
   static const fallCountdown = Duration(seconds: 25);
 
+  /// Düşme geri sayımında kısa tekrar duyurunun söylendiği kalan süreler
+  /// (saniye): "10 sn'de bir" = geçen 10 ve 20. sn (25 sn'lik geri sayımda
+  /// kalan 15 ve 5). Yalnızca [SosSource.fall]; elle SOS'ta tekrar yok.
+  static const fallReminderSeconds = [15, 5];
+
   /// Geri sayım bitince konum henüz yoksa en fazla bu kadar beklenir.
   static const locationGrace = Duration(seconds: 3);
 

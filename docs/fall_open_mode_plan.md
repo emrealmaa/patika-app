@@ -1,9 +1,6 @@
 # Düşme algılama - açık mod (Faz 7c-2) keşif ve planı
 
-**Durum: on üç karar verildi (2026-09-30; ilk altısı ve sonraki yedisi, §8'de
-"KARAR"), yalnızca madde 14 (wake-up sensör/wakelock) açık; kod yok.**
-Kodlama 7c-1 telefon testinin sonucunu bekliyor, özellikle §0/1
-(uyandırmayan sensör): sonuç 7c-2'nin tamamını etkiliyor. Seçenekler
+**Durum: KODLANDI (2026-09-30).** On dört karar verildi (§8) ve uygulandı; ayrıntılar ve plandan sapmalar §10'da. Madde 14 (wake-up sensör/wakelock) varsayılan ve DOĞRULANMAMIŞ kararla kapandı: mevcut uyandırmayan sensörle devam; telefon testinde ekran kilitliyken kesinti çıkarsa wake-up/wakelock ayrı bir düzeltme olarak eklenecek (§0/1). Aşağıdaki §1-§7 keşif ve seçenek metnidir; kesin kararlar §8'de. Seçenekler
 artı/eksileriyle yazıldı; karar kullanıcıya ait. Sabit olanlar (tekrar
 tartışılmaz): `CLAUDE.md` "Faz 7c kararları" (madde 3: iki adımlı açma, acil
 kişi yoksa açılmaz, tam metin yalnızca ilk kez; madde 5: süre şartı; madde 6:
@@ -18,8 +15,9 @@ kişi yoksa açılmaz, tam metin yalnızca ilk kez; madde 5: süre şartı; madd
    CPU uyurken olay üretmez/toplar; ekran kapalı, cepte telefonda kesinti ya da
    toplu gecikme beklenir (**varsayım, cihazda doğrulanmadı**). Seçenekler:
    wake-up varyantı (`getDefaultSensor(TYPE_ACCELEROMETER, true)`), kısmi
-   wakelock, ya da ikisi. Hepsi pil maliyeti. Bu, 7c-1 testinin ana sorusu;
-   cevabı 7c-2'nin yapılabilirliğini belirler.
+   wakelock, ya da ikisi. Hepsi pil maliyeti. Bu, 7c-1 testinin ana sorusu.
+   **KARAR (varsayılan, doğrulanmamış, §8 madde 14):** mevcut sensörle devam;
+   kesinti çıkarsa wake-up/wakelock ayrı düzeltme olarak eklenir.
 2. **Gölge verisi, en az bir hafta günlük kullanım** (karar 5). Kesin yanlış
    pozitif eşiği ("X günde 1'den az") bu veriyle belirlenecek.
 3. Android 9+ arka planda sürekli sensörleri yalnızca ön plan servisi varken
@@ -265,10 +263,16 @@ Test Modu'nda.
 | 12b | Engellenmiş durum | "Açık modu aç" düğmesi etkin kalır; basınca nedeni sesle ve yazıyla söyler (§5) |
 | 13 | Uyarı metni | "Patika acil durum servisi değildir" cümlesi açık mod uyarısına girer, tam metnin sonuna (§7) |
 
-**Açık kalan:**
+14. **KARAR (varsayılan, doğrulanmamış): mevcut sensör kullanılır, telefon
+    testinde kesinti çıkarsa wake-up/wakelock ayrı bir düzeltme olarak
+    eklenecek.** `MotionProbe.kt` uyandırmayan (non-wake-up) ivmeölçerle
+    kalır; wake-up varyantı ya da wakelock 7c-2'ye EKLENMEZ. Ekran kilitliyken
+    örnek kesintisi olabilir; bu ihtimal kabul edilerek ilerleniyor (§0/1).
+    Kesinti sayacı (7c-1 telefon testi) yüksek çıkarsa düzeltme ayrı bir iş
+    olarak yapılır.
 
-14. Wake-up sensör / wakelock: 7c-1 telefon testi sonucunu bekliyor; **7c-2'nin
-    ön koşulu** (§0/1).
+**Açık kalan:** yok (madde 14 varsayılan kararla kapandı, doğrulama telefon
+testinde).
 
 ## 9. Önerilen sıra (karar sonrası, her adım tek tek gösterilir)
 
@@ -281,3 +285,45 @@ Test Modu'nda.
 6. Tekrar duyuru (`SosAnnouncer.tick` kaynak bilgisi) + testler.
 7. Kayıt şeması `act` + test güncellemesi.
 8. Belgeler, deneme listesi (`docs/fall_open_mode_phone_checklist.md`).
+
+## 10. Uygulama (kodlandı) ve plandan sapmalar
+
+Sıra §9'daki gibi yürüdü (her adım ayrı gösterildi ve test edildi). Dosyalar:
+`lib/fall/` (`fall_mode`, `fall_open_state`, `fall_open_gate`, `fall_enable_session`,
+`fall_open_text`, `fall_settings_controller`, `fall_consent_store`, `fall_act`),
+`lib/sos/fall_sos_bridge.dart`, `lib/voice/dialogs/fall_enable_flow.dart`,
+`lib/commands/handlers/fall_handler.dart`, `lib/widgets/fall_enable_dialog.dart`,
+Ayarlar bölümü, `FallOpenConsentStorage.kt`.
+
+Plandan sapmalar ve eklenen kararlar (hepsi onaylı):
+- **Tekrar duyuru:** `SosAnnouncer.tick` arayüzüne kaynak EKLENMEDİ (§2c'deki "kaynak bilgisi
+  gerekir" notu gereksiz çıktı): `FeedbackSosAnnouncer` kaynağı `countdownStarted`'dan saklıyor.
+  Duyuru "iptal" dediği için **konuşurken mikrofon kapatılır**, bitince yeniden açılır
+  (`pauseListening`); yoksa kendi sesimiz SOS'u iptal edebilirdi.
+- **`act` değeri `started`** (plandaki `sos_started` değil): `lib/fall/` kaynak taraması kod
+  satırlarında "sos" geçmesini yasaklıyor; test gevşetilmedi. `none` dosyaya yazılmaz, eski
+  satırlar `none` okunur. Bir iptal yanlış pozitif etiketidir. Ön kontrolde takılan aday da
+  `suppressed` (acil durum akışı başlatılmadı) etiketi alır.
+- **Silah (armed):** ayar dosyasındaki `on` tek başına yetmez; köprü yalnızca bu oturumda
+  onay + kapılar doğrulandıysa tetikler.
+- **Cihaza özgü onay:** açma onayı `noBackupFilesDir` dosyasında (`FallOpenConsentStorage.kt`,
+  kanal `patika/fall_consent`). Rastgele kimlik yerine dosyanın varlığı kullanıldı: yedekten ve
+  cihaz aktarımından gelmez, farklı cihazda her zaman yeniden iki adımlı onay istenir.
+  Kayıt MOD AÇILMADAN yazılır; yazılamazsa açılmaz. Açık moddan çıkınca onay silinir.
+- **Guard (karar 4):** açılışta `on` + onay yok ya da kapı bozuk ise ve son acil kişi silinince
+  mod gölgeye düşer ve SESLE söylenir; sessiz kopma yok. SMS izni yalnızca açılışta yoklanır.
+- **Oturum süresi 120 sn** (tam uyarı yavaş konuşma hızında uzun sürebilir).
+- **Debug 7 gün kapısı:** `--dart-define=PATIKA_FALL_SKIP_SHADOW_GATE=true`; yalnızca release
+  dışında; atlanınca log + ekranda/seste "7 gün kapısı atlandı, bu debug'a özel".
+- **Kapatma:** sesli "düşme algılamayı kapat" ve gölge anahtarı TAM kapatır (gölge sayacı
+  sıfırlanır); ekrandaki "Açık modu kapat (gölge modu sürer)" yalnızca gölgeye düşürür, bu
+  fark etikette ve ekrandaki notta görünür.
+- **Gölge sayacı** gölge→kapalıda sıfırlanır (kesintisiz 7 gün).
+- **TalkBack/TTS:** ekranda TalkBack açıksa yalnızca TalkBack okur, kapalıysa TTS; çakışmaz.
+- **Diyalog kesme:** düşme adayı sıradan diyaloğu sessizce bitirir ve açık mikrofon oturumunu
+  kapatır (yoksa geri sayımdaki sesli iptal dinlemesi açılamaz).
+- **Sentetik düğmeler** köprüye bağlı değil (testle kilitli); uçtan uca deneme gerçek düşme
+  benzeri hareketle ve ikinci numarayla: `docs/fall_open_mode_phone_checklist.md`.
+
+Telefon testleri CLAUDE.md "Bekleyen telefon testleri"nde. EŞİKLER hâlâ tahminidir; açık mod
+kullanıcıya yalnızca gölge verisi (en az bir hafta) toplandıktan sonra sunulmalıdır.

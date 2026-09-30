@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:patika_app/fall/fall_act.dart';
 import 'package:patika_app/fall/fall_detector.dart';
 import 'package:patika_app/fall/fall_shadow_log.dart';
 
@@ -49,10 +50,23 @@ void main() {
       await log.add(eval(FallOutcome.candidate), source: 'phone_imu');
       final row = stored().single as Map<String, Object?>;
       // Yeni bir alan eklemek bilinçli bir karar olmalı: konum ve ham sensör
-      // verisi bu kayda hiçbir zaman girmez (Faz 7c kararı 1).
+      // verisi bu kayda hiçbir zaman girmez (Faz 7c kararı 1). 7c-2'de
+      // yalnızca `act` (aşağıdaki grup) bilinçli eklendi; gölge satırlarına
+      // hiç yazılmaz, yani bu küme gölge için aynen geçerlidir.
       expect(row.keys.toSet(), {'at', 'src', 'out', 'ffMs', 'peakG', 'deg', 'std'});
       for (final v in row.values) {
         expect(v, anyOf(isNull, isA<num>(), isA<String>()), reason: 'iç içe veri (ham örnek dizisi) yok');
+      }
+    });
+
+    test('7c-2: `act` BİLİNÇLİ eklendi; alan listesi yalnızca bir anahtar büyür, başka hiçbir şey girmez', () async {
+      await log.add(eval(FallOutcome.candidate), source: 'phone_imu');
+      await log.setAct(log.records.single, FallAct.cancelled);
+      final row = stored().single as Map<String, Object?>;
+      expect(row.keys.toSet(), {'at', 'src', 'out', 'ffMs', 'peakG', 'deg', 'std', 'act'});
+      expect(row['act'], 'cancelled');
+      for (final v in row.values) {
+        expect(v, anyOf(isNull, isA<num>(), isA<String>()));
       }
     });
 
@@ -198,6 +212,82 @@ void main() {
       expect(log.records, isEmpty);
       expect(store.content, isNull);
       expect(notified, 1);
+    });
+  });
+
+  group('act etiketi (Faz 7c-2, karar 10)', () {
+    Future<FallShadowRecord> addCandidate() async {
+      final record = await log.addRecord(eval(FallOutcome.candidate), source: 'phone_imu');
+      return record!;
+    }
+
+    test('varsayılan none; none dosyaya YAZILMAZ (gölge satırları 7c-1 ile aynı)', () async {
+      final r = await addCandidate();
+      expect(r.act, FallAct.none);
+      expect((stored().single as Map).containsKey('act'), isFalse);
+    });
+
+    test('beş değer: none, started, cancelled, sent, suppressed (adlarda "sos" geçmez)', () {
+      expect(FallAct.values.map((a) => a.name), ['none', 'started', 'cancelled', 'sent', 'suppressed']);
+    });
+
+    test('setAct kalıcıdır ve geri okunur; başka alan değişmez', () async {
+      final r = await addCandidate();
+      await log.setAct(r, FallAct.started);
+      final again = FallShadowLog(store, now: () => clock);
+      await again.load();
+      expect(again.records.single.act, FallAct.started);
+      expect(again.records.single.peakG, closeTo(r.peakG, 0.01)); // dosya yuvarlar
+      expect(again.records.single.outcome, FallOutcome.candidate);
+    });
+
+    test('art arda güncelleme (started -> cancelled) ELDEKİ ORİJİNAL kayıtla da çalışır', () async {
+      final r = await addCandidate();
+      await log.setAct(r, FallAct.started);
+      await log.setAct(r, FallAct.cancelled); // orijinal referans, nesne yenilenmiş olsa da
+      expect(log.records.single.act, FallAct.cancelled);
+      expect(log.records, hasLength(1));
+    });
+
+    test('aynı etiketi yeniden yazmak depoya tekrar yazmaz', () async {
+      final r = await addCandidate();
+      await log.setAct(r, FallAct.sent);
+      final writes = store.writes;
+      await log.setAct(r, FallAct.sent);
+      expect(store.writes, writes);
+    });
+
+    test('iki farklı aday ayrı etiketlenir', () async {
+      clock = DateTime(2026, 9, 30, 12);
+      final a = await addCandidate();
+      clock = DateTime(2026, 9, 30, 12, 5);
+      final b = await addCandidate();
+      await log.setAct(a, FallAct.cancelled);
+      await log.setAct(b, FallAct.sent);
+      expect(log.records.map((r) => r.act), [FallAct.cancelled, FallAct.sent]);
+    });
+
+    test('kayıt budandıysa ya da silindiyse etiket sessizce atlanır', () async {
+      final r = await addCandidate();
+      await log.clear();
+      await log.setAct(r, FallAct.cancelled);
+      expect(log.records, isEmpty);
+    });
+
+    test('ESKİ satırlar (act yok) none okunur; tanınmayan act de none, satır atılmaz', () async {
+      store.content = jsonEncode([
+        {'at': clock.millisecondsSinceEpoch, 'src': 'phone_imu', 'out': 'candidate', 'ffMs': 300, 'peakG': 3.4, 'deg': 80.0, 'std': 0.02},
+        {'at': clock.millisecondsSinceEpoch, 'src': 'phone_imu', 'out': 'candidate', 'ffMs': 310, 'peakG': 3.5, 'deg': 80.0, 'std': 0.02, 'act': 'bilinmeyen'},
+        {'at': clock.millisecondsSinceEpoch, 'src': 'phone_imu', 'out': 'candidate', 'ffMs': 320, 'peakG': 3.6, 'deg': 80.0, 'std': 0.02, 'act': 'sent'},
+      ]);
+      await log.load();
+      expect(log.records.map((r) => r.act), [FallAct.none, FallAct.none, FallAct.sent]);
+    });
+
+    test('add (bool) ve addRecord aynı kuralı izler: darbesiz düşüş null/false', () async {
+      expect(await log.addRecord(eval(FallOutcome.noImpact), source: 'phone_imu'), isNull);
+      expect(await log.add(eval(FallOutcome.noImpact), source: 'phone_imu'), isFalse);
+      expect(log.records, isEmpty);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'fall_act.dart';
 import 'fall_detector.dart';
 
 /// Gölge kaydının tek satırı (Faz 7c). **Yalnızca** zaman, kaynak, sonuç ve
@@ -21,6 +22,11 @@ class FallShadowRecord {
   final double? orientationDegrees;
   final double? stillnessStdG;
 
+  /// Açık modda adaya ne yapıldı (karar 10). Gölge/kapalı modda ve eski
+  /// satırlarda [FallAct.none]. Bir iptal, gerçek dünyadaki en güçlü yanlış
+  /// pozitif etiketidir; eşik ayarında kullanılır.
+  final FallAct act;
+
   const FallShadowRecord({
     required this.at,
     required this.source,
@@ -29,7 +35,28 @@ class FallShadowRecord {
     required this.peakG,
     this.orientationDegrees,
     this.stillnessStdG,
+    this.act = FallAct.none,
   });
+
+  /// Aynı olay mı (etiket hariç tüm alanlar). Kayıtlar sabit olduğu için
+  /// etiket güncellenince nesne yenilenir; eşleştirme bununla yapılır.
+  bool sameEventAs(FallShadowRecord other) =>
+      at == other.at &&
+      source == other.source &&
+      outcome == other.outcome &&
+      freeFallMs == other.freeFallMs &&
+      peakG == other.peakG;
+
+  FallShadowRecord withAct(FallAct act) => FallShadowRecord(
+        at: at,
+        source: source,
+        outcome: outcome,
+        freeFallMs: freeFallMs,
+        peakG: peakG,
+        orientationDegrees: orientationDegrees,
+        stillnessStdG: stillnessStdG,
+        act: act,
+      );
 
   factory FallShadowRecord.fromEvaluation(FallEvaluation e, {required DateTime at, required String source}) =>
       FallShadowRecord(
@@ -52,6 +79,8 @@ class FallShadowRecord {
         'peakG': _round(peakG, 2),
         'deg': orientationDegrees == null ? null : _round(orientationDegrees!, 1),
         'std': stillnessStdG == null ? null : _round(stillnessStdG!, 3),
+        // `none` yazılmaz: gölge satırları 7c-1'dekiyle aynı kalır.
+        if (act != FallAct.none) 'act': act.name,
       };
 
   /// Bozuk ya da tanınmayan satır için null (atlanır, uygulama durmaz).
@@ -67,6 +96,8 @@ class FallShadowRecord {
     if (at is! int || src is! String || out == null || ff is! int || peak is! num) return null;
     if (deg != null && deg is! num) return null;
     if (std != null && std is! num) return null;
+    // Eski satırlarda `act` yok; tanınmayan değer de `none` sayılır (satır atılmaz).
+    final act = FallAct.values.asNameMap()[json['act']] ?? FallAct.none;
     return FallShadowRecord(
       at: DateTime.fromMillisecondsSinceEpoch(at),
       source: src,
@@ -75,6 +106,7 @@ class FallShadowRecord {
       peakG: peak.toDouble(),
       orientationDegrees: (deg as num?)?.toDouble(),
       stillnessStdG: (std as num?)?.toDouble(),
+      act: act,
     );
   }
 
@@ -156,17 +188,37 @@ class FallShadowLog extends ChangeNotifier {
   Future<void> load() => _serial(_ensureLoaded);
 
   /// Değerlendirmeyi kaydeder. Darbe adımına ulaşmadıysa yazmaz, false döner.
-  Future<bool> add(FallEvaluation e, {required String source}) {
-    if (!e.outcome.reachedImpact) return Future.value(false);
-    return _serial(() async {
+  Future<bool> add(FallEvaluation e, {required String source}) async =>
+      await addRecord(e, source: source) != null;
+
+  /// [add] gibi, ama eklenen kaydı döndürür (yazılmadıysa null). Açık modda
+  /// kaydın sonradan [setAct] ile etiketlenebilmesi için.
+  Future<FallShadowRecord?> addRecord(FallEvaluation e, {required String source}) {
+    if (!e.outcome.reachedImpact) return Future.value(null);
+    return _serial<FallShadowRecord?>(() async {
       await _ensureLoaded();
-      _records.add(FallShadowRecord.fromEvaluation(e, at: _now(), source: source));
+      final record = FallShadowRecord.fromEvaluation(e, at: _now(), source: source);
+      _records.add(record);
       _prune();
       await _persist();
       notifyListeners();
-      return true;
+      return record;
     });
   }
+
+  /// [record]'un etiketini ([FallAct]) günceller. Kayıt bu arada budandıysa
+  /// ya da silindiyse sessizce bir şey yapmaz. Yalnızca etiket değişir:
+  /// konum ve ham veri hiçbir zaman yazılmaz.
+  Future<void> setAct(FallShadowRecord record, FallAct act) => _serial(() async {
+        await _ensureLoaded();
+        // Eşleştirme olay alanlarıyla (etiket hariç): ilk güncellemeden sonra
+        // kayıt nesnesi yenilenir, eldeki orijinal referans `identical` olmaz.
+        final i = _records.indexWhere((r) => r.sameEventAs(record));
+        if (i < 0 || _records[i].act == act) return;
+        _records[i] = _records[i].withAct(act);
+        await _persist();
+        notifyListeners();
+      });
 
   /// Tüm kaydı siler (Test Modu "Kayıtları sil").
   Future<void> clear() => _serial(() async {

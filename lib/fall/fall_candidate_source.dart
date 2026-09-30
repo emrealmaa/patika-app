@@ -7,6 +7,10 @@ import 'fall_detector.dart';
 import 'motion_sample.dart';
 import 'motion_source.dart';
 
+/// Test Modu'nun sentetik düğmelerinin kaynak adı. Bu kaynak açık modda da
+/// **asla** gerçek eyleme bağlanmaz (karar 11); köprü bu adı ayrıca süzer.
+const fallSyntheticSourceId = 'synthetic';
+
 /// Düşme değerlendirmelerinin kaynağı (Faz 7c). Kayıt ve (7c-2'de) SOS
 /// bağlantısı yalnızca bu arayüzü bilir; değerlendirmenin nereden geldiğini
 /// bilmez.

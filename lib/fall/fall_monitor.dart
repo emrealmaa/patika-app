@@ -12,9 +12,9 @@ import 'fall_shadow_log.dart';
 /// işareti çalar. **Başka hiçbir şey yapmaz.**
 ///
 /// Bu sınıfın SOS'la hiçbir bağlantısı yoktur: `SosController` ya da herhangi
-/// bir SOS türü bu dosyada içe aktarılmaz, kurucuda alınmaz. Düşme algılamanın
-/// SOS'a bağlanması 7c-2'nin işidir (ve [FallMode]'da `on` değeri olmadan
-/// mümkün değildir). `fall_monitor_test.dart` bunu kilitler.
+/// bir SOS türü bu dosyada içe aktarılmaz, kurucuda alınmaz. `on` modunda
+/// yalnızca [candidates] akışını yayınlar; o akışı dinleyip geri sayım
+/// başlatan köprü `lib/sos/` altındadır. `fall_monitor_test.dart` bunu kilitler.
 class FallMonitor extends ChangeNotifier {
   final FallCandidateSource _source;
   final FallShadowLog log;
@@ -22,6 +22,8 @@ class FallMonitor extends ChangeNotifier {
   /// Test ses işaretini çalar (aday oluşunca). Null ise hiç çalmaz.
   final void Function()? _playCandidateEarcon;
   final bool Function() _earconEnabled;
+
+  final _candidates = StreamController<FallCandidate>.broadcast();
 
   StreamSubscription<FallEvaluation>? _sub;
   FallMode _mode = FallMode.off;
@@ -45,6 +47,11 @@ class FallMonitor extends ChangeNotifier {
 
   FallMode get mode => _mode;
 
+  /// Düşme adayları: **yalnızca `on` modunda** ve yalnızca `candidate`
+  /// sonucunda yayınlanır. Kayıt yazımından bağımsızdır (yazma hatası aday
+  /// akışını etkilemez).
+  Stream<FallCandidate> get candidates => _candidates.stream;
+
   /// Gölge modu istendi ama cihazda ivmeölçer yok / açılamadı.
   bool get sensorUnavailable => _sensorUnavailable;
 
@@ -54,7 +61,7 @@ class FallMonitor extends ChangeNotifier {
   /// Bu oturumda görülen örnek kesintisi sayısı (telefon testi).
   int get gapCount => _source.gapCount;
 
-  /// Modu uygular: `shadow` kaynağı başlatır, `off` durdurur. Art arda
+  /// Modu uygular: `shadow` ve `on` kaynağı başlatır, `off` durdurur. Art arda
   /// çağrılar sırayla işlenir.
   Future<void> setMode(FallMode mode) {
     _tail = _tail.then((_) => _apply(mode));
@@ -68,10 +75,10 @@ class FallMonitor extends ChangeNotifier {
       case FallMode.off:
         _sensorUnavailable = false;
         await _source.stop();
-      case FallMode.shadow:
+      case FallMode.shadow || FallMode.on:
         final ok = await _source.start();
-        // Başlatma sürerken mod değiştiyse eski kararı uygulama.
-        if (_mode != FallMode.shadow) {
+        // Başlatma sürerken mod kapatıldıysa eski kararı uygulama.
+        if (!_mode.runsSensor) {
           await _source.stop();
         } else {
           _sensorUnavailable = !ok;
@@ -88,13 +95,20 @@ class FallMonitor extends ChangeNotifier {
 
   void _onEvaluation(FallEvaluation e) {
     // Mod kapalıyken (durdurma ile son paket arasındaki yarış) hiçbir şey yazılmaz.
-    if (_disposed || _mode != FallMode.shadow) return;
+    if (_disposed || !_mode.runsSensor) return;
     if (!e.outcome.reachedImpact) {
       noImpactCount++;
       notifyListeners();
       return;
     }
-    unawaited(log.add(e, source: _source.sourceId));
+    // Kayıt başlatılır (beklenmez), aday akışı hemen yayınlanır: yazma yavaş ya
+    // da hatalı olsa da aday gecikmez/kaybolmaz. Aday, kaydının Future'ını
+    // taşır: açık mod sonradan etiketler (iptal/gönderim).
+    final recorded = log.addRecord(e, source: _source.sourceId);
+    if (e.outcome == FallOutcome.candidate && _mode == FallMode.on) {
+      _candidates.add(FallCandidate(source: _source.sourceId, evaluation: e, record: recorded));
+    }
+    unawaited(recorded);
     if (e.outcome == FallOutcome.candidate && _earconEnabled()) {
       _playCandidateEarcon?.call();
     }
@@ -105,7 +119,21 @@ class FallMonitor extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _sub?.cancel();
+    unawaited(_candidates.close());
     unawaited(_source.stop());
     super.dispose();
   }
+}
+
+/// `on` modunda oluşan bir düşme adayı. Yalnızca kaynak adı ve değerlendirme
+/// özeti taşır (konum ve ham örnek yok).
+class FallCandidate {
+  final String source;
+  final FallEvaluation evaluation;
+
+  /// Bu adayın gölge kaydı (yazıldığında tamamlanır; yazılamadıysa null).
+  /// Testlerde ve kayıtsız kullanımda null olabilir.
+  final Future<FallShadowRecord?>? record;
+
+  const FallCandidate({required this.source, required this.evaluation, this.record});
 }

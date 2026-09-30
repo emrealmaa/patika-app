@@ -29,6 +29,7 @@ import 'commands/handlers/call_handler.dart';
 import 'commands/handlers/message_handler.dart';
 import 'commands/handlers/crossing_mode_handler.dart';
 import 'commands/handlers/emergency_contact_handler.dart';
+import 'commands/handlers/fall_handler.dart';
 import 'commands/handlers/message_history_handler.dart';
 import 'commands/handlers/navigation_handler.dart';
 import 'commands/handlers/navigation_control_handler.dart';
@@ -43,10 +44,17 @@ import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'commands/voice_intent_classifier.dart';
 import 'contacts/alias_store.dart';
+import 'fall/fall_act.dart';
 import 'fall/fall_candidate_source.dart';
+import 'fall/fall_consent_store.dart';
+import 'fall/fall_enable_session.dart';
 import 'fall/fall_mode.dart';
 import 'fall/fall_detector.dart';
 import 'fall/fall_monitor.dart';
+import 'fall/fall_open_gate.dart';
+import 'fall/fall_open_text.dart';
+import 'fall/fall_open_state.dart';
+import 'fall/fall_settings_controller.dart';
 import 'fall/fall_shadow_log.dart';
 import 'fall/synthetic_signals.dart';
 import 'fall/motion_source.dart';
@@ -70,6 +78,7 @@ import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
 import 'sos/emergency_contacts.dart';
 import 'sos/emergency_number.dart';
+import 'sos/fall_sos_bridge.dart';
 import 'sos/feedback_sos_announcer.dart';
 import 'sos/sos_call_monitor.dart';
 import 'sos/sos_config.dart';
@@ -78,6 +87,7 @@ import 'sos/sos_delivery.dart';
 import 'sos/sos_permissions.dart';
 import 'tutorial/tutorial.dart';
 import 'voice/dialog_manager.dart';
+import 'voice/dialogs/emergency_contact_flow.dart';
 import 'voice/speech_input_service.dart';
 import 'voice/voice_controller.dart';
 
@@ -166,6 +176,29 @@ class AppState extends ChangeNotifier implements ControlActions {
   late final FallShadowLog fallLog;
   late final FallMonitor fall;
 
+  /// Açık moda iki adımlı geçiş (Faz 7c-2): ekran ve sesli diyalog AYNI
+  /// oturumu paylaşır (kanal kilidi ve süre tek yerde). Açık modun SOS'a
+  /// bağlantısı [_fallBridge]'dedir; bu iki alan hiçbir şey tetiklemez.
+  late final FallEnableSession fallEnable;
+  late final FallSettingsController fallSettings;
+  late final FallOpenState _fallOpenState;
+  late final FallConsentStore _fallConsent;
+  late final FallOpenModeGate _fallGate;
+  late final FallShadowTracker _fallTracker;
+  FallSosBridge? _fallBridge;
+
+  /// Açık mod bu oturumda SİLAHLI mı: kapılar doğrulandı ve kullanıcı açtı
+  /// (ya da açılışta kapılar yeniden doğrulandı). Ayar dosyasındaki `on` tek
+  /// başına yetmez; silahlı değilse köprü hiçbir şey tetiklemez.
+  bool _fallArmed = false;
+  bool _fallVerifying = false;
+  bool _fallRecheck = false;
+
+  /// Bir önceki etkin düşme modu: `on`'dan çıkışı yakalamak için (onay silinir).
+  /// Başlangıçta null: ayarlar henüz yüklenmeden çalışan ilk geçiş (varsayılan
+  /// mod) kayıtlı onayı silmesin.
+  FallMode? _lastFallMode;
+
   /// Test Modu'nun sentetik düğmeleri için AYRI kaynak ve monitör: sentetik
   /// örnekler gerçek sensör akışına karışmaz (zaman eksenleri çakışır); kayda
   /// `synthetic` kaynak adıyla girer. Gerçek modun kapalı olması bunu
@@ -232,6 +265,10 @@ class AppState extends ChangeNotifier implements ControlActions {
     BatteryMonitor? batteryMonitor,
     FallCandidateSource? fallSource,
     FallLogStore? fallLogStore,
+    FallOpenState? fallOpenState,
+    FallConsentStore? fallConsent,
+    ShadowGatePolicy? fallShadowGatePolicy,
+    DateTime Function()? fallNow,
     bool autoStart = true,
   })  : settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
@@ -305,6 +342,28 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.emergencyContacts = emergencyContacts ?? SecureFileEmergencyContactStore();
     final ensureSms =
         ensureSmsPermission ?? () => permissions.ensure(Permission.sms, Tr.smsPermissionWhy);
+
+    // Açık moda iki adımlı geçiş (Faz 7c-2): kapılar + oturum. Ekran (Ayarlar)
+    // ve sesli diyalog AYNI oturumu kullanır; kanal kilidi ve süre tek yerde.
+    _fallOpenState = fallOpenState ?? SharedPrefsFallOpenState();
+    _fallConsent = fallConsent ?? MethodChannelFallConsentStore();
+    _fallTracker = FallShadowTracker(_fallOpenState);
+    final fallSmsPermission = sosPermissions ?? const PermissionHandlerSosPermissions();
+    _fallGate = FallOpenModeGate(
+      directBuild: directActions.isAvailable,
+      contactCount: () async => (await this.emergencyContacts.readAll()).length,
+      hasSmsPermission: fallSmsPermission.hasSms,
+      shadowSince: _fallOpenState.shadowSince,
+      policy: fallShadowGatePolicy ?? const ShadowGatePolicy.fromDefines(),
+    );
+    fallEnable = FallEnableSession(
+      gate: _fallGate,
+      state: _fallOpenState,
+      consent: _fallConsent,
+      currentMode: _desiredFallMode,
+      setMode: _setFallModeFromUser,
+    );
+
     router = CommandRouter(
       call: CallHandler(
         contacts: resolver,
@@ -334,6 +393,12 @@ class AppState extends ChangeNotifier implements ControlActions {
         ensureSmsPermission: ensureSms,
       ),
       settings: SettingsHandler(this.settings),
+      fall: FallHandler(
+        session: fallEnable,
+        dialogs: dialogs,
+        mode: _desiredFallMode,
+        setMode: _setFallModeFromUser,
+      ),
       control: ControlHandler(this),
       navigation: NavigationHandler(dialogs: dialogs, backend: navigationBackend),
       navigationControl: NavigationControlHandler(navigation),
@@ -378,13 +443,22 @@ class AppState extends ChangeNotifier implements ControlActions {
             permissions: sosPermissions ?? const PermissionHandlerSosPermissions(),
             emergency: emergencyNumber ?? const EmergencyNumber.fromDefines(),
           ),
-      announcer: FeedbackSosAnnouncer(feedback, ensureListening: _ensureSosListening),
+      announcer: FeedbackSosAnnouncer(
+        feedback,
+        ensureListening: _ensureSosListening,
+        // Düşme geri sayımının tekrar duyurusu "iptal" der: konuşurken sessiz
+        // SOS dinlemesi kapatılır (yoksa kendi sesimiz SOS'u iptal edebilirdi).
+        pauseListening: () => voice.cancel(),
+      ),
       getLocation: () => this.locationService.currentPosition(),
       hasLocationPermission: () => this.locationAccess.isGranted(),
       call112Enabled: () => this.settings.value.emergencyCall112,
       // Arama sürerken konuşmamak için ses modunu izler; bitiş doğrulanamazsa
       // hiç konuşulmaz (bkz. AudioModeCallMonitor).
       callMonitor: sosCallMonitor ?? AudioModeCallMonitor(),
+      // Sonuç bildirimi yalnızca bilgi: düşme köprüsü iptali (bastırma) ve
+      // gönderimi (kayıt etiketi) buradan öğrenir. Elle SOS'ları ilgilendirmez.
+      onOutcome: (source, outcome) => _fallBridge?.onSosOutcome(source, outcome),
       // SOS geçmişi işlem geçmişine de yazılır: yalnızca isim ve sonuç durumu.
       onRecord: (text) {
         _addLog(PatikaIntent.sos, null, ActionResult.silentOk(text));
@@ -410,12 +484,33 @@ class AppState extends ChangeNotifier implements ControlActions {
       playCandidateEarcon: () => unawaited(feedback.earcons.play(Earcon.success)),
     )..addListener(notifyListeners);
     _fallSyntheticMotion = SyntheticMotionSource();
-    _fallSyntheticSource = PhoneImuFallCandidateSource(_fallSyntheticMotion, sourceId: 'synthetic');
+    _fallSyntheticSource = PhoneImuFallCandidateSource(_fallSyntheticMotion, sourceId: fallSyntheticSourceId);
     _fallSyntheticMonitor = FallMonitor(
       source: _fallSyntheticSource,
       log: fallLog,
       earconEnabled: () => this.settings.value.fallShadowEarcon,
       playCandidateEarcon: () => unawaited(feedback.earcons.play(Earcon.success)),
+    );
+
+    // Ayarlar ekranının düşme bölümü (Faz 7c-2): durum, gölge anahtarı, açma.
+    fallSettings = FallSettingsController(
+      session: fallEnable,
+      mode: _desiredFallMode,
+      setMode: _setFallModeFromUser,
+      state: _fallOpenState,
+      recordCount: () => fallLog.records.length,
+    );
+    fallLog.addListener(fallSettings.changed);
+    // Düşme adayı -> acil durum köprüsü. YALNIZCA gerçek monitörün akışı
+    // bağlanır; Test Modu'nun sentetik monitörü buraya hiç bağlanmaz (karar 11).
+    _fallBridge = FallSosBridge(
+      candidates: fall.candidates,
+      sos: sos,
+      mode: _desiredFallMode,
+      armed: () => _fallArmed,
+      interruptOrdinary: _interruptForFall,
+      onAct: _labelFallRecord,
+      now: fallNow,
     );
 
     this.settings.addListener(_applySettings);
@@ -472,7 +567,88 @@ class AppState extends ChangeNotifier implements ControlActions {
     _speech.configure(rate: s.speechRate, pitch: s.pitch);
     final fallMode = effectiveFallMode(s.fallMode);
     if (fallMode != fall.mode) unawaited(fall.setMode(fallMode));
+    // Gölge süresi kesintisiz sayılır: kapalıya düşünce sıfırlanır.
+    unawaited(_fallTracker.onModeChanged(fallMode));
+    // Açık mod yalnızca silahlıyken işe yarar. Mod açık değilse silah düşer;
+    // açıksa ve silahlı değilse (ör. ayar dosyasından geldi) kapılar yeniden
+    // doğrulanır, doğrulanmadan köprü hiçbir şey tetiklemez.
+    if (fallMode != FallMode.on) {
+      _fallArmed = false;
+      // Açık moddan çıkınca bu cihazdaki onay silinir: yeniden açmak yeniden
+      // iki adım ister. (İlk geçişte [_lastFallMode] null: ayarlar yüklenmeden
+      // çalışan varsayılan geçiş kayıtlı onayı silmesin.)
+      if (_lastFallMode == FallMode.on) unawaited(_fallConsent.revoke());
+    } else if (!_fallArmed) {
+      unawaited(_enforceOpenMode());
+    }
+    _lastFallMode = fallMode;
+    fallSettings.changed();
     notifyListeners();
+  }
+
+  /// Açık modda bir adaya yapılan eylem gölge kaydına etiket olarak yazılır
+  /// (karar 10): iptal, gerçek dünyadaki en güçlü yanlış pozitif verisidir.
+  /// Kayıt henüz yazılmadıysa yazılınca; yazılamadıysa sessizce atlanır.
+  void _labelFallRecord(FallCandidate candidate, FallAct act) {
+    final recorded = candidate.record;
+    if (recorded == null) return;
+    unawaited(recorded.then((r) => r == null ? null : fallLog.setAct(r, act)));
+  }
+
+  /// Açık moda istenen (ayarlardaki) mod; izleyici ([fall]) sensörü
+  /// asenkron uyguladığı için ondan geri kalabilir.
+  FallMode _desiredFallMode() => effectiveFallMode(settings.value.fallMode);
+
+  /// Ekranın, sesli komutun ve oturumun modu değiştirme yolu. `on` yalnızca
+  /// oturum (uyarı + onay + kapılar) üzerinden gelir; silah burada kurulur
+  /// ([_applySettings] çalışmadan ÖNCE, yoksa açık mod silahsız görünürdü).
+  Future<void> _setFallModeFromUser(FallMode mode) async {
+    _fallArmed = mode == FallMode.on;
+    await settings.update(settings.value.copyWith(fallMode: mode));
+  }
+
+  /// Açık modun koşulları hâlâ geçerli mi: bu cihazda onay var VE kapılar
+  /// tutuyor (acil kişi, SMS izni, gölge süresi). Geçerliyse silahlanır.
+  /// **Geçmiyorsa mod KENDİLİĞİNDEN gölgeye düşer ve bu SESLE söylenir**
+  /// (karar 4: sessiz kopma yok). Şu durumlarda çağrılır: açılışta ayar
+  /// dosyasından `on` gelince, son acil kişi silinince.
+  Future<void> _enforceOpenMode() async {
+    if (_fallVerifying) {
+      _fallRecheck = true; // süren denetim bitince bir kez daha bak
+      return;
+    }
+    _fallVerifying = true;
+    try {
+      do {
+        _fallRecheck = false;
+        if (_desiredFallMode() != FallMode.on) return;
+        final consented = await _fallConsent.granted();
+        final gate = await _fallGate.check();
+        if (_desiredFallMode() != FallMode.on) return; // bu arada değişti
+        if (consented && gate.open) {
+          _fallArmed = true;
+          continue;
+        }
+        _fallArmed = false;
+        await settings.update(settings.value.copyWith(fallMode: FallMode.shadow));
+        // Kapı nedeni varsa o söylenir; yalnızca onay yoksa (yedekten/başka
+        // cihazdan geldi) yeniden onay istenir.
+        final text = gate.open ? Tr.fallOpenNeedsReconfirm : Tr.fallOpenDropped(fallOpenBlockText(gate));
+        unawaited(feedback.say(text, priority: AnnouncementPriority.high, dedupe: false));
+      } while (_fallRecheck);
+    } finally {
+      _fallVerifying = false;
+    }
+  }
+
+  /// Düşme geri sayımı başlamadan önce SIRADAN diyalog ve dinleme kesilir
+  /// (gerçek düşme o sırada olabilir). Diyalog sessizce biter; açık mikrofon
+  /// oturumu da kapatılır, yoksa geri sayımdaki sesli "iptal" dinlemesi
+  /// ([VoiceController.listenForSos]) açılamazdı. Süren SOS'u kesmek köprünün
+  /// işi değil: köprü onu hiç çağırmaz.
+  Future<void> _interruptForFall() async {
+    dialogs.cancel(null);
+    await voice.cancel();
   }
 
   /// Test Modu: sentetik düşme senaryosunu çalıştırır ve biten değerlendirmeleri
@@ -839,8 +1015,12 @@ class AppState extends ChangeNotifier implements ControlActions {
     _record(command.intent, command.entity, result);
   }
 
-  void _onDialogFinished(DialogFlow flow, ActionResult result) =>
-      _record(flow.intent, flow.entityLabel, result);
+  void _onDialogFinished(DialogFlow flow, ActionResult result) {
+    _record(flow.intent, flow.entityLabel, result);
+    // Bir acil kişi silindiyse açık modun kapıları yeniden denetlenir: son
+    // kişi gittiyse mod gölgeye düşer ve bu söylenir.
+    if (flow is EmergencyContactRemoveFlow && result.success) unawaited(_enforceOpenMode());
+  }
 
   void _addLog(PatikaIntent intent, String? entity, ActionResult result) {
     log.insert(
@@ -900,6 +1080,11 @@ class AppState extends ChangeNotifier implements ControlActions {
     _batteryTimer?.cancel();
     sos.status.removeListener(_flushBattery);
     sos.status.removeListener(notifyListeners);
+    _fallBridge?.dispose();
+    _fallBridge = null;
+    fallEnable.cancel();
+    fallLog.removeListener(fallSettings.changed);
+    fallSettings.dispose();
     sos.dispose();
     fall.dispose();
     _fallSyntheticMonitor.dispose();

@@ -74,7 +74,9 @@ String describeStatus(StatusSnapshot s) {
     ],
     // Yalnızca mod kapalı değilse (Faz 7c kararı 2).
     if (s.fallMode == FallMode.shadow)
-      s.fallSensorUnavailable ? Tr.statusFallShadowNoSensor : Tr.statusFallShadow,
+      s.fallSensorUnavailable ? Tr.statusFallShadowNoSensor : Tr.statusFallShadow
+    else if (s.fallMode == FallMode.on)
+      s.fallSensorUnavailable ? Tr.statusFallOnNoSensor : Tr.statusFallOn,
   ];
   return parts.join('. ');
 }

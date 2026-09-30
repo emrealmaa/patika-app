@@ -34,8 +34,9 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 
 ## Nerede kaldık (2026-09-30)
 
-**Bitenler** (7c-1 dahil hepsi commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
-`849bcce`, 7c-1 `a4c49b5`; 701 test):
+**Bitenler** (7c-1'e kadar commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
+`849bcce`, 7c-1 `a4c49b5`; 7c-2 kodlandı, tek pakette commit'lenecek;
+903 test):
 
 | Faz | İçerik |
 |---|---|
@@ -50,7 +51,8 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 6 | Navigasyon: saf mantık (6a), konum servisi + `NavigationSession` + karşıya geçiş duraklaması (6b), Google Routes/Places + `NavigationFlow` (6c) |
 | 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
 | 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
-| 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; SOS'a bağlantısı YOK (testle kilitli). Commit'li ve push'lu (`a4c49b5`) |
+| 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; gölge modunda SOS'a bağlantı YOK (testle kilitli). Commit'li ve push'lu (`a4c49b5`) |
+| 7c-2 | Düşme algılama **açık mod** (deneysel, opt-in): iki adımlı açma (`FallEnableSession`; ses + ekran aynı oturum), kapılar, cihaza özgü onay (`FallOpenConsentStorage.kt`), guard (kapı bozulursa gölgeye düşer ve söyler), `FallSosBridge` (bastırma, süren SOS'u kesmez, diyalog kesme), `SosController.onOutcome`, tekrar duyuru (kalan 15/5 sn), `act` kayıt etiketi, Ayarlar bölümü, sesli komutlar, "durum" cümlesi; plan ve sapmalar: `docs/fall_open_mode_plan.md` §10; telefon listesi: `docs/fall_open_mode_phone_checklist.md`. Kodlandı, commit'lenmedi |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
@@ -97,6 +99,26 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   (acil kişi listesiyle aynı yöntem, bkz. Faz 7 kararları madde 13) ve
   "Kayıtları sil"in dosyayı gerçekten sildiği; geçici dosyaya yazıp
   yeniden adlandırma Samsung dosya sisteminde sorunsuz mu.
+- [ ] **Faz 7c-2 (açık mod) - diyalog kesme ve mikrofon:** düşme adayı
+  sırasında **sıradan bir diyalog ya da dinleme oturumu** açıksa
+  (`AppState._interruptForFall`: `dialogs.cancel(null)` + `voice.cancel()`):
+  (a) mikrofon gerçekten kapanıyor mu, geri sayımda sesli "iptal"
+  (`listenForSos`) bundan sonra duyuluyor mu (kapanmazsa dinleme oturumu
+  "iptal"i normal komut sayar, SOS'u iptal etmez); (b) o sırada kısa
+  "Dinleme iptal edildi" bildirimi geliyor mu, geri sayım girişini
+  bozuyor/uzatıyor mu; (c) Bluetooth kulaklık/gözlükle aynı davranış.
+- [ ] **Faz 7c-2 (açık mod) - cihaza özgü onay:** açık moda geçiş onayı
+  `noBackupFilesDir`'deki bir dosyada tutulur (yedekten ve cihaz aktarımından
+  GELMEZ). Başka/yeni cihaza yedekten dönüşte ayarlarda `on` görünse bile
+  açık modun **silahlanmadığı**, gölgeye düşüp sesle söylendiği ve yeniden
+  iki adımlı onay istendiği doğrulanacak (gerçek `adb backup`/Google yedeği
+  ya da "Switch"). Ayrıca uygulama verisi silinince onayın da gittiği.
+- [ ] **Faz 7c-2 (açık mod) - uçtan uca:** debug derlemesinde
+  `--dart-define=PATIKA_FALL_SKIP_SHADOW_GATE=true` ve ikinci numarayla
+  (asla gerçek 112 değil), gerçek düşme benzeri hareketle: 25 sn geri sayım,
+  "15 saniye kaldı"/"5 saniye kaldı" duyuruları, sesli/gözlük/ekran iptali,
+  iptalden sonra 2 dk bastırma, gönderim, "durum" cümlesi. Sentetik düğmeler
+  açık modda hiçbir şey göndermemeli.
 
 - [ ] **YÜKSEK ÖNCELİK - gözlük SoftAP'ına bağlıyken telefonun internet
   erişimi.** SoftAP internetsizdir; Android buna bağlanınca mobil veriyi
@@ -257,17 +279,14 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 
 ## Sıradaki
 
-1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a-1 (SOS mantığı), 7a-2
-   (uygulamaya bağlama) ve 7a-3 (acil kişi kurulumu: sesle ekle/sil/liste,
-   izin akışı kurulum sırasında, isteğe bağlı rıza SMS'i) kodlandı; SOS
-   çekirdeği (7a) tamamlandı. 7b (pil + durum) bitti, push'lu. 7c:
-   kararlar alındı ("Faz 7c kararları"); 7c-1 (yalnızca gölge modu)
-   kodlandı, `a4c49b5` push'landı; sırada 7c-1 telefon testi. Sonra 7c-2
-   (açık mod + SOS'a bağlama, iki adımlı açma) - ÖNCE gölge verisi
-   toplanmalı (en az bir hafta).
-   7c-2 keşfi ve kararları: `docs/fall_open_mode_plan.md` (altı karar
-   verildi, kalanlar açık); kodlama 7c-1 telefon testini (wake-up sensör)
-   bekliyor. Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
+1. Faz 6 kodlandı (6a, 6b, 6c commit'li). Faz 7: 7a (SOS çekirdeği) ve 7b
+   (pil + durum) bitti, push'lu. 7c (düşme algılama): 7c-1 (gölge modu)
+   `a4c49b5` ile push'landı; **7c-2 (açık mod) kodlandı, commit onayı
+   bekliyor** ("Faz 7c-2 kararları"). Sırada: 7c-1 + 7c-2 telefon testleri
+   (özellikle sensör kesintisi, diyalog/mikrofon kesme, cihaza özgü onay);
+   açık mod kullanıcıya ANCAK gölge verisi (en az bir hafta) toplandıktan
+   ve eşikler ayarlandıktan sonra sunulur. Sonra Faz 8 (ilk şartnameye
+   göre). Faz 5 iptal edildi (aşağıda).
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
@@ -554,6 +573,46 @@ bağlama.
    edilen bir düşme adayından sonra **2 dakikalık bastırma** (yeni aday
    SOS tetiklemez, gölge kaydına yine yazılır) + geri sayım sırasında **10
    sn'de bir tekrarlanan** sesli geri sayım duyurusu.
+
+## Faz 7c-2 kararları (düşme algılama açık mod; geçerli, tekrar tartışma)
+
+Ayrıntı ve sapmalar: `docs/fall_open_mode_plan.md` §8 ve §10.
+
+1. **İki adımlı açma, tek çekirdek** (`FallEnableSession`): adım 1 kapıları
+   denetler ve uyarıyı okutur, modu AÇMAZ; adım 2 yalnızca adım 1'in
+   kanalından (ses / ekran) ve 120 sn içinde kabul edilir; kapılar onay
+   anında yeniden denetlenir. Sesli onay yalnızca tüm cümle "anladım aç",
+   "anladım, aç", "kabul ediyorum aç", "onaylıyorum aç" (tek başına "aç",
+   "evet" açmaz). Tam uyarı yalnızca "anladım, aç" ile duyulduktan sonra
+   kısa hatırlatmaya döner. Ekranda TalkBack varsa yalnızca TalkBack, yoksa
+   TTS okur.
+2. **Kapılar:** `direct` derleme, en az 1 acil kişi, SMS izni, gölge en az
+   7 gün KESİNTİSİZ (gölge→kapalıda sayaç sıfırlanır). Debug'da 7 gün kapısı
+   `PATIKA_FALL_SKIP_SHADOW_GATE=true` ile atlanır; release'te imkânsız; iz
+   bırakır (log + ekran/ses notu).
+3. **Silah ve cihaza özgü onay:** ayar dosyasındaki `on` tek başına
+   tetiklemez. Onay `noBackupFilesDir` dosyasındadır (yedekten gelmez);
+   açılışta `on` + onay yok ya da kapı bozuk ise (ya da son acil kişi
+   silinince) mod KENDİLİĞİNDEN gölgeye düşer ve SESLE söylenir. **Sessiz
+   kopma yok** (kritik). Onay kaydı yazılamazsa açılmaz.
+4. **Köprü** (`lib/sos/fall_sos_bridge.dart`, `SosSource.fall` ile tetikleme
+   yalnızca burada): sentetik kaynak asla; iptal anından **2 dk bastırma**
+   (bellekte, yalnızca düşme kaynaklı, elle SOS etkilenmez); süren SOS/arama
+   KESİLMEZ (aday `suppressed`); sıradan diyalog ve açık mikrofon oturumu
+   kesilir; 112 teklifi Faz 7 madde 5 aynen.
+5. **Tekrar duyuru:** düşme geri sayımında kalan 15 ve 5 sn'de "N saniye
+   kaldı, iptal için iptal deyin". Konuşurken mikrofon KAPATILIR (kendi
+   sesimiz SOS'u iptal etmesin), bitince yeniden açılır.
+6. **Kayıt etiketi `act`:** `none`/`started`/`cancelled`/`sent`/`suppressed`
+   (`sos_started` değil: `lib/fall/` "sos" kelimesi taraması). Konum ve ham
+   veri yine yok.
+7. **Kapatma:** sesli "düşme algılamayı kapat" ve gölge anahtarı TAM kapatır;
+   ekrandaki "Açık modu kapat (gölge modu sürer)" yalnızca gölgeye düşürür.
+   Uyarı metninde "güvenli" gibi güvence yok; "Patika acil durum servisi
+   değildir" var.
+8. **Varsayılan, doğrulanmamış:** sensör uyandırmayan (non-wake-up) kalır;
+   telefon testinde kesinti çıkarsa wake-up/wakelock ayrı düzeltme.
+   **EŞİKLER hâlâ tahminidir.**
 
 ## Faz 4b kararları (geçerli, tekrar tartışma)
 

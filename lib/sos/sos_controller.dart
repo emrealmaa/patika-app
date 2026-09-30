@@ -55,6 +55,20 @@ enum SosTriggerResult {
   blocked,
 }
 
+/// Bir SOS'un sonu, dışarıya bildirilir (yalnızca bilgi; SOS davranışını
+/// değiştirmez). Düşme köprüsü bunu kayıt etiketi ve bastırma için kullanır.
+enum SosOutcome {
+  /// Geri sayımda iptal edildi.
+  cancelled,
+
+  /// En az bir kanaldan çıktı (en az bir SMS `sent` ya da arama başladı;
+  /// 60 sn sınırını başlatan koşulun aynısı).
+  sent,
+
+  /// Gönderim başladı ama hiçbir kanaldan çıkmadı.
+  failed,
+}
+
 /// Konumun SMS'e girip girmediği (kullanıcıya söylenir).
 enum SosLocation { included, noPermission, unavailable }
 
@@ -151,6 +165,10 @@ class SosController {
   /// Her geçmiş satırı ayrıca buraya da verilir (AppState işlem geçmişine yazar).
   final void Function(String text)? _onRecord;
 
+  /// Geri sayım iptal edilince ya da gönderim bitince çağrılır (kaynağıyla).
+  /// Yalnızca bilgi: hata fırlatsa da SOS etkilenmez.
+  final void Function(SosSource source, SosOutcome outcome)? _onOutcome;
+
   final status = ValueNotifier<SosStatus>(SosStatus.idle);
 
   /// Bellekteki SOS geçmişi, en yeni başta (yalnızca isim ve sonuç durumu).
@@ -184,8 +202,10 @@ class SosController {
     required bool Function() call112Enabled,
     required SosCallMonitor callMonitor,
     void Function(String text)? onRecord,
+    void Function(SosSource source, SosOutcome outcome)? onOutcome,
     DateTime Function()? now,
   })  : _onRecord = onRecord,
+        _onOutcome = onOutcome,
         _delivery = delivery,
         _announcer = announcer,
         _getLocation = getLocation,
@@ -260,6 +280,7 @@ class SosController {
   /// başladıysa false döner ve bu söylenir.
   bool cancel(SosCancelSource by) {
     if (_phase == SosPhase.countdown) {
+      final source = _source ?? SosSource.voice;
       _ticker?.cancel();
       _ticker = null;
       _locationFuture = null;
@@ -270,6 +291,7 @@ class SosController {
         SosCancelSource.glasses => Tr.sosCancelByGlasses,
         SosCancelSource.screen => Tr.sosCancelByScreen,
       }));
+      _notifyOutcome(source, SosOutcome.cancelled);
       return true;
     }
     if (_phase == SosPhase.sending) {
@@ -424,8 +446,18 @@ class SosController {
 
     _setPhase(SosPhase.idle);
     if (anySent || call.placed) _startRateLimit();
+    _notifyOutcome(source, anySent || call.placed ? SosOutcome.sent : SosOutcome.failed);
     if (anySent && location == SosLocation.unavailable) unawaited(_followUpLater());
     unawaited(_afterCall(batch, snapshot, call, location));
+  }
+
+  /// Dışarıya bilgi: çağıranın hatası SOS akışını asla bozmaz.
+  void _notifyOutcome(SosSource source, SosOutcome outcome) {
+    try {
+      _onOutcome?.call(source, outcome);
+    } catch (e) {
+      debugPrint('[SOS] sonuç bildirimi hatası: ${e.runtimeType}');
+    }
   }
 
   /// Arama bitene kadar susar, geç kalan SMS sonuçlarını bekler, gerekiyorsa

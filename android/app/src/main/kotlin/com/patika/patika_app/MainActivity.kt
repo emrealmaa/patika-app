@@ -90,6 +90,7 @@ class MainActivity : FlutterActivity() {
         BatteryProbe(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         EmergencyContactsStorage(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         FallShadowLogStorage(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        FallOpenConsentStorage(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MotionProbe(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->

@@ -41,8 +41,14 @@ void main() {
       expect(effectiveFallMode(null, isDebug: false), FallMode.off);
     });
 
-    test('7c-1\'de yalnızca off ve shadow var: SOS tetikleyen bir mod yok', () {
-      expect(FallMode.values, [FallMode.off, FallMode.shadow]);
+    test('modlar: off, shadow, on; hiçbir varsayılan ya da "seçilmemiş" on olmaz', () {
+      expect(FallMode.values, [FallMode.off, FallMode.shadow, FallMode.on]);
+      expect(defaultFallMode(isDebug: true), isNot(FallMode.on));
+      expect(defaultFallMode(isDebug: false), isNot(FallMode.on));
+      expect(effectiveFallMode(null, isDebug: true), isNot(FallMode.on));
+      expect(FallMode.off.runsSensor, isFalse);
+      expect(FallMode.shadow.runsSensor, isTrue);
+      expect(FallMode.on.runsSensor, isTrue);
     });
   });
 
@@ -62,10 +68,16 @@ void main() {
       expect(back, s);
     });
 
-    test('tanınmayan mod değeri "seçilmemiş" sayılır (asla SOS modu değil)', () {
-      final back = Settings.fromJson({'fallMode': 'on', 'fallShadowEarcon': 'evet'});
+    test('tanınmayan mod değeri "seçilmemiş" sayılır', () {
+      final back = Settings.fromJson({'fallMode': 'acik', 'fallShadowEarcon': 'evet'});
       expect(back.fallMode, isNull);
       expect(back.fallShadowEarcon, isFalse);
+    });
+
+    test('kayıtlı "on" okunur; ama tek başına geçerli sayılmaz (açık mod kapı ve onay ister, sonraki adım)', () {
+      // Bilinçli: ayar dosyasındaki "on" kendi başına güvenilmez. Bağlantı
+      // (AppState/köprü) kapıları yeniden denetlemeden açık modu etkinleştirmez.
+      expect(Settings.fromJson({'fallMode': 'on'}).fallMode, FallMode.on);
     });
   });
 
@@ -118,6 +130,82 @@ void main() {
       await monitor.setMode(FallMode.off);
       expect(monitor.running, isFalse);
       expect(motion.hasListener, isFalse);
+    });
+
+    group('açık mod (on): aday akışı', () {
+      late List<FallCandidate> seen;
+      late StreamSubscription<FallCandidate> sub;
+
+      setUp(() {
+        seen = [];
+        sub = monitor.candidates.listen(seen.add);
+      });
+
+      tearDown(() => sub.cancel());
+
+      test('sensör açılır, kayıt yazılır, aday akışa da girer', () async {
+        await monitor.setMode(FallMode.on);
+        expect(monitor.running, isTrue);
+        await feed(SyntheticScenario.realisticFall);
+        expect(log.records.map((r) => r.outcome), [FallOutcome.candidate]);
+        expect(seen, hasLength(1));
+        expect(seen.single.source, 'phone_imu');
+        expect(seen.single.evaluation.outcome, FallOutcome.candidate);
+      });
+
+      test('gölgede aday akışı HİÇ yayınlanmaz (yalnızca kayıt)', () async {
+        await monitor.setMode(FallMode.shadow);
+        await feed(SyntheticScenario.realisticFall);
+        expect(log.records, hasLength(1));
+        expect(seen, isEmpty);
+      });
+
+      test('kapalıyken akış da kayıt da yok', () async {
+        await monitor.setMode(FallMode.off);
+        motion.push(syntheticScenario(SyntheticScenario.realisticFall));
+        await pumpEventQueue();
+        expect(seen, isEmpty);
+        expect(log.records, isEmpty);
+      });
+
+      test('elenen değerlendirmeler (hareket, yön değişimi yok) akışa girmez, yine de kayda girer', () async {
+        await monitor.setMode(FallMode.on);
+        await feed(SyntheticScenario.droppedAndPickedUp);
+        await feed(SyntheticScenario.impactNoOrientationChange);
+        expect(seen, isEmpty);
+        expect(log.records, hasLength(2));
+      });
+
+      test('darbesiz düşüş, yürüme ve sert oturma akışa girmez', () async {
+        await monitor.setMode(FallMode.on);
+        await feed(SyntheticScenario.fallNoImpact);
+        await feed(SyntheticScenario.walking);
+        await feed(SyntheticScenario.hardSit);
+        expect(seen, isEmpty);
+      });
+
+      test('kayıt yazılamasa da aday akışa girer', () async {
+        store.failWrites = true;
+        await monitor.setMode(FallMode.on);
+        await feed(SyntheticScenario.realisticFall);
+        expect(seen, hasLength(1));
+      });
+
+      test('on -> shadow: sensör açık kalır, yeni adaylar akışa girmez', () async {
+        await monitor.setMode(FallMode.on);
+        await monitor.setMode(FallMode.shadow);
+        expect(monitor.running, isTrue);
+        await feed(SyntheticScenario.realisticFall);
+        expect(seen, isEmpty);
+        expect(log.records, hasLength(1));
+      });
+
+      test('on -> off: sensör kapanır', () async {
+        await monitor.setMode(FallMode.on);
+        await monitor.setMode(FallMode.off);
+        expect(monitor.running, isFalse);
+        expect(motion.hasListener, isFalse);
+      });
     });
 
     test('gölge: aday kayda girer, kaynak adıyla', () async {
@@ -357,6 +445,19 @@ void main() {
       final text = describeStatus(const StatusSnapshot(fallMode: FallMode.shadow, fallSensorUnavailable: true));
       expect(text.endsWith(Tr.statusFallShadowNoSensor), isTrue, reason: text);
       expect(text.contains(Tr.statusFallShadow), isFalse);
+    });
+
+    test('açık modda tek cümle eklenir, en sonda ("açık, deneysel")', () {
+      final text = describeStatus(const StatusSnapshot(fallMode: FallMode.on));
+      expect(text.endsWith(Tr.statusFallOn), isTrue, reason: text);
+      expect('düşme'.allMatches(text.toLowerCase()), hasLength(1));
+      expect(text.contains(Tr.statusFallShadow), isFalse);
+    });
+
+    test('açık modda sensör açılamadıysa bu söylenir (çalışıyor denmez)', () {
+      final text = describeStatus(const StatusSnapshot(fallMode: FallMode.on, fallSensorUnavailable: true));
+      expect(text.endsWith(Tr.statusFallOnNoSensor), isTrue, reason: text);
+      expect(text.contains(Tr.statusFallOn), isFalse);
     });
 
     test('kapalıyken sensör bayrağı cümleyi değiştirmez', () {

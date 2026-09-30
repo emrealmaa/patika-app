@@ -154,6 +154,13 @@ class Rig {
   EmergencyNumber emergency = const EmergencyNumber(debugTestNumber: testNumber);
   late final SosController controller;
 
+  /// `onOutcome` bildirimleri (kaynak, sonuç) ve hata fırlatma anahtarı.
+  final outcomes = <(SosSource, SosOutcome)>[];
+  bool throwOnOutcome = false;
+
+  /// Ek dinleyici (düşme köprüsü testleri `onSosOutcome`'u buraya bağlar).
+  void Function(SosSource source, SosOutcome outcome)? outcomeSink;
+
   Rig() {
     controller = SosController(
       delivery: DirectSosDelivery(
@@ -170,6 +177,11 @@ class Rig {
       hasLocationPermission: () async => locationPermission,
       call112Enabled: () => call112,
       callMonitor: RigCallMonitor(this),
+      onOutcome: (source, outcome) {
+        outcomes.add((source, outcome));
+        outcomeSink?.call(source, outcome);
+        if (throwOnOutcome) throw StateError('dinleyici bozuk');
+      },
       now: () => DateTime(2026, 9, 28, 14, 5),
     );
   }
@@ -566,6 +578,106 @@ void main() {
             run(async, const Duration(minutes: 2)); // 60 sn sınırını aş
           }
           expect(rig.controller.history.length, SosController.maxHistory);
+          rig.dispose();
+        });
+      });
+    });
+
+    group('sonuç bildirimi (onOutcome; yalnızca bilgi)', () {
+      test('geri sayımda iptal: (kaynak, cancelled) bir kez; gönderim olmaz', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          trigger(rig, async, SosSource.fall);
+          run(async, const Duration(seconds: 3));
+          rig.controller.cancel(SosCancelSource.voice);
+          run(async, const Duration(minutes: 1));
+          expect(rig.outcomes, [(SosSource.fall, SosOutcome.cancelled)]);
+          expect(rig.direct.sms, isEmpty);
+          rig.dispose();
+        });
+      });
+
+      test('gönderim: SMS gitti -> sent (elle SOS da bildirilir, kaynağıyla)', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          trigger(rig, async, SosSource.glasses);
+          run(async, const Duration(seconds: 12));
+          expect(rig.outcomes, [(SosSource.glasses, SosOutcome.sent)]);
+          rig.dispose();
+        });
+      });
+
+      test('düşme kaynağı: 25 sn sonra sent, kaynak fall', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          trigger(rig, async, SosSource.fall);
+          run(async, const Duration(seconds: 24));
+          expect(rig.outcomes, isEmpty, reason: 'geri sayım bitmeden sonuç yok');
+          run(async, const Duration(seconds: 14));
+          expect(rig.outcomes, [(SosSource.fall, SosOutcome.sent)]);
+          rig.dispose();
+        });
+      });
+
+      test('hiçbir kanaldan çıkmadıysa (SMS başarısız, arama yok) failed', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          rig.direct.smsResult = SmsSendStatus.failed;
+          rig.direct.callSucceeds = false;
+          trigger(rig, async, SosSource.fall);
+          run(async, const Duration(seconds: 40));
+          expect(rig.outcomes, [(SosSource.fall, SosOutcome.failed)]);
+          rig.dispose();
+        });
+      });
+
+      test('SMS başarısız ama arama başladıysa sent (60 sn sınırını başlatan koşulun aynısı)', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          rig.direct.smsResult = SmsSendStatus.failed;
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 30)); // hiçbir SMS gitmedi: 112 teklifi penceresi (6 sn) sonrası aranır
+          expect(rig.direct.calls, isNotEmpty);
+          expect(rig.outcomes, [(SosSource.voice, SosOutcome.sent)]);
+          rig.dispose();
+        });
+      });
+
+      test('ön kontrolde takılan SOS (kişi yok) ve sınır: sonuç bildirimi YOK', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          rig.store.remove(ayse.key);
+          rig.store.remove(ali.key);
+          expect(trigger(rig, async, SosSource.fall), SosTriggerResult.blocked);
+          run(async, const Duration(seconds: 40));
+          expect(rig.outcomes, isEmpty);
+          rig.dispose();
+        });
+      });
+
+      test('gönderim başladıktan sonra iptal denemesi bildirim üretmez (too late)', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 7));
+          expect(rig.controller.phase, SosPhase.sending);
+          expect(rig.controller.cancel(SosCancelSource.voice), isFalse);
+          expect(rig.outcomes, isEmpty, reason: 'iptal kabul edilmedi');
+          run(async, const Duration(seconds: 10));
+          expect(rig.outcomes, [(SosSource.voice, SosOutcome.sent)]);
+          rig.dispose();
+        });
+      });
+
+      test('bildirim dinleyicisi hata fırlatsa da SOS ETKİLENMEZ (SMS gider, arama yapılır)', () {
+        fakeAsync((async) {
+          final rig = Rig();
+          rig.throwOnOutcome = true;
+          trigger(rig, async, SosSource.voice);
+          run(async, const Duration(seconds: 12));
+          expect(rig.direct.sms.map((s) => s.$1), [ayse.number, ali.number]);
+          expect(rig.direct.calls, [ayse.number]);
+          expect(rig.controller.phase, SosPhase.idle);
           rig.dispose();
         });
       });

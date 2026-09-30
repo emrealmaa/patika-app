@@ -9,6 +9,7 @@ import '../ble/glasses_protocol.dart';
 import '../battery/phone_battery.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
+import '../fall/fall_act.dart';
 import '../fall/fall_detector.dart';
 import '../fall/fall_mode.dart';
 import '../fall/fall_shadow_log.dart';
@@ -384,6 +385,13 @@ class _FallShadowSectionState extends State<_FallShadowSection> {
       peakG: r.peakG,
       degrees: r.orientationDegrees,
       stillnessStd: r.stillnessStdG,
+      act: switch (r.act) {
+        FallAct.none => null,
+        FallAct.started => Tr.fallActStarted,
+        FallAct.cancelled => Tr.fallActCancelled,
+        FallAct.sent => Tr.fallActSent,
+        FallAct.suppressed => Tr.fallActSuppressed,
+      },
     );
   }
 
