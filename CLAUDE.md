@@ -34,8 +34,8 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 
 ## Nerede kaldık (2026-09-30)
 
-**Bitenler** (7b dahil hepsi commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
-`849bcce`; 601 test):
+**Bitenler** (7c-1 dahil hepsi commit'li ve push'lu; 7b-1 `c4dcafe`, 7b-2
+`849bcce`, 7c-1 `a4c49b5`; 701 test):
 
 | Faz | İçerik |
 |---|---|
@@ -50,7 +50,7 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 6 | Navigasyon: saf mantık (6a), konum servisi + `NavigationSession` + karşıya geçiş duraklaması (6b), Google Routes/Places + `NavigationFlow` (6c) |
 | 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
 | 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
-| 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; SOS'a bağlantısı YOK (testle kilitli). Kodlandı, commit'lenmedi |
+| 7c-1 | Düşme algılama, yalnızca gölge modu (`lib/fall/`, `MotionProbe.kt`, `FallShadowLogStorage.kt`); plan: `docs/fall_detection_plan.md`; SOS'a bağlantısı YOK (testle kilitli). Commit'li ve push'lu (`a4c49b5`) |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
@@ -262,8 +262,9 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
    izin akışı kurulum sırasında, isteğe bağlı rıza SMS'i) kodlandı; SOS
    çekirdeği (7a) tamamlandı. 7b (pil + durum) bitti, push'lu. 7c:
    kararlar alındı ("Faz 7c kararları"); 7c-1 (yalnızca gölge modu)
-   kodlandı, commit onayı bekliyor. Sırada 7c-2 (açık mod + SOS'a bağlama,
-   iki adımlı açma) - ÖNCE gölge verisi toplanmalı (en az bir hafta).
+   kodlandı, `a4c49b5` push'landı; sırada 7c-1 telefon testi. Sonra 7c-2
+   (açık mod + SOS'a bağlama, iki adımlı açma) - ÖNCE gölge verisi
+   toplanmalı (en az bir hafta).
    7c-2 keşfi ve kararları: `docs/fall_open_mode_plan.md` (altı karar
    verildi, kalanlar açık); kodlama 7c-1 telefon testini (wake-up sensör)
    bekliyor. Sonra Faz 8 (ilk şartnameye göre). Faz 5 iptal edildi (aşağıda).
