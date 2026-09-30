@@ -1,7 +1,8 @@
 # Düşme algılama - açık mod (Faz 7c-2) keşif ve planı
 
-**Durum: altı karar verildi (2026-09-30, §8'de "KARAR"), kalanlar açık; kod
-yok.** Kodlama 7c-1 telefon testinin sonucunu bekliyor, özellikle §0/1
+**Durum: on üç karar verildi (2026-09-30; ilk altısı ve sonraki yedisi, §8'de
+"KARAR"), yalnızca madde 14 (wake-up sensör/wakelock) açık; kod yok.**
+Kodlama 7c-1 telefon testinin sonucunu bekliyor, özellikle §0/1
 (uyandırmayan sensör): sonuç 7c-2'nin tamamını etkiliyor. Seçenekler
 artı/eksileriyle yazıldı; karar kullanıcıya ait. Sabit olanlar (tekrar
 tartışılmaz): `CLAUDE.md` "Faz 7c kararları" (madde 3: iki adımlı açma, acil
@@ -67,13 +68,16 @@ güvenli yön).
 
 ### 1c. "Anladım, aç" eşleştirme (A ve C için)
 - Yalnızca tüm cümle, nezaket sözcükleriyle ("lütfen anladım, aç" gibi) -
-  `classifySosVoice` ile aynı katı kalıp. Öneri: "anladım aç", "anladım,
-  açabilirsin", "anladım açılsın". **Bilerek dar.**
+  `classifySosVoice` ile aynı katı kalıp. **KARAR (2026-09-30), kabul edilen
+  kalıplar:** "anladım aç", "anladım, aç", "kabul ediyorum aç",
+  "onaylıyorum aç". **Tek başına "aç" yeterli değil.** (Önceki önerideki
+  "açabilirsin", "açılsın" listeye alınmadı.) **Bilerek dar.**
 - `parseYesNo` KULLANILMAZ ("evet/tamam" açmasın).
 - Bu kalıp Dikte ve diğer diyalog cevaplarında hiç denetlenmez.
 
 ### 1d. "İlk kez tam metin" bayrağı: neye bağlı?
-- **Öneri:** bayrak yalnızca "anladım, aç" verildiğinde kalıcı olarak yazılır.
+- **KARAR (2026-09-30):** bayrak yalnızca "anladım, aç" (§1c'deki kalıplardan
+  biri) verildiğinde kalıcı olarak yazılır.
   Tam metni duyup vazgeçen kullanıcı sonraki denemede yine tam metni duyar.
 - Alternatif: metin okunur okunmaz yazılır. Artı: daha az tekrar. Eksi: metni
   yarıda kesen/duymayan kullanıcı bir daha tam metni hiç duymaz.
@@ -133,7 +137,7 @@ arayüzüne kaynak bilgisi (ya da "elle/düşme" ayrımı) gerekir: bugün `tick
 yalnızca kalan süreyi alıyor.
 
 ### 2d. 2 dk bastırma: anlam noktaları
-1. **Ne zaman başlar?** İptal anından (ÖNERİ; kullanıcı "yanlış alarm" dediği
+1. **Ne zaman başlar?** İptal anından (KARAR 2026-09-30; kullanıcı "yanlış alarm" dediği
    an) ya da adayın oluştuğu andan. İptal anı daha doğru: geri sayım 25 sn
    sürdüğü için aday anından 2 dk fiilen 95 sn olurdu.
 2. **Neyi bastırır?** Yalnızca düşme kaynaklı yeni tetiği. Gölge kaydı devam
@@ -141,16 +145,21 @@ yalnızca kalan süreyi alıyor.
 3. **Gönderilen SOS sonrası?** Ayrı kural zaten var (60 sn, iptal/başarısızı
    saymaz). İkisi birbirine karışmaz.
 4. **Kalıcı mı?** Bellekte (uygulama yeniden başlarsa sıfırlanır). Artı: basit;
-   eksi: uygulama çökerse bastırma kaybolur. Öneri: bellekte.
+   eksi: uygulama çökerse bastırma kaybolur. **KARAR (2026-09-30): bellekte;
+   uygulama kapanıp açılınca sıfırlanması sorun değil. Bastırma iptal anından
+   başlar, yalnızca düşme kaynaklıdır (madde 1 ve 2).**
 5. **Bastırılan aday kaydı:** kayda etiket (bkz. §3).
 
 ### 2e. Meşgulken gelen aday
 - Zaten geri sayım/gönderim sürüyorsa: `trigger` `alreadyRunning` döner
   (mevcut davranış), ikinci aday yalnızca kayda yazılır.
 - Diyalog (mesaj dikte) ya da gelen arama sürerken: SOS diyaloğu keser
-  (güvenlik-önce, Faz 7a). **Öneri: düşme için de aynı** (gerçek düşme o
-  sırada olabilir). Alternatif: diyalog sürerken bastırmak -> yanlış negatif
-  riski; önerilmez.
+  (güvenlik-önce, Faz 7a). **KARAR (2026-09-30): düşme aday da yalnızca
+  SIRADAN diyalogları (ör. acil kişi kurulumu, mesaj dikte) keser** (gerçek
+  düşme o sırada olabilir). **Aktif bir SOS gönderimi sürüyorsa (ör. arama
+  sürüyor) yeni aday onu kesmez**: aynı akış zaten çalışıyor, yukarıdaki
+  `alreadyRunning` kuralı geçerli. Diyalog sürerken bastırmak yanlış negatif
+  riski, seçilmedi.
 - Telefon ekranı açıkken (elde tutuluyor olabilir) tetiklememek yanlış
   pozitifi azaltır ama elde telefonla düşen biri için yanlış negatif. **Karar
   gölge verisine bırakılsın**, şimdi eklenmesin.
@@ -159,7 +168,7 @@ yalnızca kalan süreyi alıyor.
 Bugünkü kural ("ön kontrolde takılan SOS her kaynakta 112 teklifi açar")
 düşmede yanlış pozitifte gürültülü. 1e/2 (otomatik gölgeye düşme) bunu nadir
 yapar. Ayrıca düşme için "teklif yok, yalnızca nedeni söyle" seçeneği var.
-**Karar sizde;** öneri: Faz 7 madde 5 aynen kalsın (her kaynakta teklif), çünkü
+**KARAR (2026-09-30): Faz 7 madde 5 aynen kalır (her kaynakta teklif)**, çünkü
 açık modu kapı bozulunca da kullanıcı yardımsız kalmamalı.
 
 ## 3. Gölge kaydı şeması (açık moda geçişle birlikte)
@@ -176,7 +185,7 @@ açık modu kapı bozulunca da kullanıcı yardımsız kalmamalı.
 
 ## 4. Test Modu'ndaki sentetik düğmeler açık modda ne yapar?
 
-**Sentetik kaynak köprüye BAĞLANMAZ (ÖNERİ, kilitli testle).** Aksi halde bir
+**Sentetik kaynak köprüye BAĞLANMAZ (KARAR 2026-09-30, kilitli testle).** Aksi halde bir
 Test Modu düğmesi gerçek acil kişilere gerçek SMS atardı.
 - Açık modun uçtan uca denemesi: debug derlemesinde, acil kişi olarak **ikinci
   numarayla** (mevcut SOS deneme listesi yaklaşımı, asla gerçek 112 değil),
@@ -212,7 +221,7 @@ Test Modu'nda.
 ### Engellenmiş durumda (acil kişi yok vb.)
 - **A) Düğme devre dışı + gerekçe metni altında.** Eksi: TalkBack "devre dışı"
   der ama nedeni ayrı bir satırda; kullanıcı düğmeyi "atlar".
-- **B) Düğme etkin kalır, basınca nedeni sesle + yazıyla söyler, gerekiyorsa
+- **B) KARAR (2026-09-30): Düğme etkin kalır, basınca nedeni sesle + yazıyla söyler, gerekiyorsa
   yönlendirir ("Önce acil kişi ekleyin: 'acil kişi ekle' deyin") (ÖNERİ).**
   Artı: her kanalda (ekran, ses) aynı metin; keşfedilebilir. Eksi: düğmeye
   basınca "olmadı" cevabı.
@@ -233,7 +242,7 @@ Test Modu'nda.
 - Sesli eğitime düşme algılama **eklenmez** (deneysel); yalnızca komutlar
   listesinde. `TODO.md` madde 17 (eğitim metni `play` için yanlış) geçerli.
 - Kaynak: "Patika acil durum servisi değildir" cümlesi açık mod uyarı metnine de
-  girer mi? **Karar sizde;** öneri: evet, tam metnin sonuna tek cümle.
+  girer mi? **KARAR (2026-09-30): evet**, tam metnin sonuna tek cümle.
 
 ## 8. Karar listesi
 
@@ -247,20 +256,23 @@ Test Modu'nda.
 | 6 | Tekrar duyuru | Kısa cümle, kalan süreyle: "15 saniye kaldı, iptal için iptal deyin" (kalan 15 ve 5 sn'de) |
 | 10 | Kayıt şeması | `act` alanı eklenir (`none`, `sos_started`, `cancelled`, `sent`, `suppressed`); alan beyaz listesi testi bilinçli güncellenir |
 | 12 | Ayarlar | **B:** ayrı "Düşme algılama (deneysel)" bölümü, gölge anahtarı + "Açık modu aç" **düğmesi** |
+| 2 | "Anladım, aç" kalıpları | Tüm cümle: "anladım aç", "anladım, aç", "kabul ediyorum aç", "onaylıyorum aç". Tek başına "aç" yeterli değil (§1c) |
+| 3 | Tam metin bayrağı | Yalnızca "anladım, aç" (§1c kalıpları) verilince kalıcı yazılır (§1d) |
+| 7 | Bastırma | İptal anından başlar, yalnızca düşme kaynaklı, bellekte; uygulama kapanıp açılınca sıfırlanması sorun değil (§2d) |
+| 8 | Meşgulken gelen aday | Yalnızca SIRADAN diyalogları (acil kişi kurulumu, dikte vb.) keser. Aktif SOS gönderimi sürüyorsa (arama sürüyor) yeni aday onu kesmez, `alreadyRunning` (§2e) |
+| 9 | Ön kontrol başarısızlığı | 112 teklifi Faz 7 madde 5 ile aynı (her kaynakta) (§2f) |
+| 11 | Sentetik kaynak | Köprüye bağlanmaz, kilitli testle (§4) |
+| 12b | Engellenmiş durum | "Açık modu aç" düğmesi etkin kalır; basınca nedeni sesle ve yazıyla söyler (§5) |
+| 13 | Uyarı metni | "Patika acil durum servisi değildir" cümlesi açık mod uyarısına girer, tam metnin sonuna (§7) |
 
-**Açık kalanlar (önerim parantezde):**
+**Açık kalan:**
 
-2. "Anladım, aç" kalıpları: dar liste (§1c).
-3. Tam metin bayrağı ne zaman yazılır (yalnızca "anladım, aç" verilince).
-7. Bastırma (iptal anından, yalnızca düşme kaynaklı, bellekte).
-8. Meşgulken (diyalog/arama sürerken de tetikle; SOS diyaloğu keser).
-9. Ön kontrol başarısızlığında 112 teklifi (Faz 7 madde 5 aynen).
-11. Sentetik kaynak köprüye bağlanmaz; uçtan uca deneme ikinci numarayla
-    (öneri; kilitli testle).
-12b. Engellenmiş durumda "Açık modu aç" düğmesi (etkin kalır, nedeni söyler).
-13. Açık mod uyarısına "Patika acil durum servisi değildir" cümlesi (evet).
-14. Wake-up sensör / wakelock (7c-1 telefon testinden sonra; **7c-2'nin ön
-    koşulu**).
+14. Wake-up sensör / wakelock: 7c-1 telefon testi sonucunu bekliyor; **7c-2'nin
+    ön koşulu** (§0/1).
+
+Not: Madde 11'de kararda yalnızca "köprüye bağlanmaz" var; §4'teki "uçtan
+uca deneme ikinci numarayla, debug derlemesinde" yaklaşımı önerilmiş
+haliyle duruyor, ayrıca onaylanmadı.
 
 ## 9. Önerilen sıra (karar sonrası, her adım tek tek gösterilir)
 
