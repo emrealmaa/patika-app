@@ -16,10 +16,7 @@ void main() {
   const saat = PatikaIntent.saat;
   const ara = PatikaIntent.ara;
   const mesaj = PatikaIntent.mesaj;
-  const hava = PatikaIntent.hava;
   const nav = PatikaIntent.navigasyon;
-  const muzik = PatikaIntent.muzik;
-  const haber = PatikaIntent.haber;
   const oku = PatikaIntent.oku;
   const gecis = PatikaIntent.gecisModu;
   const yok = PatikaIntent.bilinmiyor;
@@ -49,12 +46,13 @@ void main() {
           ("Emre'ye SMS gönder", mesaj, 'Emre'),
         ]));
 
-    test('HAVA', () => check([
-          ('hava nasıl', hava, null),
-          ('bugün hava nasıl olacak', hava, null),
-          ('yağmur yağacak mı', hava, null),
-          ('dışarısı soğuk mu', hava, null),
-          ('havalar nasıl', hava, null),
+    test('hava / müzik / haber artık tanınmaz (Katman 2 işi)', () => check([
+          ('hava nasıl', yok, null),
+          ('yağmur yağacak mı', yok, null),
+          ('müzik aç', yok, null),
+          ('bir şarkı çal', yok, null),
+          ('son dakika haberleri', yok, null),
+          ('bugün neler olmuş', yok, null),
         ]));
 
     test('NAVİGASYON', () => check([
@@ -67,13 +65,7 @@ void main() {
           ('saat kulesine götür', nav, 'saat kulesi'),
         ]));
 
-    test('MÜZİK / HABER / OKU', () => check([
-          ('müzik aç', muzik, null),
-          ('bir şarkı çal', muzik, null),
-          ('müziği aç', muzik, null),
-          ('haberleri oku', haber, null),
-          ('bugün neler olmuş', haber, null),
-          ('son dakika haberleri', haber, null),
+    test('OKU', () => check([
           ('bunu oku', oku, null),
           ('önümde ne yazıyor', oku, null),
           ('yazıyı okur musun', oku, null),
@@ -97,7 +89,7 @@ void main() {
         ]));
 
     test('kişi/yer adayı yoksa eylem niyeti kaybeder', () => check([
-          ('haberleri ara', haber, null), // "haberleri" kişi değil
+          ('saati ara', saat, null), // "saati" kişi değil
           ('saat kaçta gitmeliyim', saat, null), // gidilecek yer yok
           ('görüşürüz', yok, null), // veda, arama değil
         ]));
@@ -105,10 +97,6 @@ void main() {
     test('yönelme ekli yer navigasyonu öne çıkarır', () => check([
           ('saat kulesine götür', nav, 'saat kulesi'),
           ("Ankara'ya git", nav, 'Ankara'),
-        ]));
-
-    test('eşitlikte tablo sırası: kişi gerektiren eylem önde', () => check([
-          ('müzik öğretmenimi ara', ara, 'müzik öğretmenimi'),
         ]));
 
     test('geçiş modu', () => check([

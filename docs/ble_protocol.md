@@ -45,8 +45,9 @@ Gözlük **peripheral**, telefon **central**.
 | `hb` | `seq` (int, ops.) | **Her 2 saniyede bir**, bağlı olduğu sürece | `{"t":"hb","seq":1532}` |
 
 `intent` değerleri Python tarafındaki `intent_classifier.py` ile aynıdır:
-`ARA`, `MESAJ`, `HAVA`, `SAAT`, `MÜZİK`, `HABER`, `OKU`, `GECIS_MODU`,
-`NAVİGASYON`, `BİLİNMİYOR`.
+`ARA`, `MESAJ`, `SAAT`, `OKU`, `GECIS_MODU`, `NAVİGASYON`, `BİLİNMİYOR`.
+`HAVA`, `MÜZİK` ve `HABER` Katman 2'nin (Python/Gemini) işidir; telefon
+uygulaması bunları tanımaz, gelirse `BİLİNMİYOR` sayar (2026-10-01).
 
 Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
 (`{"intent":"ARA","entity":"Emre"}`) hâlâ `cmd` olarak kabul edilir.

@@ -3,10 +3,7 @@
 enum PatikaIntent {
   ara,
   mesaj,
-  hava,
   saat,
-  muzik,
-  haber,
   oku,
   gecisModu,
   navigasyon,
@@ -69,11 +66,6 @@ enum PatikaIntent {
   /// Kontrol niyeti değil (anında uygulanan DUR/SOS gibi değil), sıradan sorgu.
   durum,
 
-  /// "düşme algılamayı aç/kapat", "gölge modunu aç/kapat", "düşme algılama
-  /// durumu" (Faz 7c-2). Python tarafında yok, yalnızca telefon mikrofonundan.
-  /// Entity: "ac", "kapat", "golge_ac", "golge_kapat", "durum"
-  /// (`FallHandler`). Açma her zaman iki adımlı diyalogla yapılır.
-  dusme,
   bilinmiyor;
 
   /// Anında (onay sorusu olmadan) uygulanan kontrol niyetleri. Telefon eylemi
@@ -90,15 +82,8 @@ enum PatikaIntent {
         return PatikaIntent.ara;
       case 'MESAJ':
         return PatikaIntent.mesaj;
-      case 'HAVA':
-        return PatikaIntent.hava;
       case 'SAAT':
         return PatikaIntent.saat;
-      case 'MÜZİK':
-      case 'MUZIK':
-        return PatikaIntent.muzik;
-      case 'HABER':
-        return PatikaIntent.haber;
       case 'OKU':
         return PatikaIntent.oku;
       case 'GECIS_MODU':
@@ -142,9 +127,6 @@ enum PatikaIntent {
         return PatikaIntent.acilKisi;
       case 'DURUM':
         return PatikaIntent.durum;
-      case 'DUSME':
-      case 'DÜŞME':
-        return PatikaIntent.dusme;
       default:
         return PatikaIntent.bilinmiyor;
     }

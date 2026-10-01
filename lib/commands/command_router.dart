@@ -13,20 +13,16 @@ import 'handlers/call_handler.dart';
 import 'handlers/control_handler.dart';
 import 'handlers/crossing_mode_handler.dart';
 import 'handlers/emergency_contact_handler.dart';
-import 'handlers/fall_handler.dart';
 import 'handlers/message_handler.dart';
 import 'handlers/message_history_handler.dart';
 import 'handlers/navigation_control_handler.dart';
-import 'handlers/music_handler.dart';
 import 'handlers/navigation_handler.dart';
-import 'handlers/news_handler.dart';
 import 'handlers/number_handler.dart';
 import 'handlers/ocr_handler.dart';
 import 'handlers/settings_handler.dart';
 import 'handlers/status_handler.dart';
 import 'handlers/time_handler.dart';
 import 'handlers/unknown_handler.dart';
-import 'handlers/weather_handler.dart';
 
 /// Gözlükten (gerçek BLE ya da simülasyon) gelen [BleCommand]'i doğru
 /// handler'a yönlendiren tek giriş noktası - Python tarafındaki
@@ -38,10 +34,7 @@ class CommandRouter {
   final MessageHandler _message;
   final NavigationHandler _navigation;
   final NavigationControlHandler _navigationControl;
-  final MusicHandler _music;
-  final NewsHandler _news;
   final TimeHandler _time;
-  final WeatherHandler _weather;
   final OcrHandler _ocr;
   final CrossingModeHandler _crossingMode;
   final SettingsHandler _settings;
@@ -52,7 +45,6 @@ class CommandRouter {
   final MessageHistoryHandler _messageHistory;
   final EmergencyContactHandler _emergencyContact;
   final StatusHandler _status;
-  final FallHandler _fall;
   final UnknownHandler _unknown;
 
   CommandRouter({
@@ -60,10 +52,7 @@ class CommandRouter {
     MessageHandler? message,
     NavigationHandler? navigation,
     NavigationControlHandler? navigationControl,
-    MusicHandler? music,
-    NewsHandler? news,
     TimeHandler? time,
-    WeatherHandler? weather,
     OcrHandler? ocr,
     CrossingModeHandler? crossingMode,
     SettingsHandler? settings,
@@ -74,16 +63,12 @@ class CommandRouter {
     MessageHistoryHandler? messageHistory,
     EmergencyContactHandler? emergencyContact,
     StatusHandler? status,
-    FallHandler? fall,
     UnknownHandler? unknown,
   })  : _call = call ?? CallHandler(),
         _message = message ?? MessageHandler(),
         _navigation = navigation ?? NavigationHandler(),
         _navigationControl = navigationControl ?? NavigationControlHandler(),
-        _music = music ?? MusicHandler(),
-        _news = news ?? NewsHandler(),
         _time = time ?? TimeHandler(),
-        _weather = weather ?? WeatherHandler(),
         _ocr = ocr ?? OcrHandler(),
         _crossingMode = crossingMode ?? CrossingModeHandler(),
         _settings = settings ??
@@ -96,7 +81,6 @@ class CommandRouter {
         _emergencyContact =
             emergencyContact ?? EmergencyContactHandler(store: MemoryEmergencyContactStore()),
         _status = status ?? StatusHandler(),
-        _fall = fall ?? FallHandler(),
         _unknown = unknown ?? UnknownHandler();
 
   /// Handler'lardan biri beklenmedik bir istisna fırlatırsa (örn. rehber/BLE
@@ -114,14 +98,8 @@ class CommandRouter {
           return await _message.handle(command.entity);
         case PatikaIntent.navigasyon:
           return await _navigation.handle(command.entity);
-        case PatikaIntent.muzik:
-          return await _music.handle(command.entity);
-        case PatikaIntent.haber:
-          return await _news.handle(command.entity);
         case PatikaIntent.saat:
           return await _time.handle(command.entity);
-        case PatikaIntent.hava:
-          return await _weather.handle(command.entity);
         case PatikaIntent.oku:
           return await _ocr.handle(command.entity);
         case PatikaIntent.gecisModu:
@@ -148,8 +126,6 @@ class CommandRouter {
           return await _emergencyContact.handle(command.entity);
         case PatikaIntent.durum:
           return await _status.handle();
-        case PatikaIntent.dusme:
-          return await _fall.handle(command.entity);
         case PatikaIntent.dur:
         case PatikaIntent.tekrar:
         case PatikaIntent.komutlar:

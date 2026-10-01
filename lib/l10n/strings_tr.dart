@@ -153,9 +153,6 @@ abstract final class Tr {
   static String navStarted(String dest) => '$dest için yürüyüş yönlendirmesi başladı';
   static const navStartedDetail = 'Yönlendirme harita uygulamasında açıldı.';
   static String time(String hhmm) => 'Saat $hhmm';
-  static const weatherNotReady = 'Hava durumu henüz hazır değil';
-  static const newsNotReady = 'Haberler henüz hazır değil';
-  static const musicNotReady = 'Müzik kontrolü henüz hazır değil';
   static const ocrNotReady = 'Yazı okuma henüz hazır değil';
   static const crossingNotReady = 'Karşıya geçiş modu henüz hazır değil';
 
@@ -221,7 +218,6 @@ abstract final class Tr {
       'bir yere götür, saat kaç, durum, daha hızlı konuş, tekrar et, dur ve eğitimi başlat.';
   static const helpDetail = 'Örneğin: Ahmet\'i ara. Ayşe\'ye mesaj gönder. '
       'Kadıköy iskelesine götür. Gözlük ve telefon pili için durum ya da pil ne kadar deyin. '
-      'Düşme algılamayı açmak ya da kapatmak için düşme algılamayı aç, düşme algılamayı kapat deyin. '
       'Konuşmamı kesmek için dur, '
       'son söylediğimi duymak için tekrar et deyin ya da gözlük butonuna iki kez dokunun.';
   static const nothingToRepeat = 'Tekrar edilecek bir şey yok';
@@ -512,11 +508,6 @@ abstract final class Tr {
       'telefonunuzun kendi acil durum özelliğini kullanın';
   static const sosCountdownStart =
       'Acil durum çağrısı gönderilecek. İptal için iptal deyin ya da gözlüğe dokunun';
-  static const sosFallCountdownStart =
-      'Düşme algılandı. Acil durum çağrısı gönderilecek. İptal için iptal deyin ya da gözlüğe dokunun';
-  /// Düşme geri sayımında tekrar duyuru (karar 6): kalan 15 ve 5 saniyede.
-  static String sosFallCountdownReminder(int secondsLeft) =>
-      '$secondsLeft saniye kaldı, iptal için iptal deyin';
   static const sosCancelled = 'Acil durum çağrısı iptal edildi';
   static const sosTooLate = 'Gönderim başladı, artık iptal edilemiyor';
   static const sosRateLimited = 'Acil durum çağrısı az önce gönderildi';
@@ -618,176 +609,6 @@ abstract final class Tr {
   static const statusNavPaused = 'Navigasyon karşıya geçiş için duraklatıldı';
   static const statusNavNone = 'Çalışan bir navigasyon yok';
 
-  // --- Düşme algılama (Faz 7c) -------------------------------------------------
-  // Gölge modu: yalnızca yerel kayıt, hiçbir mesaj göndermez. Bilgi kipi.
-  // test/fall_monitor_test.dart bu bölümü yasaklı kelimeler için tarar.
-  static const fallShadowWarning =
-      'Düşme algılama gölge modunda açıldı. Bu modda hiçbir mesaj gönderilmez, '
-      'acil durum çağrısı başlamaz. Telefon olası düşmeleri yalnızca kendi içinde '
-      'kaydeder, kayıtlarda konum yoktur. Kayıtlar, özelliğin ne kadar doğru '
-      'çalıştığını ölçmek için kullanılacak.';
-  static const statusFallShadow = 'Düşme algılama gölge modunda, yalnızca kayıt tutuyor';
-  static const statusFallShadowNoSensor =
-      'Düşme algılama gölge modunda ama telefonun hareket sensörü açılamadı';
-
-  static const fallShadowDisabled = 'Düşme algılama kapatıldı';
-
-  // --- Düşme algılama: açık mod (Faz 7c-2) -------------------------------------
-  // Açık mod: düşme algılanınca acil kişilere mesaj + arama (25 sn iptal
-  // penceresiyle). Deneysel; "güvenli" gibi bir güvence ASLA verilmez.
-  // Bu bölüm, bölüm adındaki "açık" sözcüğü yüzünden navigasyonun yasaklı
-  // kelime taramasına (Faz 7c bölümü) girmez; kendi testi
-  // test/fall_voice_test.dart'ta ("güvenli" yok, zorunlu cümleler var).
-
-  /// İlk açışta TAM uyarı (kullanıcı "anladım, aç" deyince bir daha tam
-  /// okunmaz). "Patika acil durum servisi değildir" sonda (karar 13).
-  static const fallOpenWarningFull =
-      'Düşme algılamanın açık modu deneyseldir. Telefon düştüğünüzü sandığında '
-      '25 saniyelik bir geri sayım başlar; istediğiniz an iptal '
-      'diyebilirsiniz. İptal etmezseniz acil '
-      'kişilerinize mesaj gönderilir ve ilk kişi aranır. 112 '
-      'kendiliğinden aranmaz. Bu özellik her düşmeyi algılamayabilir, yanlış '
-      'alarm da verebilir; ona güvenilmemelidir. Patika acil durum servisi '
-      'değildir.';
-
-  /// Sonraki açışlarda kısa hatırlatma (karar 3). İki adım yine geçerli.
-  static const fallOpenWarningShort =
-      'Düşme algılama deneysel, hâlâ güvenilmemeli. Düştüğünüzü sandığında '
-      'acil kişilerinize mesaj gönderebilir.';
-
-  /// Uyarıdan sonra (ses kanalı): açmanın tek yolu bu cümle.
-  static const fallOpenConfirmInstruction =
-      'Açmak için anladım, aç deyin. Vazgeçmek için vazgeç deyin.';
-
-  /// Tanınmayan cevap ("evet" dahil): açmaz, bir kez daha söyler.
-  static const fallOpenConfirmHint =
-      'Açmak için tam olarak anladım, aç deyin; evet yetmez. '
-      'Vazgeçmek için vazgeç deyin.';
-
-  static const fallOpenEnabled =
-      'Açık mod açıldı. Düşme sanıldığında 25 saniyelik geri sayım başlar; '
-      'iptal için iptal deyin.';
-  static const fallOpenNotEnabled = 'Açık mod açılmadı';
-  static const fallOpenExpired =
-      'Süre doldu, açık mod açılmadı. Yeniden başlamak için düşme algılamayı aç deyin';
-  static const fallOpenAlready = 'Açık mod zaten açık';
-  static const fallOpenStorageFailed = 'Açık mod açılamadı, onayınız bu telefona kaydedilemedi';
-
-  // Açık mod KENDİLİĞİNDEN gölgeye düşünce söylenir (karar 4: sessiz kopma yok).
-  /// Ayarlarda `on` var ama bu telefonda onay yok (yedekten/başka cihazdan geldi).
-  static const fallOpenNeedsReconfirm =
-      'Açık mod bu telefonda yeniden onayınızı istiyor, gölge moduna alındı. '
-      'Açmak için düşme algılamayı aç deyin';
-
-  /// Bir kapı bozuldu (acil kişi silindi, SMS izni kalktı...): gölge sürer.
-  static String fallOpenDropped(String reason) =>
-      'Açık mod kapatıldı, gölge modu sürüyor. $reason';
-  static const fallOpenClosedToShadow =
-      'Açık mod kapatıldı. Gölge modu sürüyor, yalnızca kayıt tutuyor';
-  static const fallOpenClosedNotOpen = 'Açık mod zaten kapalı';
-
-  // Açık mod açılamıyorsa nedeni (ses ve ekran aynı metni kullanır).
-  static const fallOpenBlockedBuild =
-      'Bu sürümde acil durum mesajı gönderilemediği için açık mod açılamaz';
-  static const fallOpenBlockedNoContacts =
-      'Açık mod için önce bir acil kişi gerekiyor. Acil kişi eklemek için acil kişi ekle deyin';
-  static const fallOpenBlockedNoSms =
-      'Açık mod için SMS izni gerekiyor. Telefon ayarlarından Patika uygulamasına SMS izni verin';
-  static String fallOpenBlockedShadow(int daysLeft) =>
-      'Açık mod için gölge modunun en az 7 gün kesintisiz çalışması gerekiyor. '
-      '$daysLeft gün kaldı';
-
-  /// 7 günlük gölge şartı yalnızca debug derlemesinde atlanabilir; atlanınca
-  /// söylenir ve ekranda yazılır (iz bırakır).
-  static const fallGateBypassedNote = '7 gün kapısı atlandı, bu debug\'a özel';
-
-  // Sesli komutlar ("düşme algılamayı aç/kapat", "gölge modunu aç/kapat").
-  static const fallCommandUnavailable = 'Düşme algılama komutu şu an kullanılamıyor';
-  static const fallOffAlready = 'Düşme algılama zaten kapalı';
-  static const fallShadowAlready = 'Gölge modu zaten çalışıyor';
-  static const fallShadowWhileOpen = 'Açık mod çalışıyor, kayıtlar da tutuluyor';
-  static const statusFallOn = 'Düşme algılama açık, deneysel';
-  static const statusFallOnNoSensor =
-      'Düşme algılama açık ama telefonun hareket sensörü açılamadı';
-  static const statusFallOff = 'Düşme algılama kapalı';
-
-  // Ayarlar ekranı bölümü (karar 12: ayrı bölüm, gölge anahtarı + açık mod
-  // düğmesi). Durum bilgisi renkle değil yazıyla verilir.
-  static const fallSettingsSection = 'Düşme algılama (deneysel)';
-  static const fallStatusOffLine = 'Mod: kapalı';
-  static String _fallDays(int? days) =>
-      days == null || days == 0 ? 'bugün başladı' : '$days gündür';
-  static String fallStatusShadowLine(int? days, int records) =>
-      'Mod: gölge, ${_fallDays(days)}, $records kayıt';
-  static String fallStatusOnLine(int? days, int records) =>
-      'Mod: açık, deneysel, ${_fallDays(days)}, $records kayıt';
-  static const fallShadowSwitchTitle = 'Gölge modu';
-  static const fallShadowSwitchHint =
-      'Yalnızca kayıt tutar, mesaj göndermez. Kapatınca açık mod da kapanır';
-  static const fallOpenButtonOpen = 'Açık modu aç';
-  /// Düğmenin TAM etiketi (TalkBack de aynısını okur): yalnızca açık modu
-  /// kapatır, gölge sürer. Gölgeyi de kapatmak için ayrı yol: anahtar
-  /// ([fallOpenCloseNote]).
-  static const fallOpenButtonClose = 'Açık modu kapat (gölge modu sürer)';
-  static const fallOpenCloseNote =
-      'Gölge kaydını da tamamen kapatmak için yukarıdaki Gölge modu anahtarını kapatın';
-  static const fallOpenButtonHint = 'Önce uyarı okunur, sonra onayınız istenir';
-  static const fallOpenDialogTitle = 'Açık mod açılsın mı?';
-  static const fallOpenDialogConfirm = 'Anladım, aç';
-  static const fallOpenDialogCancel = 'Vazgeç';
-
-  // --- Test Modu: düşme algılama (Faz 7c-1) ------------------------------------
-  // Gölge modu: yalnızca kayıt. Sentetik düğmeler gerçek düşme verisi DEĞİLDİR.
-  // test/fall_monitor_test.dart bu bölümü yasaklı kelimeler için tarar.
-  static const testFallTitle = 'Düşme algılama (gölge)';
-  static const testFallHint =
-      'Gölge modu yalnızca kayıt tutar, hiçbir mesaj göndermez. Sentetik düğmeler '
-      'gerçek düşme verisi değil, şematik sinyallerdir; kayıtta "synthetic" olarak görünür.';
-  static const testFallMode = 'Düşme algılama (gölge modu)';
-  static const testFallModeHint = 'Açarken kısa bir açıklama okunur';
-  static const testFallEarcon = 'Düşme adayında test sesi çal';
-  static const testFallEarconHint = 'Yalnızca deneme için, varsayılan kapalı';
-  static const testFallSynthetic = 'Sentetik sinyal';
-  static const testFallRecords = 'Gölge kayıtları';
-  static const testFallNoRecords = 'Henüz kayıt yok';
-  static const testFallClear = 'Kayıtları sil';
-  static const testFallCleared = 'Gölge kayıtları silindi';
-  static String testFallCounters(int noImpact, int gaps) =>
-      'Darbesiz düşüş: $noImpact, sensör kesintisi: $gaps';
-  static const testFallSensorUnavailable = 'Telefonun hareket sensörü açılamadı';
-  static String testFallScenarioResult(String scenario, String result) => '$scenario: $result';
-  static const testFallNoEvaluation = 'değerlendirme oluşmadı';
-  static const testFallScenarioRealisticFall = 'Gerçekçi düşme';
-  static const testFallScenarioDroppedAndPickedUp = 'Telefon düştü, hemen alındı';
-  static const testFallScenarioHardSit = 'Sert oturma';
-  static const testFallScenarioNoImpact = 'Düşüş, darbe yok';
-  static const testFallScenarioNoOrientation = 'Darbe var, yön değişmedi';
-  static const testFallScenarioWalking = 'Yürüme';
-  static const fallOutcomeCandidate = 'düşme adayı';
-  static const fallOutcomeMovement = 'elendi: hareket sürdü';
-  static const fallOutcomeNoOrientation = 'elendi: duruş değişmedi';
-  static const fallOutcomeNoImpact = 'elendi: darbe yok';
-  // Açık modda adaya yapılan eylem (kayıt etiketi, karar 10). `none` için
-  // hiçbir şey gösterilmez. Gerçek dünyada bir iptal, yanlış pozitif demektir.
-  static const fallActStarted = 'geri sayım başladı';
-  static const fallActCancelled = 'iptal edildi';
-  static const fallActSent = 'gönderildi';
-  static const fallActSuppressed = 'başlatılmadı';
-  static String fallRecordLine({
-    required String time,
-    required String source,
-    required String outcome,
-    required int freeFallMs,
-    required double peakG,
-    double? degrees,
-    double? stillnessStd,
-    String? act,
-  }) =>
-      '$time, $source: $outcome. Düşüş $freeFallMs ms, tepe ${peakG.toStringAsFixed(1)} g'
-      '${degrees == null ? '' : ', açı ${degrees.round()} derece'}'
-      '${stillnessStd == null ? '' : ', hareket ${stillnessStd.toStringAsFixed(2)}'}'
-      '${act == null ? '' : '. Acil durum: $act'}';
-
   // --- Test Modu: telefon pili taklidi (Faz 7b) --------------------------------
   static const testPhoneBattery = 'Telefon pil seviyesi';
   static const testPhoneCharging = 'Telefon şarjda';
@@ -799,7 +620,6 @@ abstract final class Tr {
   // numarası ve konum (koordinat, bağlantı) HİÇ yazılmaz.
   static const sosSourceVoice = 'sesle';
   static const sosSourceGlasses = 'gözlük';
-  static const sosSourceFall = 'düşme algılama';
   static const sosCancelByVoice = 'sesle';
   static const sosCancelByGlasses = 'gözlükten';
   static const sosCancelByScreen = 'ekrandan';

@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
-import '../fall/fall_enable_session.dart';
-import '../fall/fall_mode.dart';
-import '../fall/fall_open_text.dart';
-import '../fall/fall_settings_controller.dart';
 import '../l10n/strings_tr.dart';
 import '../settings/settings.dart';
 import '../settings/settings_store.dart';
-import '../widgets/fall_enable_dialog.dart';
 
 /// Ayarlar ekranı. Tamamen TalkBack ile kullanılabilir olacak şekilde
 /// sadece radyo listelerinden oluşuyor (kaydırıcı yok - TalkBack'te kademeli
@@ -24,16 +19,11 @@ class SettingsScreen extends StatelessWidget {
   final FeedbackHub feedback;
   final VoidCallback onStartTutorial;
 
-  /// Düşme algılama bölümünün bağımlılığı (Faz 7c-2). Null ise bölüm hiç
-  /// gösterilmez.
-  final FallSettingsController? fall;
-
   const SettingsScreen({
     super.key,
     required this.store,
     required this.feedback,
     required this.onStartTutorial,
-    this.fall,
   });
 
   Settings get _s => store.value;
@@ -123,10 +113,6 @@ class SettingsScreen extends StatelessWidget {
             feedback.say(v ? Tr.sosCall112EnabledWarning : Tr.sosCall112DisabledInfo);
           },
         ),
-        if (fall != null) ...[
-          _Header(Tr.fallSettingsSection),
-          _FallSection(controller: fall!, feedback: feedback),
-        ],
         _Header(Tr.settingsFeedback),
         _Choice<FeedbackMode>(
           title: Tr.feedbackMode,
@@ -168,163 +154,6 @@ class SettingsScreen extends StatelessWidget {
             label: const Text(Tr.resetSettings),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// "Düşme algılama (deneysel)" bölümü (Faz 7c-2, karar 12): durum satırı,
-/// gölge ANAHTARI (kolay açılıp kapanır) ve "Açık modu aç" DÜĞMESİ (anahtar
-/// değil, eylem: iki adımlı açmayı başlatır). Engellenmiş durumda düğme etkin
-/// kalır; basınca nedeni yazıyla ve sesle (TalkBack açıksa yalnızca TalkBack)
-/// söyler (karar 12b).
-class _FallSection extends StatefulWidget {
-  final FallSettingsController controller;
-  final FeedbackHub feedback;
-
-  const _FallSection({required this.controller, required this.feedback});
-
-  @override
-  State<_FallSection> createState() => _FallSectionState();
-}
-
-class _FallSectionState extends State<_FallSection> {
-  late Future<FallSettingsStatus> _status;
-
-  /// Son eylemin sonucu / engel nedeni: ekranda yazılı kalır (TalkBack canlı
-  /// bölge olarak okur); TalkBack kapalıyken ayrıca TTS okur.
-  String? _message;
-
-  @override
-  void initState() {
-    super.initState();
-    _status = widget.controller.status();
-    widget.controller.addListener(_reload);
-  }
-
-  @override
-  void didUpdateWidget(covariant _FallSection old) {
-    super.didUpdateWidget(old);
-    if (old.controller != widget.controller) {
-      old.controller.removeListener(_reload);
-      widget.controller.addListener(_reload);
-    }
-    // Üst ekran yeniden kuruldu (ayar/uygulama durumu değişti): özeti tazele.
-    _status = widget.controller.status();
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_reload);
-    super.dispose();
-  }
-
-  void _reload() {
-    if (!mounted) return;
-    final next = widget.controller.status();
-    setState(() {
-      _status = next;
-    });
-  }
-
-  void _announce(String text) {
-    if (!mounted) return;
-    setState(() => _message = text);
-    // TalkBack açıkken canlı bölge okur; TTS de okusa çift okuma olurdu.
-    if (!MediaQuery.accessibleNavigationOf(context)) widget.feedback.say(text);
-  }
-
-  Future<void> _setShadow(bool on) async {
-    await widget.controller.setShadowEnabled(on);
-    _announce(on ? Tr.fallShadowWarning : Tr.fallShadowDisabled);
-  }
-
-  Future<void> _toggleOpen() async {
-    final c = widget.controller;
-    if (c.mode == FallMode.on) {
-      await c.closeOpenMode();
-      _announce(Tr.fallOpenClosedToShadow);
-      return;
-    }
-    final begin = await c.session.begin(FallEnableChannel.screen);
-    if (!mounted) return;
-    switch (begin.kind) {
-      case FallEnableBeginKind.blocked:
-        _announce(fallOpenBlockText(begin.gate!));
-      case FallEnableBeginKind.alreadyOn:
-        c.changed();
-        _announce(Tr.fallOpenAlready);
-      case FallEnableBeginKind.superseded:
-        break;
-      case FallEnableBeginKind.prompt:
-        final result = await showFallEnableDialog(
-          context,
-          controller: c,
-          begin: begin,
-          feedback: widget.feedback,
-        );
-        if (!mounted) return;
-        c.changed();
-        _announce(switch (result?.kind) {
-          FallEnableConfirmKind.enabled => Tr.fallOpenEnabled,
-          FallEnableConfirmKind.expired => Tr.fallOpenExpired,
-          FallEnableConfirmKind.blocked => fallOpenBlockText(result!.gate!),
-          FallEnableConfirmKind.storageFailed => Tr.fallOpenStorageFailed,
-          _ => Tr.fallOpenNotEnabled,
-        });
-    }
-  }
-
-  String _statusLine(FallSettingsStatus s) => switch (s.mode) {
-        FallMode.off => Tr.fallStatusOffLine,
-        FallMode.shadow => Tr.fallStatusShadowLine(s.runningDays, s.records),
-        FallMode.on => Tr.fallStatusOnLine(s.runningDays, s.records),
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final mode = widget.controller.mode;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: FutureBuilder<FallSettingsStatus>(
-            future: _status,
-            builder: (context, snapshot) {
-              final s = snapshot.data;
-              return Semantics(
-                container: true,
-                child: Text(s == null ? Tr.fallStatusOffLine : _statusLine(s)),
-              );
-            },
-          ),
-        ),
-        SwitchListTile(
-          title: const Text(Tr.fallShadowSwitchTitle),
-          subtitle: const Text(Tr.fallShadowSwitchHint),
-          value: mode != FallMode.off,
-          onChanged: _setShadow,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: FilledButton.tonal(
-            style: const ButtonStyle(minimumSize: WidgetStatePropertyAll(Size.fromHeight(56))),
-            onPressed: _toggleOpen,
-            child: Text(mode == FallMode.on ? Tr.fallOpenButtonClose : Tr.fallOpenButtonOpen),
-          ),
-        ),
-        // Düğmenin altındaki not: kapalıyken nasıl açılacağı; açıkken de
-        // gölgeyi tamamen kapatmanın AYRI yolu (anahtar) hatırlatılır.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(mode == FallMode.on ? Tr.fallOpenCloseNote : Tr.fallOpenButtonHint),
-        ),
-        if (_message != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Semantics(liveRegion: true, container: true, child: Text(_message!)),
-          ),
       ],
     );
   }

@@ -154,13 +154,6 @@ class Rig {
   EmergencyNumber emergency = const EmergencyNumber(debugTestNumber: testNumber);
   late final SosController controller;
 
-  /// `onOutcome` bildirimleri (kaynak, sonuç) ve hata fırlatma anahtarı.
-  final outcomes = <(SosSource, SosOutcome)>[];
-  bool throwOnOutcome = false;
-
-  /// Ek dinleyici (düşme köprüsü testleri `onSosOutcome`'u buraya bağlar).
-  void Function(SosSource source, SosOutcome outcome)? outcomeSink;
-
   Rig() {
     controller = SosController(
       delivery: DirectSosDelivery(
@@ -177,11 +170,6 @@ class Rig {
       hasLocationPermission: () async => locationPermission,
       call112Enabled: () => call112,
       callMonitor: RigCallMonitor(this),
-      onOutcome: (source, outcome) {
-        outcomes.add((source, outcome));
-        outcomeSink?.call(source, outcome);
-        if (throwOnOutcome) throw StateError('dinleyici bozuk');
-      },
       now: () => DateTime(2026, 9, 28, 14, 5),
     );
   }
@@ -583,106 +571,6 @@ void main() {
       });
     });
 
-    group('sonuç bildirimi (onOutcome; yalnızca bilgi)', () {
-      test('geri sayımda iptal: (kaynak, cancelled) bir kez; gönderim olmaz', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          trigger(rig, async, SosSource.fall);
-          run(async, const Duration(seconds: 3));
-          rig.controller.cancel(SosCancelSource.voice);
-          run(async, const Duration(minutes: 1));
-          expect(rig.outcomes, [(SosSource.fall, SosOutcome.cancelled)]);
-          expect(rig.direct.sms, isEmpty);
-          rig.dispose();
-        });
-      });
-
-      test('gönderim: SMS gitti -> sent (elle SOS da bildirilir, kaynağıyla)', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          trigger(rig, async, SosSource.glasses);
-          run(async, const Duration(seconds: 12));
-          expect(rig.outcomes, [(SosSource.glasses, SosOutcome.sent)]);
-          rig.dispose();
-        });
-      });
-
-      test('düşme kaynağı: 25 sn sonra sent, kaynak fall', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          trigger(rig, async, SosSource.fall);
-          run(async, const Duration(seconds: 24));
-          expect(rig.outcomes, isEmpty, reason: 'geri sayım bitmeden sonuç yok');
-          run(async, const Duration(seconds: 14));
-          expect(rig.outcomes, [(SosSource.fall, SosOutcome.sent)]);
-          rig.dispose();
-        });
-      });
-
-      test('hiçbir kanaldan çıkmadıysa (SMS başarısız, arama yok) failed', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          rig.direct.smsResult = SmsSendStatus.failed;
-          rig.direct.callSucceeds = false;
-          trigger(rig, async, SosSource.fall);
-          run(async, const Duration(seconds: 40));
-          expect(rig.outcomes, [(SosSource.fall, SosOutcome.failed)]);
-          rig.dispose();
-        });
-      });
-
-      test('SMS başarısız ama arama başladıysa sent (60 sn sınırını başlatan koşulun aynısı)', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          rig.direct.smsResult = SmsSendStatus.failed;
-          trigger(rig, async, SosSource.voice);
-          run(async, const Duration(seconds: 30)); // hiçbir SMS gitmedi: 112 teklifi penceresi (6 sn) sonrası aranır
-          expect(rig.direct.calls, isNotEmpty);
-          expect(rig.outcomes, [(SosSource.voice, SosOutcome.sent)]);
-          rig.dispose();
-        });
-      });
-
-      test('ön kontrolde takılan SOS (kişi yok) ve sınır: sonuç bildirimi YOK', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          rig.store.remove(ayse.key);
-          rig.store.remove(ali.key);
-          expect(trigger(rig, async, SosSource.fall), SosTriggerResult.blocked);
-          run(async, const Duration(seconds: 40));
-          expect(rig.outcomes, isEmpty);
-          rig.dispose();
-        });
-      });
-
-      test('gönderim başladıktan sonra iptal denemesi bildirim üretmez (too late)', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          trigger(rig, async, SosSource.voice);
-          run(async, const Duration(seconds: 7));
-          expect(rig.controller.phase, SosPhase.sending);
-          expect(rig.controller.cancel(SosCancelSource.voice), isFalse);
-          expect(rig.outcomes, isEmpty, reason: 'iptal kabul edilmedi');
-          run(async, const Duration(seconds: 10));
-          expect(rig.outcomes, [(SosSource.voice, SosOutcome.sent)]);
-          rig.dispose();
-        });
-      });
-
-      test('bildirim dinleyicisi hata fırlatsa da SOS ETKİLENMEZ (SMS gider, arama yapılır)', () {
-        fakeAsync((async) {
-          final rig = Rig();
-          rig.throwOnOutcome = true;
-          trigger(rig, async, SosSource.voice);
-          run(async, const Duration(seconds: 12));
-          expect(rig.direct.sms.map((s) => s.$1), [ayse.number, ali.number]);
-          expect(rig.direct.calls, [ayse.number]);
-          expect(rig.controller.phase, SosPhase.idle);
-          rig.dispose();
-        });
-      });
-    });
-
     group('60 sn sınırı', () {
       /// Başarıyla çıkan bir SOS'u bitirir.
       void sendOne(Rig rig, FakeAsync async, SosSource source) {
@@ -837,25 +725,12 @@ void main() {
         });
       });
 
-      test('düşme kaynaklı SOS: 112 ayarı açık olsa da KENDİLİĞİNDEN aranmaz; 25 sn geri sayım', () {
-        fakeAsync((async) {
-          final rig = Rig()..call112 = true;
-          trigger(rig, async, SosSource.fall);
-          expect(rig.log, ['countdown(fall,25)']);
-          run(async, const Duration(seconds: 24));
-          expect(rig.direct.sms, isEmpty);
-          run(async, const Duration(seconds: 40));
-          expect(rig.direct.calls, [ayse.number], reason: 'onay yoksa yalnızca ilk kişi');
-          expect(rig.direct.calls, isNot(contains(testNumber)));
-          rig.dispose();
-        });
-      });
-
-      test('düşmede SMS\'lerden sonra kısa pencerede 112 teklifi sunulur; çift dokunuş onaydır', () {
+      test('SMS gitmediyse kısa pencerede 112 teklifi sunulur; çift dokunuş onaydır', () {
         fakeAsync((async) {
           final rig = Rig();
-          trigger(rig, async, SosSource.fall);
-          run(async, const Duration(seconds: 25)); // SMS'ler gitti, sonuçlar söyleniyor
+          rig.direct.smsResult = SmsSendStatus.failed;
+          trigger(rig, async, SosSource.glasses);
+          run(async, const Duration(seconds: 7)); // SMS'ler denendi, sonuçlar söyleniyor
           expect(rig.where('smsResults('), [contains('offer=true')]);
           run(async, const Duration(seconds: 2)); // konuşma bitti, karar penceresi açık
           expect(rig.controller.offering112, isTrue);
@@ -874,11 +749,12 @@ void main() {
         });
       });
 
-      test('düşmede pencere onaysız geçerse ilk kişi aranır ve teklif kapanır', () {
+      test('pencere onaysız geçerse ilk kişi aranır ve teklif kapanır', () {
         fakeAsync((async) {
           final rig = Rig();
-          trigger(rig, async, SosSource.fall);
-          run(async, const Duration(seconds: 25 + 2));
+          rig.direct.smsResult = SmsSendStatus.failed;
+          trigger(rig, async, SosSource.glasses);
+          run(async, const Duration(seconds: 7 + 2));
           expect(rig.controller.offering112, isTrue);
           run(async, SosConfig.offerDecisionWindow + const Duration(seconds: 1));
           expect(rig.direct.calls, [ayse.number]);
@@ -1109,10 +985,8 @@ void main() {
       });
     });
 
-    test('geri sayım süreleri: elle 7 sn, düşme 25 sn', () {
-      expect(SosConfig.countdownFor(SosSource.voice), const Duration(seconds: 7));
-      expect(SosConfig.countdownFor(SosSource.glasses), const Duration(seconds: 7));
-      expect(SosConfig.countdownFor(SosSource.fall), const Duration(seconds: 25));
+    test('geri sayım süresi: elle 7 sn', () {
+      expect(SosConfig.manualCountdown, const Duration(seconds: 7));
     });
   });
 }

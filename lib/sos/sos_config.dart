@@ -1,19 +1,10 @@
-/// SOS'u kim tetikledi. Kaynak iki şeyi belirler: geri sayım süresi ve
-/// 112'nin aranıp aranamayacağı.
+/// SOS'u kim tetikledi.
 enum SosSource {
   /// Sesli "yardım", "imdat", "acil durum".
   voice,
 
   /// Gözlük uzun basışı.
   glasses,
-
-  /// Düşme algılama (Faz 7c). Süre uzundur ve **112 hiç aranmaz**
-  /// (yanlış pozitif riski en yüksek yer; bkz. CLAUDE.md Faz 7 kararları).
-  fall;
-
-  /// Bu kaynaktan tetiklenen SOS 112'yi **kendiliğinden** arayabilir mi
-  /// (ayar açıksa)? Düşmede hayır; ama kullanıcı onaylı teklif her kaynakta var.
-  bool get may112 => this != fall;
 }
 
 /// Geri sayımı kim iptal etti.
@@ -24,15 +15,6 @@ enum SosCancelSource { voice, glasses, screen }
 abstract final class SosConfig {
   /// Elle SOS. İptal varsayılanı GÖNDER: kullanıcı bir şey yapmazsa gider.
   static const manualCountdown = Duration(seconds: 7);
-
-  /// Düşme kaynaklı SOS (7c'de kullanılacak). Otomatik 112 yoktur; SMS'lerden
-  /// sonra yalnızca onaylı teklif ([offerDecisionWindow]) sunulur.
-  static const fallCountdown = Duration(seconds: 25);
-
-  /// Düşme geri sayımında kısa tekrar duyurunun söylendiği kalan süreler
-  /// (saniye): "10 sn'de bir" = geçen 10 ve 20. sn (25 sn'lik geri sayımda
-  /// kalan 15 ve 5). Yalnızca [SosSource.fall]; elle SOS'ta tekrar yok.
-  static const fallReminderSeconds = [15, 5];
 
   /// Geri sayım bitince konum henüz yoksa en fazla bu kadar beklenir.
   static const locationGrace = Duration(seconds: 3);
@@ -57,8 +39,7 @@ abstract final class SosConfig {
   static const offer112Window = Duration(seconds: 20);
 
   /// SMS sonuçları söylendikten sonra, kişi araması BAŞLAMADAN önce 112
-  /// teklifine verilen kısa karar süresi. Düşme kaynaklı SOS'ta her zaman,
-  /// diğerlerinde SMS'lerin hiçbiri gitmediyse sunulur. Bu pencerede çift
+  /// teklifine verilen kısa karar süresi. SMS'lerin hiçbiri gitmediyse sunulur. Bu pencerede çift
   /// dokunuş 112 onayıdır ("tekrar et" değil); onaylanırsa kişi aranmaz.
   static const offerDecisionWindow = Duration(seconds: 6);
 
@@ -68,7 +49,4 @@ abstract final class SosConfig {
   static const sendNowGuard = Duration(seconds: 2);
 
   static const maxContacts = 3;
-
-  static Duration countdownFor(SosSource source) =>
-      source == SosSource.fall ? fallCountdown : manualCountdown;
 }

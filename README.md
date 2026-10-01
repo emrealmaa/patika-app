@@ -78,7 +78,8 @@ değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
 | EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
 | SOS | "Yardım", "imdat", "acil durum" | ✅ Geri sayım; "iptal", "yanlış alarm", "vazgeç", "gerek yok" iptal eder ("dur" iptal etmez) |
 | Acil kişi | "acil kişi ekle Ayşe", "acil kişi sil Ayşe", "acil kişiler kim" | ✅ En çok 3 kişi; ekleme onaylı, `direct`de isteğe bağlı bildirim SMS'i |
-| HAVA / HABER / MÜZİK / GEÇİŞ MODU | "Hava durumu nasıl" … | Henüz hazır değil (sonraki fazlar) |
+| GEÇİŞ MODU | "Karşıya geçmek istiyorum" … | Henüz hazır değil (sonraki fazlar) |
+| Hava / haber / müzik | - | Uygulamada yok: Katman 2'nin (Python/Gemini) işi |
 | OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
 
 Telefon eylemi başlatan komutlar (ara, mesaj gönder, götür) çok adımlı

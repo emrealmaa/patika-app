@@ -1,4 +1,3 @@
-import '../fall/fall_mode.dart';
 import '../l10n/strings_tr.dart';
 
 enum Verbosity { short, long }
@@ -66,18 +65,8 @@ class Settings {
   /// Acil durumda (SOS) kişi yerine 112 aransın mı (Faz 7). Varsayılan
   /// KAPALI: asılsız 112 araması idari para cezası gerektirebilir (bkz.
   /// CLAUDE.md Faz 7 kararları). Sesle değil yalnızca ayarlar ekranından
-  /// açılır; açılırken sesli uyarı verilir. Düşme kaynaklı SOS bu ayardan
-  /// bağımsız olarak 112'yi kendiliğinden aramaz.
+  /// açılır; açılırken sesli uyarı verilir.
   final bool emergencyCall112;
-
-  /// Düşme algılama modu (Faz 7c). null = kullanıcı hiç seçmedi: derleme
-  /// türünün varsayılanı geçerli (debug gölge, release kapalı; bkz.
-  /// [effectiveFallMode]). Açıkça seçilen değer derleme türünden bağımsız.
-  final FallMode? fallMode;
-
-  /// Gölge modunda aday oluşunca kısa test ses işareti çalsın mı. Varsayılan
-  /// kapalı (Faz 7c kararı 2): yalnızca deneme sırasında açılır.
-  final bool fallShadowEarcon;
 
   const Settings({
     this.speechRateLevel = 2,
@@ -90,8 +79,6 @@ class Settings {
     this.readMessagesAloud = true,
     this.notificationsMuted = false,
     this.emergencyCall112 = false,
-    this.fallMode,
-    this.fallShadowEarcon = false,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -116,8 +103,6 @@ class Settings {
     bool? readMessagesAloud,
     bool? notificationsMuted,
     bool? emergencyCall112,
-    FallMode? fallMode,
-    bool? fallShadowEarcon,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -131,8 +116,6 @@ class Settings {
       readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
-      fallMode: fallMode ?? this.fallMode,
-      fallShadowEarcon: fallShadowEarcon ?? this.fallShadowEarcon,
     );
   }
 
@@ -164,8 +147,6 @@ class Settings {
         'readMessagesAloud': readMessagesAloud,
         'notificationsMuted': notificationsMuted,
         'emergencyCall112': emergencyCall112,
-        'fallMode': ?fallMode?.name,
-        'fallShadowEarcon': fallShadowEarcon,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -194,12 +175,6 @@ class Settings {
       emergencyCall112: json['emergencyCall112'] is bool
           ? json['emergencyCall112'] as bool
           : d.emergencyCall112,
-      // Tanınmayan değer (ör. ileride eklenecek `on` eski sürümde okunursa)
-      // "hiç seçilmedi" sayılır: derleme türü varsayılanı, asla SOS değil.
-      fallMode: FallMode.values.asNameMap()[json['fallMode']],
-      fallShadowEarcon: json['fallShadowEarcon'] is bool
-          ? json['fallShadowEarcon'] as bool
-          : d.fallShadowEarcon,
     );
   }
 
@@ -215,15 +190,12 @@ class Settings {
       other.nodToListen == nodToListen &&
       other.readMessagesAloud == readMessagesAloud &&
       other.notificationsMuted == notificationsMuted &&
-      other.emergencyCall112 == emergencyCall112 &&
-      other.fallMode == fallMode &&
-      other.fallShadowEarcon == fallShadowEarcon;
+      other.emergencyCall112 == emergencyCall112;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud, notificationsMuted, emergencyCall112, fallMode,
-      fallShadowEarcon);
+      readMessagesAloud, notificationsMuted, emergencyCall112);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

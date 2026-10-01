@@ -17,13 +17,6 @@ import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
-import 'package:patika_app/fall/fall_candidate_source.dart';
-import 'package:patika_app/fall/fall_mode.dart';
-import 'package:patika_app/fall/fall_consent_store.dart';
-import 'package:patika_app/fall/fall_open_gate.dart';
-import 'package:patika_app/fall/fall_open_state.dart';
-import 'package:patika_app/fall/fall_shadow_log.dart';
-import 'package:patika_app/fall/motion_source.dart';
 import 'package:patika_app/sos/emergency_contacts.dart';
 import 'package:patika_app/sos/emergency_number.dart';
 import 'package:patika_app/sos/sos_call_monitor.dart';
@@ -88,27 +81,9 @@ class Harness {
   /// (`app.pollPhoneBattery()`); `autoStart` kapalıyken zamanlayıcı yok.
   final phoneBattery = FakePhoneBattery(const PhoneBatteryReading(80));
 
-  /// Düşme algılama (Faz 7c-1): sentetik hareket kaynağı + bellekte kayıt;
-  /// gerçek sensör/kanal hiç kullanılmaz. [fallMotion.push] ile sinyal verilir.
-  final fallMotion = SyntheticMotionSource();
-  final fallLogStore = MemoryFallLogStore();
-
-  /// Açık moda geçişin kalıcı durumu (Faz 7c-2): varsayılan olarak gölge 8
-  /// gündür kesintisiz çalışıyor (7 gün kapısı tutar), tam metin duyulmadı.
-  late final MemoryFallOpenState fallOpenState;
-
-  /// Bu cihazdaki açık mod onayı (yedekten gelmez): varsayılan YOK.
-  late final MemoryFallConsentStore fallConsent;
-
-  /// Tam uyarı metni "anladım, aç" ile duyuldu mu (kalıcı bayrak).
-  bool get openStateHeard => fallOpenState.heard;
-
   /// Varsayılan "play" türü (doğrudan eylem yok); "direct" için sahte ver.
   Harness({
-    // Düşme algılama varsayılanı testte kapalı: debug derlemesinde gölge
-    // olurdu (kDebugMode) ve eski testlerin durum cümlesini değiştirirdi.
-    // Düşme testleri modu açıkça seçer.
-    Settings initial = const Settings(fallMode: FallMode.off),
+    Settings initial = const Settings(),
     DirectActions direct = const NoDirectActions(),
     IncomingMessages incomingMessages = const NoIncomingMessages(),
     LoudMessagesNotice? loudMessagesNotice,
@@ -118,18 +93,11 @@ class Harness {
     SosCallMonitor? sosCallMonitor,
     Future<bool> Function()? ensureSmsPermission,
     BatteryMonitor? batteryMonitor,
-    MemoryFallOpenState? fallOpenState,
-    MemoryFallConsentStore? fallConsent,
     bool smsPermission = true,
-    ShadowGatePolicy fallShadowGatePolicy = const ShadowGatePolicy(),
-    DateTime Function()? fallNow,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
-    this.fallConsent = fallConsent ?? MemoryFallConsentStore();
     // AppState kurulurken (açılış guard'ı ilk mikro-görevde çalışır) hazır olsun.
     sosPermissions.sms = smsPermission;
-    this.fallOpenState = fallOpenState ??
-        MemoryFallOpenState(since: DateTime.now().subtract(const Duration(days: 8)));
     this.emergencyContacts = MemoryEmergencyContactStore(emergencyContacts);
     settings.update(initial);
     app = AppState(
@@ -168,12 +136,6 @@ class Harness {
       sosCallMonitor: sosCallMonitor ?? FakeCallMonitor(),
       phoneBattery: phoneBattery,
       batteryMonitor: batteryMonitor,
-      fallSource: PhoneImuFallCandidateSource(fallMotion),
-      fallLogStore: fallLogStore,
-      fallOpenState: this.fallOpenState,
-      fallConsent: this.fallConsent,
-      fallShadowGatePolicy: fallShadowGatePolicy,
-      fallNow: fallNow,
     );
   }
 

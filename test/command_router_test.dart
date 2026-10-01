@@ -72,10 +72,11 @@ void main() {
     test('PatikaIntent.fromWireName tüm bilinen niyetleri doğru eşler', () {
       expect(PatikaIntent.fromWireName('ARA'), PatikaIntent.ara);
       expect(PatikaIntent.fromWireName('MESAJ'), PatikaIntent.mesaj);
-      expect(PatikaIntent.fromWireName('HAVA'), PatikaIntent.hava);
       expect(PatikaIntent.fromWireName('SAAT'), PatikaIntent.saat);
-      expect(PatikaIntent.fromWireName('MÜZİK'), PatikaIntent.muzik);
-      expect(PatikaIntent.fromWireName('HABER'), PatikaIntent.haber);
+      for (final gone in ['HAVA', 'MÜZİK', 'MUZIK', 'HABER']) {
+        expect(PatikaIntent.fromWireName(gone), PatikaIntent.bilinmiyor,
+            reason: '$gone Katman 2 (Python/Gemini) işi, uygulamada niyet değil');
+      }
       expect(PatikaIntent.fromWireName('OKU'), PatikaIntent.oku);
       expect(PatikaIntent.fromWireName('GECIS_MODU'), PatikaIntent.gecisModu);
       expect(PatikaIntent.fromWireName('NAVİGASYON'), PatikaIntent.navigasyon);

@@ -18,7 +18,7 @@ import 'intent_lexicon.dart';
 ///    - Her niyet, cümledeki anahtar kelimelerinin ağırlığı kadar puan alır
 ///      (Türkçe ekleri tanır: "saati", "arar mısın", "götürür müsün").
 ///    - Kişi/yer gerektiren niyet (ARA/MESAJ/NAVİGASYON) gerçek bir aday
-///      yoksa 1 puan kaybeder ("haberleri ara" -> HABER); yönelme ekli bir
+///      yoksa 1 puan kaybeder ("saati ara" -> SAAT); yönelme ekli bir
 ///      yer 1 puan ekler ("saat kulesine götür" -> NAVİGASYON).
 ///    - En yüksek puan kazanır; eşitlikte tablo sırası; [minIntentScore]
 ///      altı BİLİNMİYOR.
@@ -53,11 +53,6 @@ BleCommand classifyVoiceCommand(String text) {
   // ("acil durum" SOS, "dur" DUR kalır), "ne kadar kaldı"dan ÖNCE ("pilim ne
   // kadar kaldı" navigasyon sorusu değil).
   if (_statusQuery.hasMatch(lowered)) return BleCommand.fromWire('DURUM', null);
-
-  // Düşme algılama komutları (Faz 7c-2): yalnızca TÜM cümle. "acil durum" SOS,
-  // "durum" DURUM, "dur" DUR kalır (kontrol katmanı ve yukarıdaki sorgu önce).
-  final fall = _fallCommand(lowered);
-  if (fall != null) return BleCommand.fromWire('DUSME', fall);
 
   // Navigasyon kontrolü (Faz 6): katı kalıplar, anahtar kelime puanlamasından
   // ÖNCE - "geçtim" GECIS_MODU'nun "geç" fiiline, "kaç dakika kaldı" başka
@@ -178,7 +173,7 @@ final _recentNotifications = RegExp(r'bildirim\p{L}*\s+oku', unicode: true);
 
 /// "durum", "durum ne", "genel durum", "pil", "pilim ne kadar", "pil durumu",
 /// "gözlüğün pili kaç", "şarjım ne kadar kaldı". YALNIZCA tüm cümle bu olduğunda:
-/// "hava durumu" HAVA'da, "acil durum" SOS'ta kalır. Dikte sırasında hiç
+/// "hava durumu" durum sorusu sayılmaz (tanınmaz), "acil durum" SOS'ta kalır. Dikte sırasında hiç
 /// denetlenmez (diyalog cevabı sınıflandırıcıya gitmez; mesaj gövdesindeki
 /// "pil" kelimesi mesajın parçasıdır).
 final _statusQuery = RegExp(
@@ -188,51 +183,6 @@ final _statusQuery = RegExp(
     r'(?:\s+(?:durumu|seviyesi|nedir|ne|kaç|ne\s+kadar)(?:\s+(?:kaldı|var|oldu))?)?)'
     '$_politeEnd\$',
     unicode: true);
-
-// --- Düşme algılama (Faz 7c-2) --------------------------------------------------
-
-const _fallSubject = r'düşme\s+(?:algıla|tespit)\p{L}*(?:\s+özelli[kğ]\p{L}*)?';
-const _shadowSubject = r'gölge\s+mod\p{L}*';
-const _openVerb = r'(?:aç|açar\s+mısın|açabilir\s+misin|etkinleştir\p{L}*)';
-const _closeVerb =
-    r'(?:kapat|kapatır\s+mısın|kapatabilir\s+misin|durdur|devre\s+dışı\s+bırak)';
-
-/// "düşme algılamayı aç" -> ac (iki adımlı açma diyaloğu)
-/// "düşme algılamayı kapat" / "gölge modunu kapat" -> kapat / golge_kapat
-/// "gölge modunu aç" -> golge_ac
-/// "düşme algılama durumu (ne)" / "düşme algılama açık mı" -> durum
-/// YALNIZCA tüm cümle: "Ahmet'e düşme algılamayı aç de" ya da "düşme
-/// algılamayı açmayı unutma" eşleşmez.
-final _fallRules = [
-  ('^$_polite$_fallSubject\\s+$_openVerb$_politeEnd\$', 'ac'),
-  ('^$_polite$_fallSubject\\s+$_closeVerb$_politeEnd\$', 'kapat'),
-  ('^$_polite$_shadowSubject\\s+$_openVerb$_politeEnd\$', 'golge_ac'),
-  ('^$_polite$_shadowSubject\\s+$_closeVerb$_politeEnd\$', 'golge_kapat'),
-  (
-    '^$_polite$_fallSubject\\s+(?:durum\\p{L}*|açık\\s+mı|kapalı\\s+mı|nasıl)(?:\\s+(?:ne|nedir))?$_politeEnd\$',
-    'durum'
-  ),
-].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
-
-String? _fallCommand(String lowered) {
-  for (final (pattern, entity) in _fallRules) {
-    if (pattern.hasMatch(lowered)) return entity;
-  }
-  return null;
-}
-
-/// Açık modu açmanın ikinci adımı (ses kanalı): YALNIZCA tüm cümle "anladım
-/// aç", "anladım, aç", "kabul ediyorum aç", "onaylıyorum aç" (nezaket
-/// sözcükleriyle olabilir). Tek başına "aç", "evet", "tamam", "anladım"
-/// AÇMAZ: bilerek dar (karar 2). Yalnızca açma diyaloğunun cevabında
-/// denetlenir; dikte ve diğer diyaloglarda ya da normal komut olarak hiç.
-final _fallEnableConfirmRule = RegExp(
-  '^$_polite(?:anladım|kabul\\s+ediyorum|onaylıyorum)\\s+aç$_politeEnd\$',
-  unicode: true,
-);
-
-bool classifyFallEnableConfirm(String text) =>
-    _fallEnableConfirmRule.hasMatch(_turkishLower(_normalizeSpacing(text)));
 
 // --- Navigasyon kontrolü (Faz 6) ------------------------------------------------
 
@@ -402,8 +352,8 @@ class _Token {
 }
 
 /// İsim kökünden sonra gelebilecek ekler (çoğul, hal, iyelik, -ki):
-/// saat|i, saat|in, haber|leri, önüm|deki, bu|nu, karşı|ya.
-/// "havaalanı" ("hava" + "alanı") ya da "saatçi" eşleşmez.
+/// saat|i, saat|in, saat|ler, önüm|deki, bu|nu, karşı|ya.
+/// "saatçi" eşleşmez.
 final _nounSuffix = RegExp(
   r"^'?(?:l[ae]r)?"
   r"(?:[ıiuü]|y[ıiuü]|n[ıiuü]|[ae]|y[ae]|n[ae]|[dt][ae]|[dt][ae]n|n?[ıiuü]n|"
@@ -460,7 +410,7 @@ class _Score {
   /// Yalnızca anahtar kelime ağırlıkları - eşik buna uygulanır: "Ara" tek
   /// başına (kişi yok, sıralama puanı 1) yine ARA'dır ve diyalog "Kimi
   /// arayayım?" diye sorar. Ceza yalnızca niyetler arası sıralamayı etkiler
-  /// ("haberleri ara" -> HABER).
+  /// ("saati ara" -> SAAT).
   final int keywordScore;
   final Set<int> keywordTokens;
   final Set<String> matchedStems;
@@ -497,8 +447,8 @@ BleCommand _classifyByKeywords(String lowered, String source) {
 
     if (entry.entity != EntityKind.none) {
       // Katı aday: bu niyetin anahtar kelimesi, dolgu kelimesi ya da BAŞKA
-      // bir niyetin güçlü anahtar kelimesi olmayan kelimeler. "haberleri ara"
-      // da "haberleri" kişi adayı sayılmaz.
+      // bir niyetin güçlü anahtar kelimesi olmayan kelimeler. "saati ara"
+      // da "saati" kişi adayı sayılmaz.
       final strict = [
         for (var i = 0; i < tokens.length; i++)
           if (!keywordTokens.contains(i) &&

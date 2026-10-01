@@ -36,9 +36,10 @@ void main() {
 
   group('entity gerektirmeyen niyetler', () {
     test('SAAT', () => expectCommand('Saat kaç?', PatikaIntent.saat));
-    test('HAVA', () => expectCommand('hava durumu nasıl', PatikaIntent.hava));
-    test('MÜZİK', () => expectCommand('müzik çal', PatikaIntent.muzik));
-    test('HABER', () => expectCommand('haberleri oku', PatikaIntent.haber));
+    test('hava / müzik artık tanınmaz (Katman 2 işi)', () {
+      expectCommand('hava durumu nasıl', PatikaIntent.bilinmiyor);
+      expectCommand('müzik çal', PatikaIntent.bilinmiyor);
+    });
     test('OKU', () => expectCommand('önümdeki yazıyı oku', PatikaIntent.oku));
     test('GECIS_MODU', () => expectCommand('karşıya geçmek istiyorum', PatikaIntent.gecisModu));
   });

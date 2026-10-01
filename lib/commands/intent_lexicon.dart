@@ -81,12 +81,6 @@ const intentLexicon = [
     Keyword(['geçit', 'geçid'], _n, 1),
     Keyword(['yol'], _n, 1),
   ]),
-  IntentEntry('HABER', EntityKind.none, [
-    Keyword(['haber'], _n, 2),
-    Keyword(['gündem'], _n, 2),
-    Keyword(['neler'], _n, 1),
-    Keyword(['ol'], _v, 1),
-  ]),
   IntentEntry('OKU', EntityKind.none, [
     Keyword(['oku'], _v, 2),
     Keyword(['yazı'], _n, 2),
@@ -96,27 +90,8 @@ const intentLexicon = [
     Keyword(['bura'], _n, 1),
     Keyword(['tabela'], _n, 1),
   ]),
-  IntentEntry('HAVA', EntityKind.none, [
-    Keyword(['hava'], _n, 2),
-    Keyword(['yağmur'], _n, 2),
-    Keyword(['sıcaklık'], _n, 2),
-    Keyword(['şemsiye'], _n, 2),
-    Keyword(['yağ'], _v, 1),
-    Keyword(['kar'], _n, 1),
-    Keyword(['soğuk'], _n, 1),
-    Keyword(['sıcak'], _n, 1),
-    Keyword(['derece'], _n, 1),
-    Keyword(['dışarı'], _n, 1),
-  ]),
   IntentEntry('SAAT', EntityKind.none, [
     Keyword(['saat'], _n, 2),
-  ]),
-  IntentEntry('MÜZİK', EntityKind.none, [
-    Keyword(['müzik', 'müziğ'], _n, 2),
-    Keyword(['şarkı'], _n, 2),
-    Keyword(['çal'], _v, 1),
-    Keyword(['aç'], _v, 1),
-    Keyword(['dinle'], _v, 1),
   ]),
 ];
 

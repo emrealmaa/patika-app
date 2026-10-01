@@ -61,7 +61,7 @@ void main() {
     });
 
     test('yalnızca tüm cümle: komşu niyetler bozulmadı', () {
-      expect(classifyVoiceCommand('hava durumu').intent, PatikaIntent.hava);
+      expect(classifyVoiceCommand('hava durumu').intent, PatikaIntent.bilinmiyor);
       expect(classifyVoiceCommand('ne kadar kaldı').intent, PatikaIntent.navigasyonKalan);
       expect(classifyVoiceCommand('pil almak için markete götür').intent,
           isNot(PatikaIntent.durum));

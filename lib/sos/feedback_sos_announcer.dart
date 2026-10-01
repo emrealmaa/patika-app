@@ -20,25 +20,12 @@ class FeedbackSosAnnouncer implements SosAnnouncer {
   /// (her saniye çağrılır; zaten dinliyorsa hiçbir şey yapmaz).
   final void Function() _ensureListening;
 
-  /// Açık mikrofon oturumunu kapatır. Düşme geri sayımındaki tekrar duyuru
-  /// "iptal deyin" der: mikrofon o sırada açık kalırsa kendi sesimizi
-  /// "iptal" diye duyup SOS'u iptal edebilirdi. Verilmezse (testler) duyuru
-  /// öncesinde dinleme kapatılmaz.
-  final Future<void> Function()? _pauseListening;
-
   bool _introDone = true;
-  SosSource? _source;
-
-  /// Her geri sayımda artar: eski bir SOS'un geç biten duyurusu yeni SOS'un
-  /// dinleme durumunu bozmasın.
-  int _generation = 0;
 
   FeedbackSosAnnouncer(
     this._feedback, {
     required void Function() ensureListening,
-    Future<void> Function()? pauseListening,
-  })  : _ensureListening = ensureListening,
-        _pauseListening = pauseListening;
+  }) : _ensureListening = ensureListening;
 
   Future<bool> _say(String text) =>
       _feedback.say(text, priority: AnnouncementPriority.critical, dedupe: false);
@@ -70,10 +57,8 @@ class FeedbackSosAnnouncer implements SosAnnouncer {
   @override
   void countdownStarted(SosSource source, Duration total) {
     _feedback.signal(FeedbackEvent.sosTick);
-    _source = source;
-    _generation++;
     _introDone = false;
-    _say(source == SosSource.fall ? Tr.sosFallCountdownStart : Tr.sosCountdownStart).whenComplete(() {
+    _say(Tr.sosCountdownStart).whenComplete(() {
       _introDone = true;
       _ensureListening();
     });
@@ -86,33 +71,8 @@ class FeedbackSosAnnouncer implements SosAnnouncer {
     if (remaining.inSeconds <= 3) {
       Timer(const Duration(milliseconds: 500), () => _feedback.earcons.play(Earcon.sosTick));
     }
-    // Düşme geri sayımında kısa tekrar duyuru (kalan 15 ve 5 sn). Önce
-    // [_introDone] kapanır: aşağıdaki satır mikrofonu yeniden açmasın.
-    if (_source == SosSource.fall && SosConfig.fallReminderSeconds.contains(remaining.inSeconds)) {
-      _remind(remaining.inSeconds);
-    }
-    // Giriş cümlesi / tekrar duyuru bitmeden mikrofon açılmaz (kendi sesimizi duymasın).
+    // Giriş cümlesi bitmeden mikrofon açılmaz (kendi sesimizi duymasın).
     if (_introDone) _ensureListening();
-  }
-
-  /// Kısa tekrar duyuru: dinleme kapanır, cümle söylenir, bitince (ya da
-  /// kesilince) dinleme yeniden açılır. Ekran ve gözlük dokunuşu iptali bu
-  /// sırada da açıktır; yalnızca sesli iptal 2-3 sn kapalı kalır.
-  void _remind(int secondsLeft) {
-    _introDone = false;
-    final generation = _generation;
-    unawaited(() async {
-      try {
-        await _pauseListening?.call();
-      } catch (_) {
-        // Dinleme kapatılamadıysa yine de konuş: duyuru SOS'un güvenliğinden önemli değil
-        // ama sessiz kalmak iptal yolunu hatırlatmaz.
-      }
-      await _say(Tr.sosFallCountdownReminder(secondsLeft));
-      if (generation != _generation) return;
-      _introDone = true;
-      _ensureListening();
-    }());
   }
 
   @override
