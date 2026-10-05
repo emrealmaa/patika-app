@@ -32,9 +32,10 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
-## Nerede kaldık (2026-10-01)
+## Nerede kaldık (2026-10-05)
 
-**Bitenler** (7b-1 `c4dcafe`, 7b-2 `849bcce`; 597 test). **Faz 7c ve Faz 8
+**Bitenler** (7b-1 `c4dcafe`, 7b-2 `849bcce`, arayüz sadeleştirmesi
+`05b77ea`/`6c436cd`/`d08619a`; 628 test). **Faz 7c ve Faz 8
 İPTAL EDİLDİ (2026-10-01)**, bkz. "Faz planı". Aşağıdaki tabloda yoklar;
 7c-1 (`a4c49b5`) ve 7c-2 (`c632967`, `124b93b`) commit'leri git geçmişinde:
 
@@ -51,6 +52,7 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 | 6 | Navigasyon: saf mantık (6a), konum servisi + `NavigationSession` + karşıya geçiş duraklaması (6b), Google Routes/Places + `NavigationFlow` (6c) |
 | 7a | SOS çekirdeği: durum makinesi + geri sayım + gönderim (7a-1), uygulamaya bağlama: gözlük, sesli iptal, ekran, 112 teklifi (7a-2), acil kişi kurulumu: sesle ekle/sil/liste, izin akışı, isteğe bağlı rıza SMS'i (7a-3, `6663ac1`); SOS telefon deneme listesi `docs/sos_phone_test_checklist.md` (`f8a1823`) |
 | 7b | Pil uyarıları: telefon (`BatteryProbe.kt`, 30 sn yoklama) + gözlük (`batt`), `BatteryMonitor`, meşgulken erteleme, Test Modu taklidi (7b-1, `c4dcafe`); DURUM niyeti ("durum", "pil ne kadar") + `StatusHandler` (7b-2) |
+| Arayüz | Arayüz sadeleştirmesi: release'te gerçek BLE ile açılış (`05b77ea`); gizli Test Modu (Ayarlar'da sürüm satırına 7 dokunuş, `package_info_plus`, her açılışta `low` öncelikli "Test modu açık", simülasyon anahtarı Test Modu'nda) + teknik sızıntı temizliği (cihaz kimliği yok, okunur komut adları) (`6c436cd`); telefon testi maddeleri (`d08619a`) |
 
 **Açık kalanlar:**
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
