@@ -231,6 +231,20 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   sapıyor", "30 metre sonra") gerçek görme engelli kullanıcılarla
   denenmesi (Altınokta Körler Derneği / Mustafa Özhan Kalaç). Emir kipi
   yerine bilgi kipinin yeterince anlaşılır olduğu **henüz bir varsayım**.
+- [ ] **Arayüz sadeleştirmesi - gerçek BLE açılışı:** release/`direct`
+  derlemesi ilk açılışta **gerçek BLE** ile başlıyor mu
+  (`AppState.defaultSimulated`, sahte gözlük yok); Bağlantı sekmesinde
+  simülasyon anahtarı ve cihaz kimliği (MAC/UUID) görünmüyor.
+- [ ] **Arayüz sadeleştirmesi - gizli Test Modu:** Ayarlar'daki sürüm
+  satırına TalkBack ile 7 dokunuş: sesli sayaç ("N dokunuş daha"), Test
+  Modu sekmesi en sonda beliriyor; uygulama yeniden açılınca her açılışta
+  "Test modu açık" duyuruluyor; "Test modunu gizle" ile kapanıyor ve
+  sonraki açılışta sessiz.
+- [ ] **Arayüz sadeleştirmesi - hatırlatma ile Hızlı Ayarlar:** Test Modu
+  açıkken uygulama **Hızlı Ayarlar karosundan** açılınca "Test modu açık"
+  hatırlatması (öncelik `low`) hemen başlayan dinlemeyle üst üste geliyor
+  mu: TTS mikrofona karışıp yanlış komut tanınıyor mu, dinleme hatırlatmayı
+  kesiyor mu, hatırlatma 10 sn'den uzun bekleyip atılıyor mu.
 
 ## Sıradaki
 
