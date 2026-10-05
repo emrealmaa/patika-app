@@ -1,99 +1,99 @@
-# Patika Companion
+# Patika Companion (patika-app)
 
-Patika akıllı gözlüğünün (ESP32-S3; kamera, ToF, IMU, earbud, BLE,
-Wi-Fi SoftAP; titreşim motoru yok) Flutter companion uygulaması. Birincil kullanıcı görme engelli
-bireyler; uygulama ekrana bakmadan, sesle ve telefonun titreşimiyle kullanılacak şekilde
-tasarlanıyor. Android öncelikli, iOS şimdilik ertelendi.
+[Patika](https://github.com/emrealmaa/patika) akıllı gözlüğünün **telefon uygulaması**. Gözlükle BLE
+üzerinden konuşur, ekrana bakmadan sesli komutla çalışır; arama, mesaj, navigasyon, bildirim okuma ve
+SOS'u tek elden yönetir. Birincil kullanıcı görme engelli bireylerdir; tasarım ölçütü "göz alıcı" değil,
+**ekran görmeden kullanılabilir** olmaktır.
 
-Gözlük donanımı henüz yok: her şey **Simülasyon modunda** çalışır ve
-**Test Modu** sekmesinden denenebilir.
+> **Durum:** Android öncelikli. Gerçek gözlük yok; gözlük tarafı BLE simülasyonuyla test ediliyor.
+> iOS planlama aşamasında (kod yok). Rakamlar geliştirici ölçümüdür, hakemli çalışma değildir.
 
-## Çalıştırma
+## 1. Özellikler ve doğrulama düzeyi
+
+| Özellik | Düzey | Kanıt / eksik |
+|---|---|---|
+| Arka plan servisi, bağlantı denetçisi, yeniden bağlanma | Cihazda doğrulandı | Galaxy S24 FE (Android 16, One UI 8.5), ekran kilitliyken sesli komut çalıştı |
+| Sesli komut (Türkçe), doğal ifade anlama | Cihazda + birim testi | 38 gerçek cümlede 19/38 (%50) → 38/38; **kurallar bu cümlelerle geliştirildi, ayrı bir doğrulama kümesi yok**, genel doğruluk ölçülmedi |
+| Arama, mesaj, navigasyon yönlendirmesi | Cihazda doğrulandı | Yerel uygulamalar doğru açılıyor |
+| Kişi eşleştirme (ek almış isimler, bulanık eşleşme) | Birim testi | Eşik değerleri gerçek rehberde tam doğrulanmadı |
+| Gelen arama duyurusu | Simülasyon cihazda doğrulandı | Gerçek gelen arama ve ses modu tespiti **doğrulanmadı** |
+| Bildirim okuma (WhatsApp/SMS) | İzin akışı cihazda doğrulandı | Gerçek mesajla uçtan uca bekliyor |
+| Navigasyon (Google Routes/Places) | Birim testi | Gerçek yürüyüş, konum izni akışı, ekran kapalı senaryo bekliyor |
+| SOS (geri sayım, SMS + arama) | Birim testi | **İkinci numarayla gerçek gönderim denenmedi** |
+| Pil uyarıları | Birim testi | Cihazda gerçek eşik tetiklemesi bekliyor |
+| Erişilebilirlik (TalkBack, kontrast, dokunma alanı) | Cihazda kısmen | Uçtan uca TalkBack turu tamamlanmadı |
+
+## 2. Parametreler
+
+Bunlar tasarım varsayımlarıdır, saha verisiyle kalibre **edilmemiştir** (`Ayarlanabilir` olanlar yapılandırmadadır).
+
+| Parametre | Değer | Gerekçe |
+|---|---|---|
+| SOS geri sayımı | 7 sn, ilk 2 sn'de "hemen gönder" sayılmaz | İptal penceresi; tekrarlanan "yardım" tanıma hatasına karşı |
+| SOS iptal varsayılanı | **Hiçbir şey yapılmazsa gönderilir** | Yanlışlıkla iptal olan gerçek SOS, yanlışlıkla giden SOS'tan daha kötü |
+| Tekrar SOS sınırı | 60 sn (iptal/başarısız olan sayılmaz) | Bilinçsiz tekrar basışa karşı |
+| Konum bekleme | Geri sayımla paralel, en çok 2–3 sn sonra konumsuz gider | Konum gecikmesi mesajı geciktirmesin |
+| Pil eşikleri | Telefon %30/15/5, gözlük %20/10/5; %5'te 5 dk'da bir titreşim | Her eşik bir kez konuşulur (alarm yorgunluğu); histerezis +5 puan |
+| Pil yoklama | 30 sn | Olay dinleyici yerine basit ve güvenli |
+| Geçiş duraklaması üst süresi | 90 sn (ayarlanabilir) | Kullanıcı "geçtim" demezse navigasyon sonsuza dek susmasın |
+| Yön teyidi (GPS hareket yönü) | ≥15 m, doğruluk <10 m, hız ≥0,7 m/s | GPS hatası genelde 5–15 m (tahmini); yanlış yön söylemek susmaktan kötü |
+
+## 3. Cihazda bulunan hatalar (emülatörde görünmeyenler)
+
+| Hata | Kök neden | Sonuç |
+|---|---|---|
+| Servis ana ekrana dönünce kapanıyordu | `stopWithTask` davranışı | Düzeltildi; ikinci, daha uzun testle yakalandı |
+| TalkBack'te butonlar tetiklenemiyordu | Dışarıdan `excludeSemantics` ile etiket sarma | Etiket butonun içine taşındı; tüm butonları tarayan koruma testi eklendi |
+| "Dinliyorum" bip'i duyulmuyordu | Sistem sesi kanalı kısıktı | Bip, konuşmayla aynı kanala alındı |
+| "saat kaç" tanındı ama metin kayboldu | Motor ara sonuç gönderiyor, uygulama yalnızca kesin sonuç kabul ediyordu | Ara sonuçlar saklanıyor |
+
+Bu tablo, cihaz testinin vazgeçilmez olduğunun kanıtıdır: dört hatanın dördü emülatörde gözlenmedi.
+
+## 4. Tasarım kararları
+
+| Karar | Reddedilen seçenek | Gerekçe |
+|---|---|---|
+| `flutter_reactive_ble` | `flutter_blue_plus` | Ticari kuruluşlar için ücretli; geliştirme/test de ticari sayılıyor |
+| Arayan kimliği için bildirim dinleyici | `CallScreeningService` | Kullanıcının spam koruma rolünü ele geçirmemek |
+| Kritik pil navigasyon/SOS'u durdurmaz | Otomatik kapanma | Sistem kendi başına "yardımı kes" kararı vermemeli |
+| Acil kişiler yedeğe girmez (`noBackupFilesDir`) | Varsayılan depolama | Bulut yedeğiyle sızma riski |
+| Onay cümlesi yalnızca geri alınamaz eylemde | Her komutta teyit | Gereksiz uzatma; arama/mesajda onay zaten soruluyor |
+| **Düşme algılama kaldırıldı** | Telefon IMU'suyla düşme tespiti | Cepte/çantada telefon düşmesini kullanıcı düşmesinden güvenilir ayıramıyor; gerçek kullanıcı talebi yok |
+| Faz 5 (görsel yardım) ve Faz 8 (hava/haber/müzik) kaldırıldı | Flutter'da yeniden yazım | Görsel analiz Katman 1'in işi; hava Gemini ile soruluyor; haber/müzik ana amaç dışı |
+
+## 5. Derleme türleri
+
+| Tür | SOS ve doğrudan SMS/arama | Dağıtım |
+|---|---|---|
+| `direct` | Tam çalışır | Doğrudan APK (dernek, test kullanıcısı) |
+| `play` | Desteklenmez; "bu sürümde acil durum mesajı gönderilemiyor" der | Play Store (izin kısıtı) |
+
+## 6. Çalıştırma
 
 ```bash
 flutter pub get
-flutter run --flavor play       # mağaza sürümü (varsayılan seçim)
-flutter run --flavor direct     # doğrudan arama/SMS (kendi cihazlar)
-flutter test                    # birim + widget testleri
-flutter analyze
+flutter run --flavor direct -d <cihaz-id>
+flutter analyze && flutter test
 ```
 
-İki derleme türü var (Android, `app/build.gradle.kts`):
+Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`
+dosyasının kopyasını doldurup `--dart-define-from-file` ile ver (kopya `.gitignore`'da olmalı). Google Cloud'da
+anahtarı paket adı ve imza SHA-1 ile yalnızca Routes ve Places API'lerine kısıtla, bütçe uyarısı koy.
 
-| Tür | Onaydan sonra | Neden |
-|---|---|---|
-| `play` | Arama / SMS ekranı açılır, kullanıcı tuşa basar | Google Play `CALL_PHONE`/`SEND_SMS` izinlerini kısıtlıyor; bu türde izinler hiç yok |
-| `direct` | Doğrudan arar / gönderir | Kendi cihazlar ya da mağaza dışı dağıtım |
+**Test Modu** geliştirici aracıdır (gözlük, bildirim, arama simülasyonları). Gerçek kullanıcıya gizlidir;
+Ayarlar'daki sürüm satırına 7 kez dokunarak açılır.
 
-API anahtarları koda gömülmez, derleme sırasında `--dart-define` ile verilir:
+## 7. Geçerlilik tehditleri
 
-```bash
-cp dart_defines.example.json dart_defines.json   # git'e girmez; anahtarı buraya yazın
-flutter run --flavor play --dart-define-from-file=dart_defines.json
-```
-
-| Anahtar | Ne için | Yoksa |
-|---|---|---|
-| `PATIKA_MAPS_API_KEY` | Sesli navigasyon: Google **Routes API** (yürüyüş rotası) ve **Places API (New)** (yer arama) | Navigasyon Google Haritalar uygulamasını açan yedek akışla çalışır (sesli soru aynı, rota Haritalar'da) |
-
-Google Cloud'da anahtarı **yalnızca bu iki API ile sınırlayın** ve günlük kota
-koyun. Anahtar uygulamanın içine gömülür ve APK'dan çıkarılabilir; bu bir
-geliştirme/dağıtım aşaması çözümü. Ürün aşamasında doğru çözüm, anahtarı
-sunucuda tutan ve isteği ileten küçük bir ara sunucudur. Anahtar istekte
-`X-Goog-Api-Key` başlığıyla gider (adrese yazılmaz) ve günlüklere basılmaz.
-
-Kısa sesleri yeniden üretmek için: `dart run tool/generate_earcons.dart`
-
-## Dinlemeyi başlatma
-
-Hepsi aynı yere gider; dinlerken tekrar tetiklemek dinlemeyi iptal eder,
-süren konuşmayı da hemen susturur.
-
-| Tetikleyici | Davranış |
+| Sınır | Etki |
 |---|---|
-| **Konuş** sekmesi (ilk sekme) | Büyük buton. TalkBack açıkken ekranın tamamı tek buton |
-| Gözlük butonu: tek dokunuş | Dinlemeyi başlatır |
-| Gözlük butonu: çift dokunuş | Son söyleneni tekrarlar (karşıya geçiş duraklamasındayken navigasyonu devam ettirir) |
-| Gözlük butonu: uzun basış | Acil durum (SOS): 7 sn geri sayım, iptal edilmezse acil kişilere SMS + tek arama. Yalnızca `direct` derlemesinde; `play`'de "gönderilemiyor" der |
-| Çift baş sallama | Ayarlardan açılırsa dinlemeyi başlatır (varsayılan kapalı) |
+| Tek cihaz (Galaxy S24 FE) | Başka üretici/Android sürümlerinde arka plan davranışı farklı olabilir |
+| Gerçek gözlük, WiFi akışı, gecikme ölçümü yok | Mimari varsayımlar donanımla sınanacak |
+| Dil modeli doğruluğu ayrı kümeyle ölçülmedi | %100 sonucu geliştirme kümesine aittir |
+| Kullanıcı görüşmesi nitel, tek kaynak | Genelleme yapılamaz |
+| iOS arka plan kısıtı ölçülmedi | iOS desteği için kanıt yok |
 
-Dinleme başlarken "Dinliyorum" yerine kısa bir ses çalar (Ayarlar'dan
-değiştirilebilir). İlk açılışta kısa bir sesli eğitim çalar.
+Belgeler: `CLAUDE.md` (faz durumu, kararlar, bekleyen testler), `docs/architecture.md`, `docs/ble_protocol.md`.
+Bu uygulama **acil durum servisi değildir**; SOS deneyseldir ve bastonun/kullanıcının kendi değerlendirmesinin yerini almaz.
 
-## Sesli komutlar
-
-| Niyet | Örnek | Durum |
-|---|---|---|
-| ARA | "Ahmet'i ara", "annemi arar mısın" | Arama ekranını numarayla açar |
-| MESAJ | "Ayşe'ye mesaj gönder" | SMS ekranını açar |
-| NAVİGASYON | "Kadıköy iskelesine götür" | Yer sorulur/seçilir, rota özetlenip onay alınır ("… 1,2 kilometre, yaklaşık 15 dakika. Başlayayım mı?"), sonra uygulama içi sesli yönlendirme. Anahtar ya da konum yoksa Google Haritalar açılır |
-| NAVİGASYON KONTROLÜ | "Ne kadar kaldı", "navigasyonu bitir", "geçtim" | ✅ Kalan yol/süre; kapat; karşıya geçiş duraklamasını bitir |
-| SAAT | "Saat kaç" | ✅ |
-| NUMARA | "Mehmet'in numarasını söyle" | ✅ Numarayı rakam rakam okur |
-| TAKMA AD | "Annemi Fatma Yılmaz olarak kaydet", "takma adları oku", "annem takma adını sil" | ✅ |
-| AYAR | "Daha hızlı konuş", "kısa anlat", "titreşimi azalt" | ✅ |
-| DUR | "Dur", "sus", "iptal", "vazgeç" | ✅ Konuşmayı keser (her an) |
-| TEKRAR | "Tekrar et", "ne dedin" | ✅ Son söyleneni tekrarlar |
-| KOMUTLAR | "Ne yapabilirim", "komutlar" | ✅ Komut listesini okur |
-| EĞİTİM | "Eğitimi başlat" | ✅ Sesli eğitimi yeniden oynatır |
-| SOS | "Yardım", "imdat", "acil durum" | ✅ Geri sayım; "iptal", "yanlış alarm", "vazgeç", "gerek yok" iptal eder ("dur" iptal etmez) |
-| Acil kişi | "acil kişi ekle Ayşe", "acil kişi sil Ayşe", "acil kişiler kim" | ✅ En çok 3 kişi; ekleme onaylı, `direct`de isteğe bağlı bildirim SMS'i |
-| GEÇİŞ MODU | "Karşıya geçmek istiyorum" … | Henüz hazır değil (sonraki fazlar) |
-| Hava / haber / müzik | - | Uygulamada yok: Katman 2'nin (Python/Gemini) işi |
-| OKU | … | Henüz hazır değil. Faz 5 (görsel yardım) iptal edildi: görsel analiz gözlük+telefon sisteminin işi (bkz. CLAUDE.md) |
-
-Telefon eylemi başlatan komutlar (ara, mesaj gönder, götür) çok adımlı
-diyaloğa gider ve eylemden önce onay sorar ("Ahmet Yılmaz'ı arayayım mı?"):
-yanlış duyulan bir isim ya da yer yanlış eyleme yol açmasın. Bilgi, ayar ve
-kontrol komutları hemen uygulanır. "Yardım" kelimesi acil durum için
-ayrılmıştır; komut listesi "ne yapabilirim" ile açılır.
-
-Navigasyon cümleleri yalnızca bilgi verir, emir vermez ("30 metre sonra rota
-sağa sapıyor"). Karşıya geçiş noktalarında navigasyon susar; geçiş kararı
-navigasyonun değil, Kavşak Geçiş Asistanının işidir.
-
-## Dokümanlar
-
-- [Mimari](docs/architecture.md): modüller ve akış
-- [BLE protokolü](docs/ble_protocol.md): gözlük ↔ telefon mesajları (firmware ekibi için)
-- [TODO.md](TODO.md): ertelenen kararlar ve açık işler
+**Lisans:** henüz belirlenmedi.
