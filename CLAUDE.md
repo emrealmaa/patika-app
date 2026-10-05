@@ -255,6 +255,11 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
    Faz 5 ve Faz 8 iptal edildi (aşağıda). Sırada yalnızca "Bekleyen telefon
    testleri".
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
+3. **Telefon testi hâlâ bekliyor (2026-10-05), ilk oturumda bakılacaklar:**
+   release'te gerçek BLE ile açılış (sahte gözlük yok); TalkBack ile sürüm
+   satırına 7 dokunuş (gizli Test Modu); SOS'un ikinci numarayla uçtan uca
+   denenmesi (asla gerçek 112 ile değil,
+   `docs/sos_phone_test_checklist.md`).
 
 ## Faz 6 kararları (geçerli, tekrar tartışma)
 
