@@ -65,7 +65,12 @@ void main() {
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     final tts = FakeSpeechOutput();
-    await tester.pumpWidget(testApp(tts: tts));
+    await tester.pumpWidget(testApp(tts: tts, testModeUnlocked: true));
+    await tester.pump();
+    // Açılış hatırlatması bitsin: sonraki duyurular onun arkasında beklemesin.
+    expect(tts.spoken, ['Test modu açık']);
+    tts.finishCurrent();
+    tts.spoken.clear();
     await tester.pump();
 
     await tester.tap(find.text('Test Modu'));

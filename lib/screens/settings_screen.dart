@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
 import '../l10n/strings_tr.dart';
+import '../platform/app_version.dart';
 import '../settings/settings.dart';
 import '../settings/settings_store.dart';
+import '../settings/test_mode_access.dart';
 
 /// Ayarlar ekranı. Tamamen TalkBack ile kullanılabilir olacak şekilde
 /// sadece radyo listelerinden oluşuyor (kaydırıcı yok - TalkBack'te kademeli
@@ -19,11 +21,18 @@ class SettingsScreen extends StatelessWidget {
   final FeedbackHub feedback;
   final VoidCallback onStartTutorial;
 
+  /// Sürüm satırı ve gizli Test Modu erişimi. İkisi de verilmezse satır
+  /// gösterilmez.
+  final TestModeAccess? testMode;
+  final AppVersionSource? version;
+
   const SettingsScreen({
     super.key,
     required this.store,
     required this.feedback,
     required this.onStartTutorial,
+    this.testMode,
+    this.version,
   });
 
   Settings get _s => store.value;
@@ -154,7 +163,77 @@ class SettingsScreen extends StatelessWidget {
             label: const Text(Tr.resetSettings),
           ),
         ),
+        if (version != null)
+          _VersionTile(version: version!, testMode: testMode, feedback: feedback),
       ],
+    );
+  }
+}
+
+/// Sürüm satırı. Gizli erişim burada: art arda 7 dokunuş Test Modu'nu açar
+/// (Android "Geliştirici seçenekleri" deseni). Satır sıradan bir bilgi satırı
+/// gibi görünür ve okunur (TalkBack'te yalnızca "Sürüm 1.0.0 (1)"); her
+/// dokunuşta kısa titreşim, 4. dokunuştan itibaren sesli sayaç, 7.'de sesli
+/// "Test modu açıldı" bildirimi gelir, böylece TalkBack ile de yapılabilir.
+class _VersionTile extends StatelessWidget {
+  final AppVersionSource version;
+  final TestModeAccess? testMode;
+  final FeedbackHub feedback;
+
+  const _VersionTile({required this.version, required this.testMode, required this.feedback});
+
+  void _onTap() {
+    final access = testMode;
+    if (access == null) return;
+    final result = access.tap();
+    switch (result.kind) {
+      case TestModeTapKind.counting:
+        _tick();
+      case TestModeTapKind.countdown:
+        _tick();
+        // Önceki sayaç cümlesi bitmeden yenisi gelirse eskisi kesilir.
+        feedback.queue.stopAll();
+        feedback.say(Tr.testModeTapsLeft(result.remaining), dedupe: false);
+      case TestModeTapKind.unlocked:
+        feedback.queue.stopAll();
+        feedback.signal(FeedbackEvent.success, text: Tr.testModeOpened);
+      case TestModeTapKind.alreadyUnlocked:
+        feedback.queue.stopAll();
+        feedback.say(Tr.testModeAlreadyOpen, dedupe: false);
+    }
+  }
+
+  void _tick() =>
+      feedback.haptics.play(HapticPatternId.listening, scale: feedback.settings.hapticScale);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: version.label(),
+      builder: (context, snapshot) {
+        final text = snapshot.data ?? '';
+        return Semantics(
+          container: true,
+          label: text,
+          excludeSemantics: true,
+          // Düğme DEĞİL: kullanıcıya "düğme" denmez; TalkBack çift dokunuşu
+          // yine de iletir (tap eylemi var).
+          onTap: testMode == null ? null : _onTap,
+          child: InkWell(
+            onTap: testMode == null ? null : _onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

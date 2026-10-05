@@ -26,7 +26,10 @@ import 'listen_screen.dart';
 class TestModeScreen extends StatefulWidget {
   final AppState state;
 
-  const TestModeScreen({super.key, required this.state});
+  /// "Test modunu gizle" düğmesi; verilmezse düğme gösterilmez.
+  final VoidCallback? onHide;
+
+  const TestModeScreen({super.key, required this.state, this.onHide});
 
   @override
   State<TestModeScreen> createState() => _TestModeScreenState();
@@ -61,6 +64,23 @@ class _TestModeScreenState extends State<TestModeScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Gözlük donanımı simülasyonu yalnızca burada: sıradan kullanıcı
+        // Bağlantı sekmesinde bu anahtarı görmez (release açılışı gerçek BLE).
+        SwitchListTile(
+          title: const Text(Tr.simulationMode),
+          subtitle: Text(state.isSimulated ? Tr.simulationOn : Tr.simulationOff),
+          value: state.isSimulated,
+          onChanged: (v) => state.toggleMode(v),
+        ),
+        if (widget.onHide != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: widget.onHide,
+            icon: const Icon(Icons.visibility_off),
+            label: const Text(Tr.testModeHide),
+          ),
+        ],
+        const SizedBox(height: 24),
         CompactVoiceButton(controller: state.voice),
         const SizedBox(height: 24),
         if (!state.isSimulated)

@@ -25,13 +25,6 @@ class ConnectionScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        SwitchListTile(
-          title: const Text(Tr.simulationMode),
-          subtitle: Text(state.isSimulated ? Tr.simulationOn : Tr.simulationOff),
-          value: state.isSimulated,
-          onChanged: (v) => state.toggleMode(v),
-        ),
-        const SizedBox(height: 16),
         _StatusCard(
           connectionState: state.connectionState,
           battery: state.glassesBattery,
@@ -97,9 +90,9 @@ class _DeviceCard extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    // Ham cihaz kimliği (MAC/UUID) kullanıcıya gösterilmez.
                     children: [
                       Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(device.id),
                     ],
                   ),
                 ),
@@ -137,7 +130,7 @@ class _LogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = entry.result.success;
-    final baslik = '${entry.intent.name}${entry.entity != null ? " (${entry.entity})" : ""}';
+    final baslik = '${Tr.commandName(entry.intent.name)}${entry.entity != null ? " (${entry.entity})" : ""}';
 
     return Semantics(
       label: Tr.logEntryLabel(baslik, ok, entry.result.message),

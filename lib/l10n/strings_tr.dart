@@ -7,6 +7,16 @@ abstract final class Tr {
   static const tabConnection = 'Bağlantı';
   static const tabTestMode = 'Test Modu';
   static const tabSettings = 'Ayarlar';
+
+  // --- Sürüm ve gizli Test Modu erişimi -----------------------------------
+  static String versionLine(String version, String build) => 'Sürüm $version ($build)';
+  static const versionUnknown = 'Sürüm bilinmiyor';
+  static String testModeTapsLeft(int n) => 'Test modunu açmak için $n dokunuş daha';
+  static const testModeOpened = 'Test modu açıldı. Alt çubuğa dördüncü sekme olarak eklendi';
+  static const testModeAlreadyOpen = 'Test modu zaten açık';
+  static const testModeReminder = 'Test modu açık';
+  static const testModeHide = 'Test modunu gizle';
+  static const testModeHidden = 'Test modu gizlendi';
   static const unexpectedError = 'Bir hata oluştu, komut tamamlanamadı';
   static const unknownCommand = 'Bu komutu anlayamadım';
   static String unknownCommandHeard(String heard) => '"$heard" komutunu anlayamadım';
@@ -24,6 +34,37 @@ abstract final class Tr {
   static const noDevices = 'Henüz cihaz bulunamadı.';
   static const recentCommands = 'Son komutlar';
   static const noCommands = 'Henüz işlenen bir komut yok.';
+
+  /// Komut geçmişinde gösterilen okunur niyet adı. Anahtar `PatikaIntent.name`
+  /// (strings dosyası komut katmanına bağlanmasın diye metin olarak alınır);
+  /// bilinmeyen ad olduğu gibi döner. `test/test_mode_access_test.dart` her
+  /// niyetin bir karşılığı olduğunu kilitler.
+  static String commandName(String name) => switch (name) {
+        'ara' => 'Arama',
+        'mesaj' => 'Mesaj',
+        'saat' => 'Saat',
+        'oku' => 'Okuma',
+        'gecisModu' => 'Karşıya geçiş',
+        'navigasyon' => 'Navigasyon',
+        'ayar' => 'Ayar',
+        'numara' => 'Numara',
+        'sonMesaj' => 'Son mesaj',
+        'takmaAd' => 'Takma ad',
+        'mesajlarim' => 'Mesajlarım',
+        'sonBildirimler' => 'Son bildirimler',
+        'navigasyonBitir' => 'Navigasyonu bitir',
+        'navigasyonKalan' => 'Kalan mesafe',
+        'gectim' => 'Karşıya geçtim',
+        'dur' => 'Durdur',
+        'tekrar' => 'Tekrar',
+        'komutlar' => 'Komut listesi',
+        'egitim' => 'Eğitim',
+        'sos' => 'Acil durum',
+        'acilKisi' => 'Acil kişi',
+        'durum' => 'Durum',
+        'bilinmiyor' => 'Anlaşılmadı',
+        _ => name,
+      };
   static const connect = 'Bağlan';
   static String connectTo(String name) => '$name cihazına bağlan';
   static const stateDisconnected = 'Bağlı değil';
@@ -246,7 +287,7 @@ abstract final class Tr {
   // --- Test modu -----------------------------------------------------------
   static const manualOnlySimulated =
       'Elle komut gönderme sadece simülasyon modundayken çalışır. '
-      'Bağlantı ekranından "Simülasyon modu"nu açın. '
+      'Bu ekranın üstündeki "Simülasyon modu" anahtarını açın. '
       'Sesli komut her iki modda da çalışır.';
   static const intentLabel = 'Niyet (intent)';
   static const entityLabel = 'Entity (isim/yer, opsiyonel)';

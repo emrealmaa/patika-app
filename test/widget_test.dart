@@ -5,25 +5,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:patika_app/app_state.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/main.dart';
+import 'package:patika_app/platform/app_version.dart';
 import 'package:patika_app/settings/settings_store.dart';
+import 'package:patika_app/settings/test_mode_access.dart';
 import 'package:patika_app/tutorial/tutorial.dart';
 
 import 'fakes.dart';
 
 /// Platform eklentisi gerektirmeyen AppState: sahte TTS/konuşma tanıma/
 /// titreşim/kısa ses, bellek içi kayıtlar, açılıştaki otomatik bağlanma kapalı.
-PatikaApp testApp({FakeSpeechOutput? tts, FakeSpeechInput? speech}) => PatikaApp(
-      appStateFactory: () => AppState(
-        autoStart: false,
-        speech: tts ?? FakeSpeechOutput(),
-        speechInput: speech ?? FakeSpeechInput(),
-        ensureMicPermission: () async => true,
-        haptics: FakeHaptics(),
-        earcons: FakeEarcons(),
-        settings: SettingsStore(MemorySettingsPersistence()),
-        deviceMemory: (_) => MemoryDeviceMemory(),
-        tutorialProgress: MemoryTutorialProgress(true),
+///
+/// Test Modu sekmesi varsayılan olarak GİZLİ (gerçek kullanıcı gibi);
+/// [testModeUnlocked] true ise açık gelir (açılışta "Test modu açık" denir).
+/// [onAppCreated] AppState kurulur kurulmaz (açılış hatırlatmasından önce)
+/// çağrılır: kuyrukta önceden duyuru olan açılışı taklit etmek için.
+PatikaApp testApp({
+  FakeSpeechOutput? tts,
+  FakeSpeechInput? speech,
+  bool testModeUnlocked = false,
+  TestModeStore? testModeStore,
+  void Function(AppState app)? onAppCreated,
+}) =>
+    PatikaApp(
+      appVersion: const FixedAppVersion(),
+      testModeFactory: () => TestModeAccess(
+        store: testModeStore ?? MemoryTestModeStore(unlocked: testModeUnlocked),
       ),
+      appStateFactory: () {
+        final app = AppState(
+          autoStart: false,
+          speech: tts ?? FakeSpeechOutput(),
+          speechInput: speech ?? FakeSpeechInput(),
+          ensureMicPermission: () async => true,
+          haptics: FakeHaptics(),
+          earcons: FakeEarcons(),
+          settings: SettingsStore(MemorySettingsPersistence()),
+          deviceMemory: (_) => MemoryDeviceMemory(),
+          tutorialProgress: MemoryTutorialProgress(true),
+        );
+        onAppCreated?.call(app);
+        return app;
+      },
     );
 
 /// Gerçek telefon boyutu (varsayılan 800x600 test yüzeyinde butonlar
@@ -35,18 +57,33 @@ void usePhoneSize(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('Uygulama "Konuş" sekmesiyle açılır, dört sekme görünür',
+  testWidgets('Uygulama "Konuş" sekmesiyle açılır, üç sekme görünür (Test Modu gizli)',
       (WidgetTester tester) async {
     await tester.pumpWidget(testApp());
     await tester.pump();
 
-    for (final tab in ['Konuş', 'Bağlantı', 'Test Modu', 'Ayarlar']) {
+    for (final tab in ['Konuş', 'Bağlantı', 'Ayarlar']) {
       expect(find.text(tab), findsOneWidget, reason: tab);
     }
+    expect(find.text('Test Modu'), findsNothing);
     expect(find.bySemanticsLabel('Sesli komut ver. Dokunun ve komutunuzu söyleyin.'),
         findsOneWidget);
 
     await tester.tap(find.text('Bağlantı'));
+    await tester.pumpAndSettle();
+    // Simülasyon anahtarı sıradan kullanıcıya görünmez (yalnızca Test Modu'nda).
+    expect(find.text('Simülasyon modu'), findsNothing);
+  });
+
+  testWidgets('Test Modu açıkken dört sekme, Test Modu en sonda; simülasyon anahtarı orada',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(testApp(testModeUnlocked: true));
+    await tester.pump();
+
+    for (final tab in ['Konuş', 'Bağlantı', 'Ayarlar', 'Test Modu']) {
+      expect(find.text(tab), findsOneWidget, reason: tab);
+    }
+    await tester.tap(find.text('Test Modu'));
     await tester.pumpAndSettle();
     expect(find.text('Simülasyon modu'), findsOneWidget);
   });
@@ -86,7 +123,11 @@ void main() {
   testWidgets('Test modunda kişisiz ARA gönderilince arama diyaloğu başlar',
       (WidgetTester tester) async {
     final tts = FakeSpeechOutput();
-    await tester.pumpWidget(testApp(tts: tts));
+    await tester.pumpWidget(testApp(tts: tts, testModeUnlocked: true));
+    await tester.pump();
+    // Açılış hatırlatması bitsin: diyalog sorusu onun arkasında beklemesin.
+    expect(tts.spoken, ['Test modu açık']);
+    tts.finishCurrent();
     await tester.pump();
 
     await tester.tap(find.text('Test Modu'));
@@ -94,7 +135,10 @@ void main() {
 
     // Varsayılan seçili niyet ARA, entity boş: komut router'a ulaşıp
     // diyaloğa devredildi, diyalog kimi arayacağını soruyor.
-    await tester.tap(find.text('Komutu gönder'));
+    // Test Modu ekranı uzun: düğme ekran dışında olabilir.
+    final send = find.text('Komutu gönder');
+    await tester.scrollUntilVisible(send, 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(send);
     await tester.pumpAndSettle();
     expect(tts.spoken, contains('Kimi arayayım?'));
   });
@@ -111,7 +155,7 @@ void main() {
     addTearDown(tester.view.reset);
     final semantics = tester.ensureSemantics();
 
-    await tester.pumpWidget(testApp());
+    await tester.pumpWidget(testApp(testModeUnlocked: true));
     await tester.pump();
 
     Future<void> expectAllButtonsTappable(String tab) async {
@@ -134,7 +178,7 @@ void main() {
       }
     }
 
-    for (final tab in ['Konuş', 'Bağlantı', 'Test Modu', 'Ayarlar']) {
+    for (final tab in ['Konuş', 'Bağlantı', 'Ayarlar', 'Test Modu']) {
       await expectAllButtonsTappable(tab);
     }
     semantics.dispose();
@@ -144,7 +188,7 @@ void main() {
       (WidgetTester tester) async {
     usePhoneSize(tester);
     final speech = FakeSpeechInput();
-    await tester.pumpWidget(testApp(speech: speech));
+    await tester.pumpWidget(testApp(speech: speech, testModeUnlocked: true));
     await tester.pump();
 
     await tester.tap(find.text('Test Modu'));
