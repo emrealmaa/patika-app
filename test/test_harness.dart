@@ -15,6 +15,7 @@ import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/location_service.dart';
 import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
+import 'package:patika_app/ble/patika_ble_service.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
 import 'package:patika_app/sos/emergency_contacts.dart';
@@ -94,6 +95,8 @@ class Harness {
     Future<bool> Function()? ensureSmsPermission,
     BatteryMonitor? batteryMonitor,
     bool smsPermission = true,
+    bool? simulated,
+    PatikaBleService Function()? realBleFactory,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     // AppState kurulurken (açılış guard'ı ilk mikro-görevde çalışır) hazır olsun.
@@ -102,6 +105,8 @@ class Harness {
     settings.update(initial);
     app = AppState(
       autoStart: false,
+      simulated: simulated,
+      realBleFactory: realBleFactory,
       speech: tts,
       speechInput: speech,
       haptics: haptics,

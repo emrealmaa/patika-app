@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -98,8 +99,15 @@ class AppState extends ChangeNotifier implements ControlActions {
   late final Tutorial tutorial;
 
   late PatikaBleService bleService;
+  final PatikaBleService Function()? _realBleFactory;
   late ConnectionSupervisor _supervisor;
-  bool isSimulated = true;
+  /// Gözlük donanımı simülasyonda mı. Release'te varsayılan GERÇEK BLE
+  /// (sıradan kullanıcı sahte gözlük görmez); debug ve testlerde simülasyon.
+  /// Simülasyon anahtarı yalnızca gizli Test Modu ekranında.
+  late bool isSimulated;
+
+  /// Açılış varsayılanı: release'te gerçek BLE, aksi halde simülasyon.
+  static bool defaultSimulated({bool release = kReleaseMode}) => !release;
 
   /// Telefonun kendi gelen arama durumu (Faz 4b) - BLE'den bağımsız, bkz.
   /// `lib/platform/call_service.dart`. Gerçek `NotificationListenerService`
@@ -210,7 +218,10 @@ class AppState extends ChangeNotifier implements ControlActions {
     PhoneBattery? phoneBattery,
     BatteryMonitor? batteryMonitor,
     bool autoStart = true,
-  })  : settings = settings ?? SettingsStore(),
+    bool? simulated,
+    PatikaBleService Function()? realBleFactory,
+  })  : _realBleFactory = realBleFactory,
+        settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
         _background = background ?? BackgroundService(),
         _deviceMemory = deviceMemory ??
@@ -390,7 +401,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.loudMessagesNotice = loudMessagesNotice ?? SharedPrefsLoudMessagesNotice();
     _messageSub = this.incomingMessages.messages.listen(_onIncomingMessage);
 
-    _attach(SimulatedBleService());
+    isSimulated = simulated ?? defaultSimulated();
+    _attach(isSimulated ? SimulatedBleService() : _realBle());
     if (autoStart) start();
   }
 
@@ -800,6 +812,11 @@ class AppState extends ChangeNotifier implements ControlActions {
     notifyListeners();
   }
 
+  /// Gerçek BLE servisi. Testler plugin gerektirmeyen bir sahte verir
+  /// ([realBleFactory]); `FlutterReactiveBle` platform olmadan hata fırlatır.
+  PatikaBleService _realBle() =>
+      _realBleFactory?.call() ?? RealBleService(permissions: permissions);
+
   /// Simülasyon <-> gerçek BLE arasında geçiş yapar. Mevcut servis dispose
   /// edilip yenisi kurulur, log geçmişi korunur; yeni modda da son cihaza
   /// otomatik bağlanma denenir.
@@ -813,7 +830,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     connectionState = BleConnectionState.disconnected;
     _attach(simulated
         ? SimulatedBleService()
-        : RealBleService(permissions: permissions));
+        : _realBle());
     _refresh();
     await _supervisor.start();
   }
