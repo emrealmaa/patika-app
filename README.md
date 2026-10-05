@@ -13,7 +13,7 @@ SOS'u tek elden yönetir. Birincil kullanıcı görme engelli bireylerdir; tasar
 | Özellik | Düzey | Kanıt / eksik |
 |---|---|---|
 | Arka plan servisi, bağlantı denetçisi, yeniden bağlanma | Cihazda doğrulandı | Galaxy S24 FE (Android 16, One UI 8.5), ekran kilitliyken sesli komut çalıştı |
-| Sesli komut (Türkçe), doğal ifade anlama | Cihazda + birim testi | 38 gerçek cümlede 19/38 (%50) → 38/38; **kurallar bu cümlelerle geliştirildi, ayrı bir doğrulama kümesi yok**, genel doğruluk ölçülmedi |
+| Sesli komut (Türkçe), doğal ifade anlama | Birim testi (+ cihazda kısmen) | 38 cümlelik birim testi 19/38 (%50) → 38/38; telefonda yalnızca birkaç ifade denendi. **Kurallar bu cümlelerle geliştirildi, ayrı doğrulama kümesi yok**, genel doğruluk ölçülmedi |
 | Arama, mesaj, navigasyon yönlendirmesi | Cihazda doğrulandı | Yerel uygulamalar doğru açılıyor |
 | Kişi eşleştirme (ek almış isimler, bulanık eşleşme) | Birim testi | Eşik değerleri gerçek rehberde tam doğrulanmadı |
 | Gelen arama duyurusu | Simülasyon cihazda doğrulandı | Gerçek gelen arama ve ses modu tespiti **doğrulanmadı** |
@@ -22,6 +22,7 @@ SOS'u tek elden yönetir. Birincil kullanıcı görme engelli bireylerdir; tasar
 | SOS (geri sayım, SMS + arama) | Birim testi | **İkinci numarayla gerçek gönderim denenmedi** |
 | Pil uyarıları | Birim testi | Cihazda gerçek eşik tetiklemesi bekliyor |
 | Erişilebilirlik (TalkBack, kontrast, dokunma alanı) | Cihazda kısmen | Uçtan uca TalkBack turu tamamlanmadı |
+| Release'te gerçek BLE ile açılış, gizli Test Modu (7 dokunuş) | Birim testi | Telefonda **doğrulanmadı** (TalkBack ile 7 dokunuş, yeniden açılışta hatırlatma) |
 
 ## 2. Parametreler
 
@@ -32,11 +33,11 @@ Bunlar tasarım varsayımlarıdır, saha verisiyle kalibre **edilmemiştir** (`A
 | SOS geri sayımı | 7 sn, ilk 2 sn'de "hemen gönder" sayılmaz | İptal penceresi; tekrarlanan "yardım" tanıma hatasına karşı |
 | SOS iptal varsayılanı | **Hiçbir şey yapılmazsa gönderilir** | Yanlışlıkla iptal olan gerçek SOS, yanlışlıkla giden SOS'tan daha kötü |
 | Tekrar SOS sınırı | 60 sn (iptal/başarısız olan sayılmaz) | Bilinçsiz tekrar basışa karşı |
-| Konum bekleme | Geri sayımla paralel, en çok 2–3 sn sonra konumsuz gider | Konum gecikmesi mesajı geciktirmesin |
+| Konum bekleme | Geri sayımla paralel, en çok 3 sn sonra konumsuz gider; konum sonradan gelirse tek takip SMS'i | Konum gecikmesi mesajı geciktirmesin |
 | Pil eşikleri | Telefon %30/15/5, gözlük %20/10/5; %5'te 5 dk'da bir titreşim | Her eşik bir kez konuşulur (alarm yorgunluğu); histerezis +5 puan |
 | Pil yoklama | 30 sn | Olay dinleyici yerine basit ve güvenli |
 | Geçiş duraklaması üst süresi | 90 sn (ayarlanabilir) | Kullanıcı "geçtim" demezse navigasyon sonsuza dek susmasın |
-| Yön teyidi (GPS hareket yönü) | ≥15 m, doğruluk <10 m, hız ≥0,7 m/s | GPS hatası genelde 5–15 m (tahmini); yanlış yön söylemek susmaktan kötü |
+| Yön teyidi (GPS hareket yönü) | ≥15 m ve doğruluğun 2 katı yürünmüş, doğruluk <10 m, hız ≥0,7 m/s, rotanın ilk 100 m'si | GPS hatası genelde 5–15 m (tahmini); yanlış yön söylemek susmaktan kötü |
 
 ## 3. Cihazda bulunan hatalar (emülatörde görünmeyenler)
 
@@ -77,11 +78,14 @@ flutter analyze && flutter test
 ```
 
 Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`
-dosyasının kopyasını doldurup `--dart-define-from-file` ile ver (kopya `.gitignore`'da olmalı). Google Cloud'da
+dosyasını `dart_defines.json` adıyla kopyalayıp doldur, `flutter run --flavor direct --dart-define-from-file=dart_defines.json`
+ile ver (`dart_defines.json` `.gitignore`'da, depoya girmez). Google Cloud'da
 anahtarı paket adı ve imza SHA-1 ile yalnızca Routes ve Places API'lerine kısıtla, bütçe uyarısı koy.
 
 **Test Modu** geliştirici aracıdır (gözlük, bildirim, arama simülasyonları). Gerçek kullanıcıya gizlidir;
-Ayarlar'daki sürüm satırına 7 kez dokunarak açılır.
+Ayarlar'daki sürüm satırına 7 kez dokunarak açılır, açıkken her açılışta
+düşük öncelikli bir duyuruyla "Test modu açık" söylenir (sırada 10 sn'den fazla beklerse atılır). Release derlemesi
+gerçek BLE ile açılır; simülasyon anahtarı yalnızca Test Modu'ndadır. **Bunların ikisi de cihazda henüz doğrulanmadı.**
 
 ## 7. Geçerlilik tehditleri
 
@@ -93,7 +97,8 @@ Ayarlar'daki sürüm satırına 7 kez dokunarak açılır.
 | Kullanıcı görüşmesi nitel, tek kaynak | Genelleme yapılamaz |
 | iOS arka plan kısıtı ölçülmedi | iOS desteği için kanıt yok |
 
-Belgeler: `CLAUDE.md` (faz durumu, kararlar, bekleyen testler), `docs/architecture.md`, `docs/ble_protocol.md`.
+Belgeler: `CLAUDE.md` (faz durumu, kararlar, bekleyen testler), `docs/architecture.md`, `docs/ble_protocol.md`,
+`docs/sos_phone_test_checklist.md` (SOS telefon deneme listesi).
 Bu uygulama **acil durum servisi değildir**; SOS deneyseldir ve bastonun/kullanıcının kendi değerlendirmesinin yerini almaz.
 
 **Lisans:** henüz belirlenmedi.
