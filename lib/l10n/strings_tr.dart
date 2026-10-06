@@ -697,4 +697,19 @@ abstract final class Tr {
       'Arama sürdüğü ya da bittiği doğrulanamadığı için sonuç konuşulmadı';
   static String sosHist112Confirmed(bool placed) =>
       placed ? '112 çift dokunuşla onaylandı ve arandı' : '112 onaylandı ama aranamadı';
+
+  // --- Arayüz: ortak bileşenler ------------------------------------------------
+  static const detailShow = 'Ayrıntıyı göster';
+  static const detailHide = 'Ayrıntıyı gizle';
+
+  /// Ayrıntı düğmesinin TalkBack etiketi: hangi kartın ayrıntısı olduğu da
+  /// söylenir (listenin ortasına odaklanan kullanıcı için). "Genişletildi/
+  /// daraltıldı" durumunu TalkBack kendisi ekler.
+  static String detailToggleLabel(String? title, bool expanded) {
+    final action = expanded ? detailHide : detailShow;
+    return title == null ? action : '$action: $title';
+  }
+
+  static const voiceHeroCaption = 'Sesli komut';
+  static const voiceHeroExamples = "Örnek: “Ayşe'yi ara”, “Kadıköy'e götür”, “durum”";
 }
