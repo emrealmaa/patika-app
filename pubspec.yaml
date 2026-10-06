@@ -76,6 +76,23 @@ flutter:
   assets:
     - assets/earcons/
 
+  # Plus Jakarta Sans (SIL OFL 1.1, assets/fonts/OFL.txt). Kaynak:
+  # github.com/tokotype/PlusJakartaSans, commit 18d1cd2 (Google Fonts'un
+  # sabitlediği upstream). Yalnızca kullanılan 5 statik ağırlık.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

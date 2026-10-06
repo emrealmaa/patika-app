@@ -31,12 +31,12 @@ class SosCountdownBanner extends StatelessWidget {
             return _Panel(
               child: Row(
                 children: const [
-                  Icon(Icons.sms, color: Colors.black),
+                  Icon(Icons.sms, color: PatikaTokens.sos),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       Tr.sosBannerSending,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: PatikaTokens.sos),
                     ),
                   ),
                 ],
@@ -50,13 +50,13 @@ class SosCountdownBanner extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.black, size: 32),
+                      const Icon(Icons.warning_amber_rounded, color: PatikaTokens.sos, size: 32),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           Tr.sosBannerTitle(seconds),
                           style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                              fontSize: 20, fontWeight: FontWeight.bold, color: PatikaTokens.sos),
                         ),
                       ),
                     ],
@@ -66,8 +66,8 @@ class SosCountdownBanner extends StatelessWidget {
                     onPressed: () => sos.cancel(SosCancelSource.screen),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(64),
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
+                      backgroundColor: PatikaTokens.sos,
+                      foregroundColor: PatikaTokens.onSos,
                       textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                     ),
                     icon: const Icon(Icons.cancel),
@@ -90,7 +90,7 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.warning,
+      color: PatikaTokens.sosSurface,
       child: SafeArea(
         bottom: false,
         child: Padding(padding: const EdgeInsets.all(16), child: child),

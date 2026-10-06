@@ -158,16 +158,28 @@ class _HomePageState extends State<HomePage> {
           Expanded(child: screens[_tabIndex]),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tabIndex,
-        onDestinationSelected: (i) => setState(() => _tabIndex = i),
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.mic), label: Tr.tabListen),
-          const NavigationDestination(icon: Icon(Icons.bluetooth), label: Tr.tabConnection),
-          const NavigationDestination(icon: Icon(Icons.settings), label: Tr.tabSettings),
-          if (_testMode.unlocked)
-            const NavigationDestination(icon: Icon(Icons.science), label: Tr.tabTestMode),
-        ],
+      // Beyaz alt çubuk, üst köşeler yuvarlak, yukarı doğru yumuşak gölge.
+      // NavigationBar korunuyor: "Sekme N / M" TalkBack etiketleri ondan.
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: PatikaTokens.card,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(PatikaTokens.radiusNav)),
+          boxShadow: PatikaTokens.navShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(PatikaTokens.radiusNav)),
+          child: NavigationBar(
+            selectedIndex: _tabIndex,
+            onDestinationSelected: (i) => setState(() => _tabIndex = i),
+            destinations: [
+              const NavigationDestination(icon: Icon(Icons.mic), label: Tr.tabListen),
+              const NavigationDestination(icon: Icon(Icons.bluetooth), label: Tr.tabConnection),
+              const NavigationDestination(icon: Icon(Icons.settings), label: Tr.tabSettings),
+              if (_testMode.unlocked)
+                const NavigationDestination(icon: Icon(Icons.science), label: Tr.tabTestMode),
+            ],
+          ),
+        ),
       ),
     );
   }

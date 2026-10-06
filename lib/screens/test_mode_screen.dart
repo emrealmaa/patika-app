@@ -85,25 +85,23 @@ class _TestModeScreenState extends State<TestModeScreen> {
         const SizedBox(height: 24),
         if (!state.isSimulated)
           Card(
-            // Uyarı zaten metinle anlatılıyor (Kural 5) - burada sadece
-            // koyu zemin + beyaz metinle AAA kontrastı garanti ediliyor
-            // (açık sarı zemin + varsayılan koyu metin karanlık temada
-            // düşük kontrast üretirdi).
-            color: const Color(0xFF4A3600),
+            // Uyarı zaten metinle anlatılıyor (Kural 5); SOS yüzeyi + koyu
+            // metin AAA kontrastında (bkz. PatikaTokens.textPairs).
+            color: PatikaTokens.sosSurface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: AppColors.warning),
+              borderRadius: BorderRadius.circular(PatikaTokens.radiusCard),
+              side: const BorderSide(color: PatikaTokens.sos),
             ),
             child: const Padding(
               padding: EdgeInsets.all(12),
               child: Row(
                 children: [
-                  ExcludeSemantics(child: Icon(Icons.warning_amber, color: AppColors.warning)),
+                  ExcludeSemantics(child: Icon(Icons.warning_amber, color: PatikaTokens.sos)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       Tr.manualOnlySimulated,
-                      style: TextStyle(color: AppColors.onSurface),
+                      style: TextStyle(color: PatikaTokens.textPrimary),
                     ),
                   ),
                 ],
@@ -716,7 +714,7 @@ class _LogCard extends StatelessWidget {
           leading: ExcludeSemantics(
             child: Icon(
               ok ? Icons.check_circle : Icons.error_outline,
-              color: ok ? AppColors.success : AppColors.warning,
+              color: ok ? PatikaTokens.successDot : PatikaTokens.sos,
             ),
           ),
           title: Text(baslik),

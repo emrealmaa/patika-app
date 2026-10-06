@@ -50,8 +50,9 @@ class VoiceButton extends StatelessWidget {
             minimumSize: expand
                 ? const Size(double.infinity, double.infinity)
                 : const Size(double.infinity, 120),
-            backgroundColor: controller.isActive ? AppColors.warning : AppColors.info,
-            foregroundColor: Colors.black,
+            backgroundColor: controller.isActive ? PatikaTokens.accent : PatikaTokens.primary,
+            foregroundColor:
+                controller.isActive ? PatikaTokens.onAccent : PatikaTokens.onPrimary,
             textStyle: TextStyle(
               fontSize: expand ? 32 : 22,
               fontWeight: FontWeight.bold,

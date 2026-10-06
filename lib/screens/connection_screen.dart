@@ -140,7 +140,7 @@ class _LogTile extends StatelessWidget {
         leading: ExcludeSemantics(
           child: Icon(
             ok ? Icons.check_circle : Icons.error_outline,
-            color: ok ? AppColors.success : AppColors.warning,
+            color: ok ? PatikaTokens.successDot : PatikaTokens.sos,
           ),
         ),
         title: Text(baslik),
@@ -159,10 +159,10 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (connectionState) {
-      BleConnectionState.disconnected => (Tr.stateDisconnected, AppColors.neutral),
-      BleConnectionState.scanning => (Tr.stateScanning, AppColors.info),
-      BleConnectionState.connecting => (Tr.stateConnecting, AppColors.warning),
-      BleConnectionState.connected => (Tr.stateConnected, AppColors.success),
+      BleConnectionState.disconnected => (Tr.stateDisconnected, PatikaTokens.neutralDot),
+      BleConnectionState.scanning => (Tr.stateScanning, PatikaTokens.primary),
+      BleConnectionState.connecting => (Tr.stateConnecting, PatikaTokens.primary),
+      BleConnectionState.connected => (Tr.stateConnected, PatikaTokens.successDot),
     };
 
     final battery = this.battery;
@@ -177,12 +177,12 @@ class _StatusCard extends StatelessWidget {
       child: Card(
         child: ListTile(
           leading: ExcludeSemantics(child: Icon(Icons.circle, color: color, size: 16)),
-          // Durum HER ZAMAN beyaz, yüksek kontrastlı metinle yazılıyor -
+          // Durum HER ZAMAN yüksek kontrastlı (AAA) metinle yazılıyor -
           // renk (yukarıdaki nokta) sadece yardımcı/dekoratif işaret,
-          // hiçbir zaman tek başına anlam taşımıyor (bkz. AppColors).
+          // hiçbir zaman tek başına anlam taşımıyor (bkz. PatikaTokens).
           title: Text(
             label,
-            style: const TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: PatikaTokens.textPrimary, fontWeight: FontWeight.bold),
           ),
           subtitle: battery == null ? null : Text(Tr.batteryVisual(battery)),
         ),
