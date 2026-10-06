@@ -75,6 +75,8 @@ flutter:
 
   assets:
     - assets/earcons/
+    # Yazı tipi lisansı, uygulamanın lisans listesinde (font_license.dart).
+    - assets/fonts/OFL.txt
 
   # Plus Jakarta Sans (SIL OFL 1.1, assets/fonts/OFL.txt). Kaynak:
   # github.com/tokotype/PlusJakartaSans, commit 18d1cd2 (Google Fonts'un

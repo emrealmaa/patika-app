@@ -12,10 +12,12 @@ import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'settings/test_mode_access.dart';
 import 'theme/app_theme.dart';
+import 'theme/font_license.dart';
 import 'voice/voice_controller.dart';
 import 'widgets/sos_countdown_banner.dart';
 
 void main() {
+  registerFontLicense();
   runApp(const PatikaApp());
 }
 
