@@ -71,6 +71,8 @@ Bu tablo, cihaz testinin vazgeçilmez olduğunun kanıtıdır: dört hatanın d�
 
 ## 6. Arayüz
 
+Ayrıntılar ve gerekçeler: `docs/UI_ERISILEBILIRLIK.md`.
+
 - **Açık tema**, renk ve ölçüler tek yerde: `PatikaTokens` (`lib/theme/app_theme.dart`). Metin/zemin çiftleri
   **7:1 (WCAG AAA)** kontrastla ölçülür (`test/theme_contrast_test.dart`). Yalnızca SOS ekranı bilerek koyudur.
 - **Yazı tipi:** Plus Jakarta Sans, statik TTF olarak uygulamaya gömülü (`assets/fonts/`); OFL lisansı
@@ -112,7 +114,7 @@ gerçek BLE ile açılır; simülasyon anahtarı yalnızca Test Modu'ndadır. **
 | iOS arka plan kısıtı ölçülmedi | iOS desteği için kanıt yok |
 
 Belgeler: `CLAUDE.md` (faz durumu, kararlar, bekleyen testler), `docs/architecture.md`, `docs/ble_protocol.md`,
-`docs/sos_phone_test_checklist.md` (SOS telefon deneme listesi).
+`docs/sos_phone_test_checklist.md` (SOS telefon deneme listesi), `docs/UI_ERISILEBILIRLIK.md` (arayüz ve erişilebilirlik).
 Bu uygulama **acil durum servisi değildir**; SOS deneyseldir ve bastonun/kullanıcının kendi değerlendirmesinin yerini almaz.
 
 **Lisans:** henüz belirlenmedi.
