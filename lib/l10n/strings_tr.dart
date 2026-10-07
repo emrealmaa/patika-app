@@ -72,6 +72,18 @@ abstract final class Tr {
   static const stateConnecting = 'Bağlanıyor…';
   static const stateConnected = 'Bağlı';
   static String connectionStatus(String state) => 'Bağlantı durumu: $state';
+  static const connectionHeroCaption = 'Patika gözlük';
+
+  // "Nasıl bağlanır?" kartı (ekranda; sesli duyuru değil).
+  static const howToConnectTitle = 'Nasıl bağlanır?';
+  static const howToConnectSummary =
+      'İlk seferde Tara\'ya dokunup gözlüğünüzü seçin; sonra uygulama kendiliğinden bağlanır.';
+  static const howToConnectSteps = [
+    'Gözlüğü açın ve telefonun Bluetooth\'unun açık olduğundan emin olun.',
+    'Tara\'ya dokunun; bulunan cihazlarda gözlüğünüzün altındaki Bağlan\'a dokunun.',
+    'Bağlanınca ve bağlantı kopunca uygulama sesle haber verir.',
+    'Bir kez bağlandıktan sonra uygulama açılışta ve bağlantı koparsa kendiliğinden yeniden bağlanır.',
+  ];
   static const cannotReachGlasses = 'Gözlüğe bağlanılamıyor, denemeye devam ediyorum';
   static String batteryVisual(int percent) => 'Gözlük pili: %$percent';
   static String batterySpoken(int percent) => 'gözlük pili yüzde $percent';
