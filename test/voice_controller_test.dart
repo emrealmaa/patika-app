@@ -301,4 +301,53 @@ void main() {
       h.dispose();
     });
   });
+
+  group('kapanış', () {
+    test('izin beklerken dispose: sonradan mikrofon açılmaz, hata yok', () {
+      fakeAsync((async) {
+        final h = Harness();
+        final permission = Completer<bool>();
+        final voice = VoiceController(
+          speech: h.speech,
+          feedback: h.app.feedback,
+          ensureMicPermission: () => permission.future,
+          submit: (_) async {},
+        );
+        voice.startListening(ListenSource.screen);
+        async.flushMicrotasks();
+        voice.dispose();
+
+        permission.complete(true);
+        async.elapse(listenDelay);
+        expect(h.speech.initCalls, 0);
+        expect(h.speech.listening, isFalse);
+        expect(h.tts.spoken, isEmpty);
+        h.dispose();
+      });
+    });
+
+    test('komut işlenirken dispose: işlem bitince hata yok', () {
+      fakeAsync((async) {
+        final h = Harness();
+        final done = Completer<void>();
+        final voice = VoiceController(
+          speech: h.speech,
+          feedback: h.app.feedback,
+          ensureMicPermission: () async => true,
+          submit: (_) => done.future,
+        );
+        voice.startListening(ListenSource.screen);
+        async.elapse(listenDelay);
+        h.speech.say('saat kaç');
+        async.flushMicrotasks();
+        expect(voice.phase, VoicePhase.processing);
+        voice.dispose();
+
+        done.complete();
+        async.flushMicrotasks();
+        expect(voice.phase, VoicePhase.idle);
+        h.dispose();
+      });
+    });
+  });
 }
