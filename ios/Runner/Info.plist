@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Patika App</string>
+	<string>Patika</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,6 +32,8 @@
 	<string>Patika gözlüğüne bağlanmak ve komutları almak için Bluetooth erişimi gerekiyor.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Arama/mesaj komutlarında söylediğiniz ismi rehberinizdeki numarayla eşleştirmek için kişilere erişim gerekiyor.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sesli yol tarifinde bulunduğunuz yeri izleyip sonraki dönüşü söyleyebilmek için konum erişimi gerekiyor.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sesli komutlarınızı telefonun mikrofonuyla dinlemek için mikrofon erişimi gerekiyor.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

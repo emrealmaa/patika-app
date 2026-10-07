@@ -117,9 +117,13 @@ void main() {
     expect(speech.spoken, contains(Tr.sosUnsupported));
   });
 
-  // En sonda: konuşma tanıma izni simctl ile verilemiyor, sistem penceresi
-  // açılabilir.
+  // Konuşma tanıma izni simctl ile verilemiyor: izin yoksa sistem penceresi
+  // dokunulmadan beklerdi. Simülatörde bir kez elle izin verilince çalışır.
   testWidgets('konuşma tanıma (speech_to_text) başlatılır', (tester) async {
+    if (!await ph.Permission.speech.isGranted) {
+      markTestSkipped('Konuşma tanıma izni yok (simctl veremiyor; elle verin)');
+      return;
+    }
     final ok = await SpeechInputService()
         .init()
         .timeout(const Duration(seconds: 15), onTimeout: () => false);
