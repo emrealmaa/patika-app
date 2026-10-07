@@ -169,7 +169,7 @@ void main() {
   });
 
   group('SOS: geri sayım halkası', () {
-    const ayse = EmergencyContact('Ayşe Demir', '0534 777 88 99');
+    const ayse = EmergencyContact('Ayşe Demir', '0555 000 00 03');
 
     Future<Harness> pump(WidgetTester tester) async {
       usePhoneSize(tester);
@@ -234,7 +234,7 @@ void main() {
     usePhoneSize(tester);
     final h = Harness(
       direct: FakeDirectActions(),
-      emergencyContacts: const [EmergencyContact('Ayşe Demir', '0534 777 88 99')],
+      emergencyContacts: const [EmergencyContact('Ayşe Demir', '0555 000 00 03')],
     );
     await tester.pumpWidget(PatikaApp(
       appVersion: const FixedAppVersion(),

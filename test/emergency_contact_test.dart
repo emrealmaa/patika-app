@@ -139,7 +139,7 @@ void main() {
     test('zaten ekli: "zaten acil kişi" der, mükerrer eklenmez', () {
       fakeAsync((async) {
         final h = Harness(emergencyContacts: const [
-          EmergencyContact('Ayşe Demir', '0534 777 88 99'),
+          EmergencyContact('Ayşe Demir', '0555 000 00 03'),
         ]);
         command(h, async, 'acil kişi ekle Ayşe');
         answer(h, async, 'evet');
@@ -153,9 +153,9 @@ void main() {
     test('3 kişi doluyken: "en fazla 3" der, eklenmez', () {
       fakeAsync((async) {
         final h = Harness(emergencyContacts: const [
-          EmergencyContact('Ahmet Yılmaz', '0532 111 22 33'),
-          EmergencyContact('Ahmet Kaya', '0533 444 55 66'),
-          EmergencyContact('Annem', '0537 666 77 88'),
+          EmergencyContact('Ahmet Yılmaz', '0555 000 00 01'),
+          EmergencyContact('Ahmet Kaya', '0555 000 00 02'),
+          EmergencyContact('Annem', '0555 000 00 04'),
         ]);
         command(h, async, 'acil kişi ekle Ayşe');
         answer(h, async, 'evet');
@@ -214,7 +214,7 @@ void main() {
         answer(h, async, 'evet');
         answer(h, async, 'evet');
         h.speakAll(async);
-        expect(actions.sms.single.$1, '0534 777 88 99');
+        expect(actions.sms.single.$1, '0555 000 00 03');
         expect(actions.sms.single.$2, Tr.emergencyConsentSmsBody);
         expect(h.tts.spoken.last, contains('bildirim mesajı gönderildi'));
         h.dispose();
@@ -268,8 +268,8 @@ void main() {
 
   group('acil kişi sil (diyalog)', () {
     Harness withTwo() => Harness(emergencyContacts: const [
-          EmergencyContact('Ayşe Demir', '0534 777 88 99'),
-          EmergencyContact('Ali Kaya', '0533 444 55 66'),
+          EmergencyContact('Ayşe Demir', '0555 000 00 03'),
+          EmergencyContact('Ali Kaya', '0555 000 00 02'),
         ]);
 
     test('isimle: onay -> evet -> silinir', () {
@@ -338,8 +338,8 @@ void main() {
     test('kayıtlı kişileri okur', () {
       fakeAsync((async) {
         final h = Harness(emergencyContacts: const [
-          EmergencyContact('Ayşe Demir', '0534 777 88 99'),
-          EmergencyContact('Ali Kaya', '0533 444 55 66'),
+          EmergencyContact('Ayşe Demir', '0555 000 00 03'),
+          EmergencyContact('Ali Kaya', '0555 000 00 02'),
         ]);
         command(h, async, 'acil kişiler kim');
         h.speakAll(async);
@@ -376,8 +376,8 @@ void main() {
           async.elapse(const Duration(seconds: 1));
           h.speakAll(async);
         }
-        expect(actions.sms.any((s) => s.$1 == '0534 777 88 99'), isTrue);
-        expect(actions.calls, ['0534 777 88 99']);
+        expect(actions.sms.any((s) => s.$1 == '0555 000 00 03'), isTrue);
+        expect(actions.calls, ['0555 000 00 03']);
         h.dispose();
       });
     });

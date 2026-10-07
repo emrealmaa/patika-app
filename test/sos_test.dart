@@ -17,8 +17,8 @@ import 'package:patika_app/sos/sos_message.dart';
 
 import 'fakes.dart';
 
-const ayse = EmergencyContact('Ayşe Demir', '0534 777 88 99');
-const ali = EmergencyContact('Ali Kaya', '0533 444 55 66');
+const ayse = EmergencyContact('Ayşe Demir', '0555 000 00 03');
+const ali = EmergencyContact('Ali Kaya', '0555 000 00 02');
 const testNumber = '0999 000 00 00';
 
 final fix = PositionFix(const LatLng(41.0, 29.0), 12, DateTime(2026, 9, 28, 14, 5));
@@ -222,10 +222,10 @@ void main() {
     test('ekler; aynı numara farklı yazılışla mükerrer sayılır; en çok 3 kişi', () async {
       final store = MemoryEmergencyContactStore();
       expect(await store.add(ayse), EmergencyAddResult.added);
-      expect(await store.add(const EmergencyContact('Ayşe', '+90 534 777 88 99')), EmergencyAddResult.duplicate);
+      expect(await store.add(const EmergencyContact('Ayşe', '+90 555 000 00 03')), EmergencyAddResult.duplicate);
       expect(await store.add(ali), EmergencyAddResult.added);
-      expect(await store.add(const EmergencyContact('Can', '0535 000 00 01')), EmergencyAddResult.added);
-      expect(await store.add(const EmergencyContact('Deniz', '0536 000 00 02')), EmergencyAddResult.full);
+      expect(await store.add(const EmergencyContact('Can', '0555 000 00 11')), EmergencyAddResult.added);
+      expect(await store.add(const EmergencyContact('Deniz', '0555 000 00 12')), EmergencyAddResult.full);
       expect((await store.readAll()).map((c) => c.name), ['Ayşe Demir', 'Ali Kaya', 'Can']);
     });
 

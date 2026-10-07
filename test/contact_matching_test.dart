@@ -13,15 +13,15 @@ import 'package:patika_app/contacts/turkish_stemmer.dart';
 /// Bilerek zor durumlar içeren sahte rehber: iki Ahmet, Ali/Alp, "Annem"
 /// adlı bir kayıt, iki Yılmaz.
 const _contacts = [
-  ContactEntry('1', 'Ahmet Yılmaz', ['0532 111 22 33']),
-  ContactEntry('2', 'Ahmet Kaya', ['0533 444 55 66']),
-  ContactEntry('3', 'Ayşe Demir', ['0534 777 88 99']),
-  ContactEntry('4', 'Ali Veli', ['0535 000 11 22']),
-  ContactEntry('5', 'Alp Er', ['0536 333 44 55']),
-  ContactEntry('6', 'Annem', ['0537 666 77 88']),
-  ContactEntry('7', 'Mehmet Öz', ['+90 532 123 45 67']),
-  ContactEntry('8', 'Fatma Yılmaz', ['0538 999 00 11']),
-  ContactEntry('9', 'Emre Can', ['0539 222 33 44']),
+  ContactEntry('1', 'Ahmet Yılmaz', ['0555 000 00 01']),
+  ContactEntry('2', 'Ahmet Kaya', ['0555 000 00 02']),
+  ContactEntry('3', 'Ayşe Demir', ['0555 000 00 03']),
+  ContactEntry('4', 'Ali Veli', ['0555 000 00 05']),
+  ContactEntry('5', 'Alp Er', ['0555 000 00 06']),
+  ContactEntry('6', 'Annem', ['0555 000 00 04']),
+  ContactEntry('7', 'Mehmet Öz', ['+90 555 000 00 09']),
+  ContactEntry('8', 'Fatma Yılmaz', ['0555 000 00 07']),
+  ContactEntry('9', 'Emre Can', ['0555 000 00 08']),
 ];
 
 class _FakeSource implements ContactSource {
@@ -162,7 +162,7 @@ void main() {
       expect(cmd.intent, PatikaIntent.numara);
       expect(cmd.entity, 'Mehmet');
       final result = await NumberHandler(contacts: resolver).handle(cmd.entity);
-      expect(result.message, 'Mehmet Öz: artı 9 0, 5 3 2, 1 2 3, 4 5, 6 7');
+      expect(result.message, 'Mehmet Öz: artı 9 0, 5 5 5, 0 0 0, 0 0, 0 9');
     });
 
     test('"Ayse\'yi ara" (Türkçe karaktersiz) -> Ayşe Demir', () async {
@@ -181,9 +181,9 @@ void main() {
 
   group('numara okuma', () {
     test('rakamlar gruplanır, TTS tek tek okur', () {
-      expect(NumberHandler.spokenDigits('0532 123 45 67'), '0 5 3 2, 1 2 3, 4 5, 6 7');
-      expect(NumberHandler.spokenDigits('05321234567'), '0 5 3 2, 1 2 3, 4 5, 6 7');
-      expect(NumberHandler.spokenDigits('+90 532 123 45 67'), 'artı 9 0, 5 3 2, 1 2 3, 4 5, 6 7');
+      expect(NumberHandler.spokenDigits('0555 000 00 09'), '0 5 5 5, 0 0 0, 0 0, 0 9');
+      expect(NumberHandler.spokenDigits('05550000009'), '0 5 5 5, 0 0 0, 0 0, 0 9');
+      expect(NumberHandler.spokenDigits('+90 555 000 00 09'), 'artı 9 0, 5 5 5, 0 0 0, 0 0, 0 9');
       expect(NumberHandler.spokenDigits('112'), '1 1 2');
     });
   });

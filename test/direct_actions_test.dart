@@ -16,7 +16,7 @@ import 'test_harness.dart';
 
 /// Faz 4a: "play" ve "direct" derleme türleri.
 void main() {
-  const ayse = ContactEntry('3', 'Ayşe Demir', ['0534 777 88 99']);
+  const ayse = ContactEntry('3', 'Ayşe Demir', ['0555 000 00 03']);
   const listenDelay = Duration(milliseconds: 500);
 
   void command(Harness h, FakeAsync async, String text) {
@@ -41,7 +41,7 @@ void main() {
         command(h, async, "Ayşe'yi ara");
         answer(h, async, 'evet');
         h.speakAll(async);
-        expect(direct.calls, ['05347778899']);
+        expect(direct.calls, ['05550000003']);
         expect(h.opened, isEmpty);
         expect(h.tts.spoken.last, 'Ayşe Demir aranıyor');
         h.dispose();
@@ -54,7 +54,7 @@ void main() {
         command(h, async, "Ayşe'yi ara");
         answer(h, async, 'evet');
         h.speakAll(async);
-        expect(h.opened.single.toString(), 'tel:05347778899');
+        expect(h.opened.single.toString(), 'tel:05550000003');
         h.dispose();
       });
     });
@@ -111,7 +111,7 @@ void main() {
       final opened = <Uri>[];
       final log = SentMessageLog();
       final result = await handlerWith(direct, opened, log).send(ayse, 'Geliyorum');
-      expect(direct.sms.single, ('05347778899', 'Geliyorum'));
+      expect(direct.sms.single, ('05550000003', 'Geliyorum'));
       expect(opened, isEmpty);
       expect(result.message, "Ayşe Demir'e mesaj gönderildi");
       expect(log.last!.confirmedSent, isTrue);

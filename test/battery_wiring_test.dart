@@ -14,8 +14,8 @@ import 'fakes.dart';
 import 'navigation_fixtures.dart';
 import 'test_harness.dart';
 
-const ayse = EmergencyContact('Ayşe Demir', '0534 777 88 99');
-const ali = EmergencyContact('Ali Kaya', '0533 444 55 66');
+const ayse = EmergencyContact('Ayşe Demir', '0555 000 00 03');
+const ali = EmergencyContact('Ali Kaya', '0555 000 00 02');
 
 /// Faz 7b-1: pil uyarılarının uygulamaya bağlanması. Eşik/histerezis mantığının
 /// kendisi `battery_monitor_test.dart`'ta. Bu dosyanın kilitlediği kurallar:

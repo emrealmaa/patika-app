@@ -10,10 +10,10 @@ void main() {
       final events = <IncomingCall?>[];
       final sub = sim.incomingCall.listen(events.add);
 
-      sim.startCall('Ahmet Yılmaz', number: '05321112233');
+      sim.startCall('Ahmet Yılmaz', number: '05550000001');
       await Future(() {});
       expect(events.single?.callerName, 'Ahmet Yılmaz');
-      expect(events.single?.number, '05321112233');
+      expect(events.single?.number, '05550000001');
       expect(sim.current?.callerName, 'Ahmet Yılmaz');
 
       await sim.answer();

@@ -30,10 +30,10 @@ import 'fakes.dart';
 /// açılıştaki otomatik bağlanma kapalı.
 /// Diyalog testleri için sahte rehber: iki Ahmet dahil.
 const harnessContacts = [
-  ContactEntry('1', 'Ahmet Yılmaz', ['0532 111 22 33']),
-  ContactEntry('2', 'Ahmet Kaya', ['0533 444 55 66']),
-  ContactEntry('3', 'Ayşe Demir', ['0534 777 88 99']),
-  ContactEntry('6', 'Annem', ['0537 666 77 88']),
+  ContactEntry('1', 'Ahmet Yılmaz', ['0555 000 00 01']),
+  ContactEntry('2', 'Ahmet Kaya', ['0555 000 00 02']),
+  ContactEntry('3', 'Ayşe Demir', ['0555 000 00 03']),
+  ContactEntry('6', 'Annem', ['0555 000 00 04']),
 ];
 
 class _HarnessContacts implements ContactSource {

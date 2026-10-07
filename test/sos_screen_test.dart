@@ -13,8 +13,8 @@ import 'fakes.dart';
 import 'test_harness.dart';
 import 'widget_test.dart' show usePhoneSize;
 
-const _ayse = EmergencyContact('Ayşe Demir', '0534 777 88 99');
-const _ali = EmergencyContact('Ali Kaya', '0533 444 55 66');
+const _ayse = EmergencyContact('Ayşe Demir', '0555 000 00 03');
+const _ali = EmergencyContact('Ali Kaya', '0555 000 00 02');
 
 /// Gerçek arama/SMS yok: FakeDirectActions (112 koruması testlerle kilitli).
 Harness _direct() => Harness(direct: FakeDirectActions(), emergencyContacts: const [_ayse, _ali]);

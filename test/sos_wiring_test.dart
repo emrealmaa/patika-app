@@ -20,8 +20,8 @@ import 'package:patika_app/widgets/sos_countdown_banner.dart';
 import 'fakes.dart';
 import 'test_harness.dart';
 
-const ayse = EmergencyContact('Ayşe Demir', '0534 777 88 99');
-const ali = EmergencyContact('Ali Kaya', '0533 444 55 66');
+const ayse = EmergencyContact('Ayşe Demir', '0555 000 00 03');
+const ali = EmergencyContact('Ali Kaya', '0555 000 00 02');
 const testNumber = '0999 000 00 00';
 
 /// Faz 7a-2: SOS'un uygulamaya bağlanması (gözlük dokunuşları, sesli iptal,

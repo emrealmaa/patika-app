@@ -52,7 +52,7 @@ void main() {
         answer(h, async, 'evet');
         h.speakAll(async);
         expect(h.opened.single.toString(),
-            'sms:05347778899?body=${Uri.encodeComponent('Beş dakikaya oradayım')}');
+            'sms:05550000003?body=${Uri.encodeComponent('Beş dakikaya oradayım')}');
         expect(h.tts.spoken.last, startsWith('Ayşe Demir için mesaj hazır'));
         expect(h.app.log.first.intent, PatikaIntent.mesaj);
         expect(h.app.log.first.entity, 'Ayşe Demir');
@@ -95,7 +95,7 @@ void main() {
 
         answer(h, async, 'evet ara');
         h.speakAll(async);
-        expect(h.opened.single.toString(), 'tel:05334445566');
+        expect(h.opened.single.toString(), 'tel:05550000002');
         expect(h.app.log.first.entity, 'Ahmet Kaya');
         h.dispose();
       });
