@@ -90,7 +90,19 @@ Kaynak: `lib/widgets/nabiz_halkalari.dart`, test: `test/animations_test.dart`.
   durağan çizilir. *Neden:* hareket hassasiyeti olan kullanıcılar ve
   sistem ayarına saygı.
 
-## 6. Cihazda doğrulanacaklar
+## 6. Bilinen sorunlar
+
+- **`play` türünde "SOS nasıl çalışır?" kartı `direct` davranışını
+  anlatıyor.** Ayarlar'daki kart (`Tr.sosHowSummary`, `Tr.sosHowDetails`,
+  `lib/screens/settings_screen.dart`) "iptal etmezseniz acil kişilerinize
+  gönderilir" diyor; bu yalnızca `direct`'te doğru. `play`'de SOS
+  desteklenmez ve "Bu sürümde acil durum mesajı gönderilemiyor" der (Faz 7
+  kararları madde 1). Eğitimdeki SOS cümlesiyle aynı sorun: **TODO.md
+  madde 17**. İlk sürüm `direct` ile dağıtıldığı için şimdilik
+  düzeltilmedi; `play` dağıtımı gündeme gelirse kart ve eğitim metni
+  derleme türüne göre ayrılmalı.
+
+## 7. Cihazda doğrulanacaklar
 
 Otomatik testlerle kilitli olanlar dışında, şunlar gerçek telefonda (Galaxy
 S24 FE, TalkBack açık) henüz denenmedi: uçtan uca TalkBack turu, SOS

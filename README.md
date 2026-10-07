@@ -84,6 +84,8 @@ Ayrıntılar ve gerekçeler: `docs/UI_ERISILEBILIRLIK.md`.
 - **Animasyonlar** yalnızca süstür (`ExcludeSemantics`), yalnızca dinleme/tarama sırasında çalışır ve
   "Animasyonları kaldır" açıkken (`MediaQuery.disableAnimationsOf`) durur.
 - Bölüm başlıkları büyük harfe çevrilmez: Dart'ın `toUpperCase()`'i Türkçe "i"yi "İ" yerine "I" yapar.
+- **Bilinen sorun:** `play` türünde Ayarlar'daki "SOS nasıl çalışır?" kartı `direct` davranışını anlatıyor
+  (TODO.md madde 17).
 
 ## 7. Çalıştırma
 
