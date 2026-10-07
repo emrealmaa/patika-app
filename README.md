@@ -69,12 +69,26 @@ Bu tablo, cihaz testinin vazgeçilmez olduğunun kanıtıdır: dört hatanın d�
 | `direct` | Tam çalışır | Doğrudan APK (dernek, test kullanıcısı) |
 | `play` | Desteklenmez; "bu sürümde acil durum mesajı gönderilemiyor" der | Play Store (izin kısıtı) |
 
-## 6. Çalıştırma
+## 6. Arayüz
+
+- **Açık tema**, renk ve ölçüler tek yerde: `PatikaTokens` (`lib/theme/app_theme.dart`). Metin/zemin çiftleri
+  **7:1 (WCAG AAA)** kontrastla ölçülür (`test/theme_contrast_test.dart`). Yalnızca SOS ekranı bilerek koyudur.
+- **Yazı tipi:** Plus Jakarta Sans, statik TTF olarak uygulamaya gömülü (`assets/fonts/`); OFL lisansı
+  `assets/fonts/OFL.txt` ve `lib/theme/font_license.dart` ile uygulamanın lisans listesinde.
+- **Ekranlar:** Konuş, Bağlantı, Ayarlar ve SOS tam ekranı. Üst uygulama çubuğu yok; her ekranın kendi başlığı
+  var (TalkBack'te ilk odak). TalkBack açıkken Konuş ekranı başlık + tek büyük düğmedir.
+- **SOS ekranı:** `BlockSemantics` arkadaki sekmeleri ve alt çubuğu TalkBack'ten düşürür (testle kanıtlı); odak
+  iptal düğmesine zorla taşınmaz.
+- **Animasyonlar** yalnızca süstür (`ExcludeSemantics`), yalnızca dinleme/tarama sırasında çalışır ve
+  "Animasyonları kaldır" açıkken (`MediaQuery.disableAnimationsOf`) durur.
+- Bölüm başlıkları büyük harfe çevrilmez: Dart'ın `toUpperCase()`'i Türkçe "i"yi "İ" yerine "I" yapar.
+
+## 7. Çalıştırma
 
 ```bash
 flutter pub get
 flutter run --flavor direct -d <cihaz-id>
-flutter analyze && flutter test
+flutter analyze && flutter test   # 680 test
 ```
 
 Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`
@@ -87,7 +101,7 @@ Ayarlar'daki sürüm satırına 7 kez dokunarak açılır, açıkken her açıl�
 düşük öncelikli bir duyuruyla "Test modu açık" söylenir (sırada 10 sn'den fazla beklerse atılır). Release derlemesi
 gerçek BLE ile açılır; simülasyon anahtarı yalnızca Test Modu'ndadır. **Bunların ikisi de cihazda henüz doğrulanmadı.**
 
-## 7. Geçerlilik tehditleri
+## 8. Geçerlilik tehditleri
 
 | Sınır | Etki |
 |---|---|
