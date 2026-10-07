@@ -12,5 +12,12 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Uygulamanın kendi kanalları (Android'de MainActivity.configureFlutterEngine).
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "PatikaChannels") {
+      let messenger = registrar.messenger()
+      AppIdentity.attach(messenger: messenger)
+      BatteryProbe.attach(messenger: messenger)
+      EmergencyContactsStorage.attach(messenger: messenger)
+    }
   }
 }

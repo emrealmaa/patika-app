@@ -8,13 +8,16 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:patika_app/accessibility/earcons.dart';
 import 'package:patika_app/accessibility/speech_output.dart';
 import 'package:patika_app/app_state.dart';
+import 'package:patika_app/battery/phone_battery.dart';
 import 'package:patika_app/ble/glasses_protocol.dart';
 import 'package:patika_app/commands/intent.dart';
 import 'package:patika_app/l10n/strings_tr.dart';
 import 'package:patika_app/main.dart';
+import 'package:patika_app/navigation/app_identity.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/location_service.dart';
 import 'package:patika_app/settings/test_mode_access.dart';
+import 'package:patika_app/sos/emergency_contacts.dart';
 import 'package:patika_app/tutorial/tutorial.dart';
 import 'package:patika_app/voice/speech_input_service.dart';
 
@@ -76,6 +79,27 @@ void main() {
 
   // Bilgi amaçlı: flutter test uygulamayı her çalıştırmada yeniden kurduğu
   // için simctl ile önceden verilen izinler silinir.
+  testWidgets('iOS kanalları: kimlik, pil, acil kişi deposu', (tester) async {
+    final identity = await MethodChannelAppIdentity().read();
+    expect(identity?.ios, isTrue);
+    expect(identity?.package, 'com.patika.patikaApp');
+
+    // Simülatörde UIDevice pili okunamayabilir (null = "bilinmiyor"); kanal
+    // bağlı değilse MissingPluginException da null döner, o yüzden yalnızca
+    // bilgi amaçlı.
+    final battery = await MethodChannelPhoneBattery().read();
+    debugPrint('[iOS] pil: ${battery?.percent} şarjda: ${battery?.charging}');
+
+    final store = SecureFileEmergencyContactStore();
+    final before = await store.readAll();
+    const contact = EmergencyContact('Deneme Kişi', '0555 000 00 09');
+    expect(await store.add(contact), EmergencyAddResult.added);
+    expect((await SecureFileEmergencyContactStore().readAll()).map((c) => c.name),
+        contains('Deneme Kişi'), reason: 'yazılan liste yeni bir depodan okunmalı');
+    expect(await store.remove(contact.key), isTrue);
+    expect((await store.readAll()).length, before.length);
+  });
+
   testWidgets('izin durumları (permission_handler) raporlanır', (tester) async {
     final statuses = {
       'mikrofon': await ph.Permission.microphone.status,

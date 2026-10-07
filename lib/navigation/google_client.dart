@@ -56,7 +56,7 @@ class GoogleRoutePlanner implements RoutePlanner {
       },
       timeout,
       (message) => RoutePlanException(message),
-      await androidRestrictionHeaders(_identity),
+      await appRestrictionHeaders(_identity),
     );
     return parseRoutesResponse(json, destinationName: destinationName);
   }
@@ -114,7 +114,7 @@ class GooglePlaceSearch implements PlaceSearch {
       },
       timeout,
       (message) => PlaceSearchException(message),
-      await androidRestrictionHeaders(_identity),
+      await appRestrictionHeaders(_identity),
     );
     return parsePlacesResponse(json);
   }

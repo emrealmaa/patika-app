@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -447,6 +448,34 @@ void main() {
         throwsA(isA<RoutePlanException>().having(
             (e) => e.toString(), 'toString', allOf(isNot(contains('AB12CD34')), isNot(contains(key))))),
       );
+    });
+  });
+
+  group('iOS uygulama kısıtlaması başlığı', () {
+    test('iOS kimliği: yalnızca X-Ios-Bundle-Identifier gider', () async {
+      final headers = await appRestrictionHeaders(
+          const FixedAppIdentity(AppIdentity.ios('com.patika.patikaApp')));
+      expect(headers, {'X-Ios-Bundle-Identifier': 'com.patika.patikaApp'});
+    });
+
+    test('kanal: platform "ios" ise iOS kimliği, yoksa Android', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel('patika/identity');
+      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      messenger.setMockMethodCallHandler(
+          channel, (_) async => {'package': 'com.patika.patikaApp', 'platform': 'ios'});
+      final ios = await MethodChannelAppIdentity().read();
+      expect(ios?.ios, isTrue);
+      expect(ios?.sha1, isNull);
+
+      messenger.setMockMethodCallHandler(
+          channel, (_) async => {'package': 'com.patika.patika_app', 'sha1': 'AB12CD34'});
+      final android = await MethodChannelAppIdentity().read();
+      expect(android?.ios, isFalse);
+      expect(await appRestrictionHeaders(FixedAppIdentity(android)),
+          {'X-Android-Package': 'com.patika.patika_app', 'X-Android-Cert': 'AB12CD34'});
     });
   });
 
