@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -98,6 +99,12 @@ void main() {
         contains('Deneme Kişi'), reason: 'yazılan liste yeni bir depodan okunmalı');
     expect(await store.remove(contact.key), isTrue);
     expect((await store.readAll()).length, before.length);
+
+    // Arama yokken 0 (MODE_NORMAL); kanal yoksa MissingPluginException fırlar.
+    expect(await const MethodChannel('patika/audiomode').invokeMethod<int>('mode'), 0);
+    // Bekleyen başlatma talimatı yok (Siri/Eylem Düğmesi tetiklenmedi).
+    expect(await const MethodChannel('patika/launch').invokeMethod<String>('consumePendingAction'),
+        isNull);
   });
 
   testWidgets('izin durumları (permission_handler) raporlanır', (tester) async {

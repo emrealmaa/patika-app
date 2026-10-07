@@ -37,6 +37,10 @@ abstract class SosCallMonitor {
 /// giden aramanın çalma aşamasında da (karşı taraf açmadan) görülüp
 /// görülmediği bekleyen telefon testlerinde (bkz. CLAUDE.md).
 ///
+/// **iOS:** `AudioModeProbe.swift` aynı değerleri `CXCallObserver`'dan üretir
+/// (bitmemiş arama varsa 2, yoksa 0); giden arama çalarken de görülür.
+/// Aşağıdaki Android ses modu/SCO incelemesi iOS için geçerli değil.
+///
 /// **Uygulamanın kendi sesi bu modu tetikler mi?** İncelendi (2026-09-28):
 /// - `flutter_tts` yalnızca ses odağı ister (`requestAudioFocus`), modu
 ///   hiç değiştirmez. `audioplayers` (kısa sesler) `AudioManager`'a hiç

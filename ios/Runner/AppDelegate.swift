@@ -16,8 +16,10 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "PatikaChannels") {
       let messenger = registrar.messenger()
       AppIdentity.attach(messenger: messenger)
+      AudioModeProbe.attach(messenger: messenger)
       BatteryProbe.attach(messenger: messenger)
       EmergencyContactsStorage.attach(messenger: messenger)
+      LaunchActions.attach(messenger: messenger)
     }
   }
 }
