@@ -254,6 +254,22 @@ abstract final class Tr {
   static String glassesStatusLine(bool connected) =>
       connected ? 'Gözlük bağlı' : 'Gözlük bağlı değil';
 
+  // Pil kartları (ekranda kısa, TalkBack'te tam cümle).
+  static const glassesBatteryTitle = 'Gözlük pili';
+  static const phoneBatteryTitle = 'Telefon pili';
+  static String batteryPercentShort(int percent) => '%$percent';
+  static const batteryCardNotConnected = 'Bağlı değil';
+  static const batteryCardUnknown = 'Okunamadı';
+  static const batteryCardCharging = 'Şarj oluyor';
+  static String glassesBatteryCardLabel(int? percent) => percent == null
+      ? '$glassesBatteryTitle: gözlük bağlı değil'
+      : '$glassesBatteryTitle yüzde $percent';
+  static String phoneBatteryCardLabel(int? percent, bool charging) => percent == null
+      ? statusPhoneUnknown
+      : charging
+          ? statusPhoneCharging(percent)
+          : statusPhoneBattery(percent);
+
   // --- Evrensel komutlar ---------------------------------------------------
   static const helpShort = 'Şunları söyleyebilirsiniz: bir kişiyi ara, mesaj gönder, '
       'bir yere götür, saat kaç, durum, daha hızlı konuş, tekrar et, dur ve eğitimi başlat.';
@@ -711,5 +727,5 @@ abstract final class Tr {
   }
 
   static const voiceHeroCaption = 'Sesli komut';
-  static const voiceHeroExamples = "Örnek: “Ayşe'yi ara”, “Kadıköy'e götür”, “durum”";
+  static const voiceHeroExamples = "Örnek: “Ayşe'yi ara”, “Kadıköy'e götür”, “saat kaç”";
 }
