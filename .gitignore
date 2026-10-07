@@ -50,3 +50,6 @@ dart_defines.json
 
 # graphify çıktısı (üretilen, commit'e dahil edilmez)
 graphify-out/
+
+# Kisisel yapilacaklar listesi (yerelde tutulur, commit edilmez)
+TODO.md
