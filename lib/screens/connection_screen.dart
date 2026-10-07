@@ -6,6 +6,7 @@ import '../ble/patika_ble_service.dart';
 import '../commands/log_entry.dart';
 import '../l10n/strings_tr.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ekran_basligi.dart';
 import '../widgets/kisa_ozet_kart.dart';
 import '../widgets/liste_satiri.dart';
 import '../widgets/patika_card.dart';
@@ -29,11 +30,13 @@ class ConnectionScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         PatikaTokens.screenPadding,
-        PatikaTokens.gapSmall,
+        PatikaTokens.gap,
         PatikaTokens.screenPadding,
         PatikaTokens.gap,
       ),
       children: [
+        const EkranBasligi(Tr.screenTitleConnection),
+        const SizedBox(height: PatikaTokens.gap),
         _StatusCard(
           connectionState: state.connectionState,
           battery: state.glassesBattery,

@@ -5,6 +5,7 @@ import '../l10n/strings_tr.dart';
 import '../theme/app_theme.dart';
 import '../voice/voice_controller.dart';
 import '../widgets/durum_hapi.dart';
+import '../widgets/ekran_basligi.dart';
 import '../widgets/mikrofon_hero.dart';
 import '../widgets/patika_card.dart';
 import '../widgets/voice_button.dart';
@@ -25,9 +26,19 @@ class ListenScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final voice = state.voice;
     if (MediaQuery.accessibleNavigationOf(context)) {
+      // Başlık ilk odak, ardından ekranın geri kalanının tamamı tek düğme.
       return Padding(
         padding: const EdgeInsets.all(PatikaTokens.gapSmall),
-        child: MikrofonHero(controller: voice, expand: true),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, PatikaTokens.gapSmall),
+              child: EkranBasligi(Tr.screenTitleListen),
+            ),
+            Expanded(child: MikrofonHero(controller: voice, expand: true)),
+          ],
+        ),
       );
     }
 
@@ -41,18 +52,21 @@ class ListenScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               PatikaTokens.screenPadding,
-              PatikaTokens.gapSmall,
+              PatikaTokens.gap,
               PatikaTokens.screenPadding,
               PatikaTokens.gap,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: connected
-                      ? DurumHapi.basari(Tr.glassesStatusLine(true))
-                      : DurumHapi.notr(Tr.glassesStatusLine(false)),
+                EkranBasligi(
+                  Tr.screenTitleListen,
+                  trailing: Align(
+                    alignment: Alignment.centerRight,
+                    child: connected
+                        ? DurumHapi.basari(Tr.glassesStatusLine(true))
+                        : DurumHapi.notr(Tr.glassesStatusLine(false)),
+                  ),
                 ),
                 const SizedBox(height: PatikaTokens.gap),
                 IntrinsicHeight(

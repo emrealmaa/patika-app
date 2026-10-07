@@ -7,11 +7,19 @@ import '../platform/app_version.dart';
 import '../settings/settings.dart';
 import '../settings/settings_store.dart';
 import '../settings/test_mode_access.dart';
+import '../sos/sos_config.dart';
+import '../theme/app_theme.dart';
+import '../widgets/anahtar_satiri.dart';
+import '../widgets/ekran_basligi.dart';
+import '../widgets/kisa_ozet_kart.dart';
+import '../widgets/patika_card.dart';
 
 /// Ayarlar ekranı. Tamamen TalkBack ile kullanılabilir olacak şekilde
-/// sadece radyo listelerinden oluşuyor (kaydırıcı yok - TalkBack'te kademeli
-/// ayar zahmetli): her seçenek tam genişlikte, en az 56dp, TalkBack
-/// "seçili, 3/5" gibi konumu kendisi okuyor.
+/// radyo listeleri ve anahtarlardan oluşuyor (kaydırıcı yok - TalkBack'te
+/// kademeli ayar zahmetli): her seçenek tam genişlikte, en az 56dp, TalkBack
+/// "seçili, 3/5" gibi konumu kendisi okuyor. Bölümler kart içinde; uzun
+/// açıklamalar tek cümlelik özet + "Ayrıntıyı göster" ([KisaOzetKart]).
+/// Sonucu olan bilgi (112 ceza uyarısı) özette kalır.
 ///
 /// Çift okuma olmasın diye TTS sadece konuşma hızı/ses tonu değişince
 /// konuşuyor - yeni hızın/tonun önizlemesi olarak. Diğer seçimleri TalkBack
@@ -43,126 +51,157 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = _s;
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.fromLTRB(
+        PatikaTokens.screenPadding,
+        PatikaTokens.gap,
+        PatikaTokens.screenPadding,
+        PatikaTokens.gap,
+      ),
       children: [
-        _Header(Tr.settingsSpeech),
-        _Choice<int>(
-          title: Tr.speechRate,
-          value: s.speechRateLevel,
-          options: [
-            for (var i = 0; i < Settings.speechRates.length; i++)
-              (i, Tr.speechRateNames[i], null),
-          ],
-          onChanged: (v) {
-            final next = s.copyWith(speechRateLevel: v);
-            _update(next);
-            feedback.say(Tr.settingChanged(Tr.speechRate, next.speechRateName));
-          },
-        ),
-        _Choice<int>(
-          title: Tr.pitch,
-          value: s.pitchLevel,
-          options: [
-            for (var i = 0; i < Settings.pitches.length; i++) (i, Tr.pitchNames[i], null),
-          ],
-          onChanged: (v) {
-            final next = s.copyWith(pitchLevel: v);
-            _update(next);
-            feedback.say(Tr.settingChanged(Tr.pitch, next.pitchName));
-          },
-        ),
-        _Choice<Verbosity>(
-          title: Tr.verbosity,
-          value: s.verbosity,
-          options: const [
-            (Verbosity.short, Tr.verbosityShort, Tr.verbosityShortHint),
-            (Verbosity.long, Tr.verbosityLong, Tr.verbosityLongHint),
-          ],
-          onChanged: (v) => _update(s.copyWith(verbosity: v)),
-        ),
-        _Header(Tr.settingsListening),
-        _Choice<int>(
-          title: Tr.silenceTimeout,
-          hint: Tr.silenceTimeoutHint,
-          value: s.silenceTimeoutSeconds,
-          options: [
-            for (var i = Settings.minSilenceSeconds; i <= Settings.maxSilenceSeconds; i++)
-              (i, Tr.seconds(i), null),
-          ],
-          onChanged: (v) => _update(s.copyWith(silenceTimeoutSeconds: v)),
-        ),
-        SwitchListTile(
-          title: const Text(Tr.nodToListen),
-          subtitle: const Text(Tr.nodToListenHint),
-          value: s.nodToListen,
-          onChanged: (v) => _update(s.copyWith(nodToListen: v)),
-        ),
-        SwitchListTile(
-          title: const Text(Tr.readMessagesAloud),
-          subtitle: const Text(Tr.readMessagesAloudHint),
-          value: s.readMessagesAloud,
-          onChanged: (v) => _update(s.copyWith(readMessagesAloud: v)),
-        ),
-        SwitchListTile(
-          title: const Text(Tr.muteNotifications),
-          subtitle: const Text(Tr.muteNotificationsHint),
-          value: s.notificationsMuted,
-          onChanged: (v) => _update(s.copyWith(notificationsMuted: v)),
-        ),
-        _Header(Tr.sosSettingsSection),
-        SwitchListTile(
-          title: const Text(Tr.sosCall112Title),
-          subtitle: const Text(Tr.sosCall112Hint),
-          value: s.emergencyCall112,
-          onChanged: (v) {
-            _update(s.copyWith(emergencyCall112: v));
-            // Açarken sesli uyarı (asılsız 112 aramasının yaptırımı var);
-            // kapatınca da ne olacağı söylenir. Yeni değeri TalkBack
-            // "açık/kapalı" diye okuyor, uyarı içeriği TTS'ten.
-            feedback.say(v ? Tr.sosCall112EnabledWarning : Tr.sosCall112DisabledInfo);
-          },
-        ),
-        _Header(Tr.settingsFeedback),
-        _Choice<FeedbackMode>(
-          title: Tr.feedbackMode,
-          value: s.feedbackMode,
-          options: const [
-            (FeedbackMode.speech, Tr.feedbackSpeech, Tr.feedbackSpeechHint),
-            (FeedbackMode.earconOnly, Tr.feedbackEarcon, Tr.feedbackEarconHint),
-          ],
-          onChanged: (v) => _update(s.copyWith(feedbackMode: v)),
-        ),
-        _Choice<int>(
-          title: Tr.hapticStrength,
-          value: s.hapticLevel,
-          options: [
-            for (var i = 0; i < Settings.hapticScales.length; i++) (i, Tr.hapticNames[i], null),
-          ],
-          onChanged: (v) {
-            final next = s.copyWith(hapticLevel: v);
-            _update(next);
-            feedback.haptics.play(HapticPatternId.understood, scale: next.hapticScale);
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: OutlinedButton.icon(
-            onPressed: onStartTutorial,
-            icon: const Icon(Icons.school),
-            label: const Text(Tr.startTutorial),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: OutlinedButton.icon(
-            onPressed: () {
-              _update(const Settings());
-              feedback.say(Tr.settingsReset);
+        const EkranBasligi(Tr.screenTitleSettings),
+        _Section(Tr.settingsSpeech, [
+          _Choice<int>(
+            title: Tr.speechRate,
+            value: s.speechRateLevel,
+            options: [
+              for (var i = 0; i < Settings.speechRates.length; i++)
+                (i, Tr.speechRateNames[i], null),
+            ],
+            onChanged: (v) {
+              final next = s.copyWith(speechRateLevel: v);
+              _update(next);
+              feedback.say(Tr.settingChanged(Tr.speechRate, next.speechRateName));
             },
-            icon: const Icon(Icons.restore),
-            label: const Text(Tr.resetSettings),
           ),
+          _Choice<int>(
+            title: Tr.pitch,
+            value: s.pitchLevel,
+            options: [
+              for (var i = 0; i < Settings.pitches.length; i++) (i, Tr.pitchNames[i], null),
+            ],
+            onChanged: (v) {
+              final next = s.copyWith(pitchLevel: v);
+              _update(next);
+              feedback.say(Tr.settingChanged(Tr.pitch, next.pitchName));
+            },
+          ),
+          _Choice<Verbosity>(
+            title: Tr.verbosity,
+            value: s.verbosity,
+            options: const [
+              (Verbosity.short, Tr.verbosityShort, Tr.verbosityShortHint),
+              (Verbosity.long, Tr.verbosityLong, Tr.verbosityLongHint),
+            ],
+            onChanged: (v) => _update(s.copyWith(verbosity: v)),
+          ),
+        ]),
+        _Section(Tr.settingsListening, [
+          _Choice<int>(
+            title: Tr.silenceTimeout,
+            hint: Tr.silenceTimeoutHint,
+            value: s.silenceTimeoutSeconds,
+            options: [
+              for (var i = Settings.minSilenceSeconds; i <= Settings.maxSilenceSeconds; i++)
+                (i, Tr.seconds(i), null),
+            ],
+            onChanged: (v) => _update(s.copyWith(silenceTimeoutSeconds: v)),
+          ),
+          AnahtarSatiri(
+            title: Tr.nodToListen,
+            value: s.nodToListen,
+            onChanged: (v) => _update(s.copyWith(nodToListen: v)),
+          ),
+          const KisaOzetKart(
+            card: false,
+            contextLabel: Tr.nodToListen,
+            summary: Tr.nodToListenSummary,
+            details: Tr.nodToListenDetails,
+          ),
+          AnahtarSatiri(
+            title: Tr.readMessagesAloud,
+            subtitle: Tr.readMessagesAloudHint,
+            value: s.readMessagesAloud,
+            onChanged: (v) => _update(s.copyWith(readMessagesAloud: v)),
+          ),
+          AnahtarSatiri(
+            title: Tr.muteNotifications,
+            value: s.notificationsMuted,
+            onChanged: (v) => _update(s.copyWith(notificationsMuted: v)),
+          ),
+          const KisaOzetKart(
+            card: false,
+            contextLabel: Tr.muteNotifications,
+            summary: Tr.muteNotificationsSummary,
+            details: Tr.muteNotificationsDetails,
+          ),
+        ]),
+        _Section(Tr.sosSettingsSection, [
+          AnahtarSatiri(
+            icon: Icons.phone_in_talk,
+            danger: true,
+            title: Tr.sosCall112Title,
+            value: s.emergencyCall112,
+            onChanged: (v) {
+              _update(s.copyWith(emergencyCall112: v));
+              // Açarken sesli uyarı (asılsız 112 aramasının yaptırımı var);
+              // kapatınca da ne olacağı söylenir. Yeni değeri TalkBack
+              // "açık/kapalı" diye okuyor, uyarı içeriği TTS'ten.
+              feedback.say(v ? Tr.sosCall112EnabledWarning : Tr.sosCall112DisabledInfo);
+            },
+          ),
+          // Ceza uyarısı özette (ayrıntıya saklanmaz).
+          const KisaOzetKart(
+            card: false,
+            contextLabel: Tr.sosCall112Title,
+            summary: Tr.sosCall112Summary,
+            details: Tr.sosCall112Details,
+          ),
+        ]),
+        const SizedBox(height: 12),
+        KisaOzetKart(
+          title: Tr.sosHowTitle,
+          summary: Tr.sosHowSummary(SosConfig.manualCountdown.inSeconds),
+          details: Tr.sosHowDetails,
         ),
+        _Section(Tr.settingsFeedback, [
+          _Choice<FeedbackMode>(
+            title: Tr.feedbackMode,
+            value: s.feedbackMode,
+            options: const [
+              (FeedbackMode.speech, Tr.feedbackSpeech, Tr.feedbackSpeechHint),
+              (FeedbackMode.earconOnly, Tr.feedbackEarcon, Tr.feedbackEarconHint),
+            ],
+            onChanged: (v) => _update(s.copyWith(feedbackMode: v)),
+          ),
+          _Choice<int>(
+            title: Tr.hapticStrength,
+            value: s.hapticLevel,
+            options: [
+              for (var i = 0; i < Settings.hapticScales.length; i++) (i, Tr.hapticNames[i], null),
+            ],
+            onChanged: (v) {
+              final next = s.copyWith(hapticLevel: v);
+              _update(next);
+              feedback.haptics.play(HapticPatternId.understood, scale: next.hapticScale);
+            },
+          ),
+        ]),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: onStartTutorial,
+          icon: const Icon(Icons.school),
+          label: const Text(Tr.startTutorial),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () {
+            _update(const Settings());
+            feedback.say(Tr.settingsReset);
+          },
+          icon: const Icon(Icons.restore),
+          label: const Text(Tr.resetSettings),
+        ),
+        const SizedBox(height: 12),
         if (version != null)
           _VersionTile(version: version!, testMode: testMode, feedback: feedback),
       ],
@@ -238,19 +277,39 @@ class _VersionTile extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  final String text;
+/// Bölüm: küçük başlık (TalkBack'te header) + içindekileri saran kart.
+class _Section extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
 
-  const _Header(this.text);
+  const _Section(this.title, this.children);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
-      child: Semantics(
-        header: true,
-        child: Text(text, style: Theme.of(context).textTheme.titleLarge),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 24, 4, PatikaTokens.gapSmall),
+          child: Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(color: PatikaTokens.textSecondary),
+            ),
+          ),
+        ),
+        PatikaCard(
+          padding: const EdgeInsets.symmetric(horizontal: PatikaTokens.gap, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -276,21 +335,19 @@ class _Choice<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.only(top: 12),
           child: Semantics(
             header: true,
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            child: Text(title, style: text.titleSmall),
           ),
         ),
         if (hint != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(hint!),
-          ),
+          Text(hint!, style: text.bodySmall?.copyWith(color: PatikaTokens.textSecondary)),
         RadioGroup<T>(
           groupValue: value,
           onChanged: (v) {
@@ -310,8 +367,8 @@ class _Choice<T> extends StatelessWidget {
                     child: Text(label),
                   ),
                   subtitle: optionHint == null ? null : Text(optionHint),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  minTileHeight: 56,
+                  contentPadding: EdgeInsets.zero,
+                  minTileHeight: PatikaTokens.minTouch,
                 ),
             ],
           ),

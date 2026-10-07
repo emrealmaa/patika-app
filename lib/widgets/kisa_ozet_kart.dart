@@ -16,6 +16,10 @@ import 'patika_card.dart';
 /// kalır.
 class KisaOzetKart extends StatefulWidget {
   final String? title;
+
+  /// Başlık görünmüyorsa (ör. bir anahtar satırının altında) düğme etiketine
+  /// eklenecek ad: "Ayrıntıyı göster: Bildirimleri sustur".
+  final String? contextLabel;
   final String summary;
 
   /// Ayrıntı: düz metin ya da madde listesi (her öğe bir madde).
@@ -28,6 +32,7 @@ class KisaOzetKart extends StatefulWidget {
   const KisaOzetKart({
     super.key,
     this.title,
+    this.contextLabel,
     required this.summary,
     required this.details,
     this.initiallyExpanded = false,
@@ -92,7 +97,7 @@ class _KisaOzetKartState extends State<KisaOzetKart> {
             alignment: Alignment.centerLeft,
           ),
           child: Semantics(
-            label: Tr.detailToggleLabel(title, _expanded),
+            label: Tr.detailToggleLabel(title ?? widget.contextLabel, _expanded),
             expanded: _expanded,
             excludeSemantics: true,
             child: Text(_expanded ? Tr.detailHide : Tr.detailShow),

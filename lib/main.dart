@@ -152,12 +152,15 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text(Tr.appTitle)),
-      // Acil durum geri sayımı her sekmenin üstünde görünür (iptal düğmesi).
+      // Üst çubuk yok: her ekran kendi başlığıyla başlar (EkranBasligi,
+      // TalkBack'te ilk odak). Acil durum geri sayımı her sekmenin üstünde
+      // görünür (iptal düğmesi).
       body: Column(
         children: [
           SosCountdownBanner(sos: _appState.sos),
-          Expanded(child: screens[_tabIndex]),
+          Expanded(
+            child: SafeArea(bottom: false, child: screens[_tabIndex]),
+          ),
         ],
       ),
       // Beyaz alt çubuk, üst köşeler yuvarlak, yukarı doğru yumuşak gölge.

@@ -235,9 +235,13 @@ abstract final class Tr {
   static const notificationsMuted = 'Bildirimler susturuldu';
   static const notificationsUnmuted = 'Bildirimler açıldı';
   static const muteNotifications = 'Bildirimleri sustur';
-  static const muteNotificationsHint =
-      'Açıkken gelen mesaj bildirimleri hiç seslendirilmez (yine de '
-      '"mesajlarımı oku" ile okunabilir). Gelen aramalar bundan etkilenmez.';
+  // Ekranda tek cümlelik özet + "Ayrıntıyı göster" ile açılan ayrıntı.
+  static const muteNotificationsSummary =
+      'Açıkken gelen mesaj bildirimleri hiç seslendirilmez.';
+  static const muteNotificationsDetails = [
+    'Mesajlar yine de "mesajlarımı oku" ile okunabilir.',
+    'Gelen aramalar bundan etkilenmez.',
+  ];
 
   // --- Sesli komut ---------------------------------------------------------
   static const listening = 'Dinliyorum';
@@ -404,8 +408,10 @@ abstract final class Tr {
   static const hapticStrength = 'Titreşim şiddeti';
   static const feedbackMode = 'Bildirim türü';
   static const nodToListen = 'Baş sallayarak dinlet';
-  static const nodToListenHint =
-      'Başınızı iki kez sallayınca dinleme başlar. Yanlışlıkla tetiklenebileceği için varsayılan olarak kapalı.';
+  static const nodToListenSummary = 'Başınızı iki kez sallayınca dinleme başlar.';
+  static const nodToListenDetails = [
+    'Yanlışlıkla tetiklenebileceği için varsayılan olarak kapalı.',
+  ];
   static const resetSettings = 'Varsayılan ayarlara dön';
   static const settingsReset = 'Ayarlar varsayılana döndü';
   static String seconds(int s) => '$s saniye';
@@ -616,9 +622,28 @@ abstract final class Tr {
   static const sosCancelButton = 'İptal et, gönderme';
   static const sosSettingsSection = 'Acil durum';
   static const sosCall112Title = 'Acil durumda 112\'yi ara';
-  static const sosCall112Hint =
-      'Kapalıyken acil durumda ilk acil kişi aranır. Açıkken 112 aranır. Asılsız '
-      '112 araması idari para cezası gerektirebilir.';
+  // Ceza uyarısı ÖZETTE: sonucu olan bilgi aç/kapa arkasına saklanmaz.
+  static const sosCall112Summary =
+      'Açıkken acil durumda 112 aranır; asılsız 112 araması idari para cezası '
+      'gerektirebilir.';
+  static const sosCall112Details = ['Kapalıyken acil durumda ilk acil kişi aranır.'];
+
+  // "SOS nasıl çalışır?" kartı (ekranda). Kararlar: CLAUDE.md Faz 7 madde 2;
+  // iptal listesi voice_intent_classifier.dart (_sosCancelRule) ile aynı.
+  static const sosHowTitle = 'SOS nasıl çalışır?';
+  static String sosHowSummary(int seconds) =>
+      'Yardım çağrısı $seconds saniye geri sayar; iptal etmezseniz acil kişilerinize '
+      'gönderilir.';
+  static const sosHowCancelWords = ['iptal', 'iptal et', 'vazgeç', 'yanlış alarm', 'gerek yok'];
+  static final sosHowDetails = [
+    'Başlatmak için "yardım", "imdat" ya da "acil durum" deyin veya gözlüğün '
+        'düğmesine uzun basın.',
+    'İptal etmek için ${sosHowCancelWords.map((w) => '"$w"').join(', ')} deyin, '
+        'gözlüğe dokunun ya da ekrandaki İptal düğmesine dokunun.',
+    '"Dur" demek geri sayımı iptal etmez.',
+    'Hiçbir şey yapmazsanız mesaj acil kişilerinize gönderilir.',
+    'Patika acil durum servisi değildir.',
+  ];
   static const sosCall112EnabledWarning =
       'Dikkat: acil durumda 112 aranacak. Asılsız 112 araması idari para cezası '
       'gerektirebilir. Kapatmak için aynı düğmeye tekrar dokunun';
@@ -739,5 +764,10 @@ abstract final class Tr {
   }
 
   static const voiceHeroCaption = 'Sesli komut';
+
+  // Ekran başlıkları (üst çubuk yok; her ekranın kendi başlığı).
+  static const screenTitleListen = 'Patika';
+  static const screenTitleConnection = 'Bağlantı';
+  static const screenTitleSettings = 'Ayarlar';
   static const voiceHeroExamples = "Örnek: “Ayşe'yi ara”, “Kadıköy'e götür”, “saat kaç”";
 }
