@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/strings_tr.dart';
 import '../theme/app_theme.dart';
 import '../voice/voice_controller.dart';
+import 'nabiz_halkalari.dart';
 import 'patika_card.dart';
 
 /// Konuş sekmesinin büyük dinleme düğmesi: gradyanlı hero kartın TAMAMI
@@ -115,7 +116,7 @@ class MikrofonHero extends StatelessWidget {
   }
 }
 
-/// Beyaz mikrofon dairesi ve (dinlerken) çevresindeki halkalar.
+/// Beyaz mikrofon dairesi ve (dinlerken) çevresindeki nabız halkaları.
 class _MicCircle extends StatelessWidget {
   static const size = 104.0;
 
@@ -132,16 +133,12 @@ class _MicCircle extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Dinlerken nabız: yalnızca bu durumda ağaçta (bitince denetleyici
+          // dispose edilir); hareketi azalt açıkken durağan.
           if (active)
             const ExcludeSemantics(
               key: ValueKey('mikrofon-halkalari'),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _Ring(scale: 1.55, alpha: 0.18),
-                  _Ring(scale: 1.25, alpha: 0.30),
-                ],
-              ),
+              child: NabizHalkalari(size: size, color: PatikaTokens.onHero),
             ),
           Container(
             width: size,
@@ -153,25 +150,6 @@ class _MicCircle extends StatelessWidget {
             child: Icon(icon, size: 46, color: PatikaTokens.primary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Ring extends StatelessWidget {
-  final double scale;
-  final double alpha;
-
-  const _Ring({required this.scale, required this.alpha});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: _MicCircle.size * scale,
-      height: _MicCircle.size * scale,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: PatikaTokens.onHero.withValues(alpha: alpha),
       ),
     );
   }

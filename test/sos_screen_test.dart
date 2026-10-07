@@ -132,9 +132,15 @@ void main() {
       await _teardown(tester, h);
     });
 
+    // Hareketi azalt açık: yumuşatma yok, halka her tikte tam olarak
+    // status.remaining'i gösterir. (Adım 7'de halkaya değerler arası
+    // yumuşatma eklendi; animasyonlu hali animations_test.dart'ta.)
     testWidgets('halka status.remaining\'den çizilir (kendi zamanlayıcısı yok) ve süs',
         (tester) async {
       usePhoneSize(tester);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       final h = _direct();
       await tester.pumpWidget(_app(h));
       await h.app.sos.trigger(SosSource.glasses);

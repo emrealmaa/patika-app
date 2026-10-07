@@ -11,6 +11,7 @@ import 'screens/listen_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/test_mode_screen.dart';
 import 'settings/test_mode_access.dart';
+import 'sos/sos_controller.dart';
 import 'theme/app_theme.dart';
 import 'theme/font_license.dart';
 import 'voice/voice_controller.dart';
@@ -33,11 +34,15 @@ class PatikaApp extends StatelessWidget {
 
   const PatikaApp({super.key, this.appStateFactory, this.testModeFactory, this.appVersion});
 
+  /// Bir kez kurulur: her yeniden çizimde yeni ThemeData verilseydi
+  /// MaterialApp'in AnimatedTheme'i gereksiz tema geçişi başlatırdı.
+  static final _theme = buildAppTheme();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: Tr.appTitle,
-      theme: buildAppTheme(),
+      theme: _theme,
       // Material'in hazır erişilebilirlik metinleri ("Sekme 1/3", "Geri",
       // "seçili" vb.) Türkçe okunsun - yoksa TalkBack bunları İngilizce söyler.
       locale: const Locale('tr', 'TR'),
@@ -156,7 +161,16 @@ class _HomePageState extends State<HomePage> {
     // (BlockSemantics, bkz. SosCountdownBanner). Boştayken hiçbir şey çizmez.
     return Stack(
       children: [
-        _buildScaffold(screens),
+        // SOS ekranı açıkken arkası görünmez: oradaki animasyonlar (ör.
+        // SOS dinlemesi sırasında Konuş'taki nabız) ticker'sız kalır.
+        ValueListenableBuilder<SosStatus>(
+          valueListenable: _appState.sos.status,
+          builder: (context, status, child) => TickerMode(
+            enabled: status.phase == SosPhase.idle || status.phase == SosPhase.preparing,
+            child: child!,
+          ),
+          child: _buildScaffold(screens),
+        ),
         Positioned.fill(child: SosCountdownBanner(sos: _appState.sos)),
       ],
     );

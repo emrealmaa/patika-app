@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/ekran_basligi.dart';
 import '../widgets/kisa_ozet_kart.dart';
 import '../widgets/liste_satiri.dart';
+import '../widgets/nabiz_halkalari.dart';
 import '../widgets/patika_card.dart';
 
 /// Bağlantı durumu ekranı: tarama, cihaza bağlanma ve son işlenen
@@ -253,7 +254,7 @@ class _StatusCard extends StatelessWidget {
 }
 
 /// Durum kartındaki beyaz daire ve (tarama/bağlanma sürerken) çevresindeki
-/// dalga halkaları. Tamamı süs.
+/// dalga halkaları ([NabizHalkalari]). Tamamı süs.
 class _SignalIcon extends StatelessWidget {
   static const size = 84.0;
 
@@ -269,16 +270,23 @@ class _SignalIcon extends StatelessWidget {
         width: size,
         height: size,
         child: Stack(
+          clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
+            // Tarama/bağlanma dalgası: yalnızca bu durumda ağaçta; hareketi
+            // azalt açıkken durağan.
             if (searching)
-              Container(
-                key: const ValueKey('baglanti-dalgalari'),
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: PatikaTokens.onHero.withValues(alpha: 0.25),
+              const OverflowBox(
+                key: ValueKey('baglanti-dalgalari'),
+                maxWidth: size * 1.5,
+                maxHeight: size * 1.5,
+                child: NabizHalkalari(
+                  size: size,
+                  color: PatikaTokens.onHero,
+                  minScale: 0.6,
+                  maxScale: 1.5,
+                  opacity: 0.4,
+                  period: Duration(milliseconds: 2600),
                 ),
               ),
             Container(

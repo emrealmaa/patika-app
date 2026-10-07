@@ -180,8 +180,18 @@ class _CountdownRing extends StatelessWidget {
           key: const ValueKey('sos-geri-sayim-halkasi'),
           width: size,
           height: size,
-          child: CustomPaint(
-            painter: CountdownRingPainter(fraction: fraction),
+          // Yalnızca saniyelik değerler arasında yumuşatma: hedef her zaman
+          // status.remaining'den; kendi zamanlayıcısı ve mantığı yok. Hareketi
+          // azalt açıkken süre sıfır (ticker hiç çalışmaz, değer anında).
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: fraction),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(seconds: 1),
+            builder: (context, value, child) => CustomPaint(
+              painter: CountdownRingPainter(fraction: value),
+              child: child,
+            ),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
