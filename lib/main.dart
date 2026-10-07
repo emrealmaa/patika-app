@@ -151,18 +151,22 @@ class _HomePageState extends State<HomePage> {
         ),
     ];
 
+    // Acil durum geri sayımı/gönderimi sürerken SOS ekranı uygulamanın
+    // TAMAMINI (alt çubuk dahil) kaplar ve arkadakini TalkBack'ten kapatır
+    // (BlockSemantics, bkz. SosCountdownBanner). Boştayken hiçbir şey çizmez.
+    return Stack(
+      children: [
+        _buildScaffold(screens),
+        Positioned.fill(child: SosCountdownBanner(sos: _appState.sos)),
+      ],
+    );
+  }
+
+  Widget _buildScaffold(List<Widget> screens) {
     return Scaffold(
       // Üst çubuk yok: her ekran kendi başlığıyla başlar (EkranBasligi,
-      // TalkBack'te ilk odak). Acil durum geri sayımı her sekmenin üstünde
-      // görünür (iptal düğmesi).
-      body: Column(
-        children: [
-          SosCountdownBanner(sos: _appState.sos),
-          Expanded(
-            child: SafeArea(bottom: false, child: screens[_tabIndex]),
-          ),
-        ],
-      ),
+      // TalkBack'te ilk odak).
+      body: SafeArea(bottom: false, child: screens[_tabIndex]),
       // Beyaz alt çubuk, üst köşeler yuvarlak, yukarı doğru yumuşak gölge.
       // NavigationBar korunuyor: "Sekme N / M" TalkBack etiketleri ondan.
       bottomNavigationBar: DecoratedBox(

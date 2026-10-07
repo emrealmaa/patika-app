@@ -620,6 +620,13 @@ abstract final class Tr {
   static String sosBannerTitle(int seconds) => 'Acil durum çağrısı: $seconds saniye sonra gönderilecek';
   static const sosBannerSending = 'Acil durum mesajı gönderiliyor';
   static const sosCancelButton = 'İptal et, gönderme';
+
+  // SOS tam ekranı (ekranda; TTS duyuruları ayrı, yukarıda).
+  static const sosScreenCaption = 'Acil durum';
+  static const sosScreenSecondsUnit = 'saniye';
+  static const sosScreenDefaultSend = 'Hiçbir şey yapmazsanız gönderilir.';
+  static const sosScreenVoiceCancelHint =
+      'Sesle de iptal edebilirsiniz: "iptal", "vazgeç", "yanlış alarm"';
   static const sosSettingsSection = 'Acil durum';
   static const sosCall112Title = 'Acil durumda 112\'yi ara';
   // Ceza uyarısı ÖZETTE: sonucu olan bilgi aç/kapa arkasına saklanmaz.
