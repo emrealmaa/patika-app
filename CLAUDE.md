@@ -34,6 +34,58 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
+## iOS (`ios-support` dalı, 2026-10-07'de başladı)
+
+Android önce; iOS desteği `ios-support` dalında, macOS'ta (Xcode 27,
+Flutter 3.47). Bundle kimliği `com.patika.patikaApp` (Android paket adı
+`com.patika.patika_app`'ten FARKLI). En düşük iOS 15.0. iOS'ta flavor yok:
+`flutter run -d <simülatör>` (`--flavor` verilmez).
+
+**Kanallar:** `patika/identity`, `patika/battery`,
+`patika/emergency_contacts`, `patika/audiomode` (`CXCallObserver`; arama
+varsa 2, yoksa 0), `patika/launch` (`ios/Runner/*.swift`, `AppDelegate`'te
+bağlanır). Hızlı Ayarlar karosunun karşılığı `ListenIntent` (App Intent):
+Siri ("Patika dinle", "Patika ile konuş"), Eylem Düğmesi, Kestirmeler,
+Spotlight. Denetim Merkezi düğmesi (iOS 18 `ControlWidget`) ayrı widget
+uzantısı hedefi ister, yapılmadı. iOS'ta karşılığı olmayan/henüz yazılmayanlar sessizce düşer
+(`MissingPluginException` yakalanıyor): `patika/direct` → SOS ve doğrudan
+arama/SMS `play` gibi davranır ("bu sürümde gönderilemiyor");
+`patika/notifications` (iOS başka uygulamaların bildirimini okutmaz).
+
+**Bilinen tuzaklar:**
+- **`permission_handler` izinleri derleme anında Info.plist'ten belirler**
+  (Swift Package Manager). Info.plist'e `NS...UsageDescription` eklenince ya
+  da çıkarılınca bu projenin `~/Library/Developer/Xcode/DerivedData/Runner-*`
+  klasörü ve `~/Library/Caches/org.swift.swiftpm/manifests` silinmeli; yoksa
+  izin hep "denied" döner. **Xcode.app'ten başlatılan derlemede** otomatik
+  algılama çalışmaz: `PERMISSION_HANDLER_INFO_PLIST=<ios/Runner/Info.plist
+  tam yolu>` ortam değişkeni gerekir.
+- **Google anahtarı:** bir anahtar ya Android ya iOS kısıtlaması taşır. iOS
+  derlemesi `PATIKA_MAPS_API_KEY`'e **ayrı, iOS kısıtlı** bir anahtarla
+  derlenir (kısıt: `com.patika.patikaApp`); istekler
+  `X-Ios-Bundle-Identifier` başlığıyla gider (`appRestrictionHeaders`).
+- `flutter test` uygulamayı her çalıştırmada kaldırıp kurar:
+  `simctl privacy grant` ile verilen izinler gider. Önce `flutter build ios
+  --simulator` + `simctl install` + `grant`, sonra `flutter test` (üstüne
+  kurulum izinleri korur). Konuşma tanıma izni `simctl` ile verilemez.
+- Simülatör testi: `flutter test integration_test/ios_smoke_test.dart -d
+  <simülatör>` (gerçek eklentiler; dosyanın başında hazırlık adımları).
+
+**Gerçek iPhone'da bekleyenler:**
+- [ ] Pil yüzdesi ve şarj durumu (`BatteryProbe.swift`; simülatörde hep nil).
+- [ ] Acil kişi dosyasının iCloud yedeğine girmediği (`isExcludedFromBackup`)
+  ve ekran kilitliyken okunabildiği (`completeUntilFirstUserAuthentication`).
+- [ ] `ListenIntent`: Türkçe Siri'nin "Patika dinle" cümlesini tanıması
+  (cümleler kodda Türkçe, ayrı `tr` yerelleştirmesi yok); Eylem Düğmesi'ne
+  atanınca soğuk açılışta ve uygulama açıkken dinlemenin başlaması.
+- [ ] `CXCallObserver`: giden aramanın çalarken ve bittikten sonra doğru
+  görülmesi (SOS iOS'ta arama yapmıyor; gelen arama işi yazılınca önemli).
+- [ ] TTS ile konuşma tanımanın aynı ses oturumunda çalışması (dinledikten
+  sonra TTS'in kısık/ahizeden çıkması), BLE, arka planda çalışma.
+- [ ] Açılıştaki bildirim izni (`AppState.start`, simülatörde arayüz
+  çizilmeden pencere geldi): sesli açıklamanın ve sistem penceresinin
+  VoiceOver'la sırası.
+
 ## Nerede kaldık (2026-10-07)
 
 **Yeni arayüz sistemi tamamlandı** (2026-10-07, `8e8cdfe`..`8feb25e`,
