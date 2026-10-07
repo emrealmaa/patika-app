@@ -21,6 +21,8 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   yok (dart-define, örnek: `dart_defines.example.json`).
 - Saf mantığa birim testi. Yeni Android izni: ilk gerektiği anda, sesli
   açıklamayla (`PermissionExplainer`).
+- `dart format` çalıştırılmaz. `git add -A` / `commit -a` yok: dosyalar
+  tek tek eklenir (`TODO.md` asla commit'e girmez).
 
 ## Ortam
 
@@ -32,7 +34,15 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
   `JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`.
 - Gizlilik: telefondan alınan, kişi adı içeren loglar iş bitince silinir.
 
-## Nerede kaldık (2026-10-05)
+## Nerede kaldık (2026-10-07)
+
+**Yeni arayüz sistemi tamamlandı** (2026-10-07, `8e8cdfe`..`8feb25e`,
+push edildi; **680 test**): açık tema + `PatikaTokens` (AAA 7:1), Plus
+Jakarta Sans, Konuş/Bağlantı/Ayarlar/SOS tam ekranı. Kararlar:
+[docs/UI_ERISILEBILIRLIK.md](docs/UI_ERISILEBILIRLIK.md). Aşağıdaki
+2026-10-05 notu bundan öncesini anlatır.
+
+### 2026-10-05
 
 **Bitenler** (7b-1 `c4dcafe`, 7b-2 `849bcce`, arayüz sadeleştirmesi
 `05b77ea`/`6c436cd`/`d08619a`; 628 test). **Faz 7c ve Faz 8
