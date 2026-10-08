@@ -42,6 +42,8 @@ class PatikaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: Tr.appTitle,
+      // Sağ üstteki "DEBUG" şeridi hiçbir derlemede görünmesin.
+      debugShowCheckedModeBanner: false,
       theme: _theme,
       // Material'in hazır erişilebilirlik metinleri ("Sekme 1/3", "Geri",
       // "seçili" vb.) Türkçe okunsun - yoksa TalkBack bunları İngilizce söyler.

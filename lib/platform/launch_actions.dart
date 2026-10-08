@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Android tarafından gelen başlatma talimatları (Hızlı Ayarlar karosu:
-/// "dinle"). Talimat native tarafta bekletiliyor; Dart açılışta kendisi
-/// soruyor, zaten çalışıyorsa "actionPending" bildirimiyle haberdar oluyor -
-/// böylece ilk açılışta da, uygulama açıkken de kaybolmuyor
-/// (bkz. MainActivity.handleLaunchIntent).
+/// Native taraftan gelen başlatma talimatları ("dinle"): Android'de Hızlı
+/// Ayarlar karosu, iOS'ta App Intent (Siri, Eylem Düğmesi, Kestirmeler).
+/// Talimat native tarafta bekletiliyor; Dart açılışta kendisi soruyor, zaten
+/// çalışıyorsa "actionPending" bildirimiyle haberdar oluyor - böylece ilk
+/// açılışta da, uygulama açıkken de kaybolmuyor (bkz.
+/// MainActivity.handleLaunchIntent, LaunchActions.swift).
 class LaunchActions {
   static const _channel = MethodChannel('patika/launch');
 
@@ -27,7 +28,7 @@ class LaunchActions {
       final action = await _channel.invokeMethod<String>('consumePendingAction');
       if (action == 'listen') onListen();
     } on MissingPluginException {
-      // Android dışı platform ya da testler - talimat kanalı yok.
+      // Kanal yok (testler).
     } catch (e) {
       debugPrint('[Launch] talimat alınamadı: $e');
     }

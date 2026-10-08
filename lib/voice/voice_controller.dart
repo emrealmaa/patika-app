@@ -70,6 +70,8 @@ class VoiceController extends ChangeNotifier {
   /// cümlesinin yinelenmesi "hemen gönder" sayılmasın.
   int _sessionSeq = 0;
 
+  bool _disposed = false;
+
   VoiceController({
     required SpeechInput speech,
     required FeedbackHub feedback,
@@ -94,6 +96,9 @@ class VoiceController extends ChangeNotifier {
       _settings.feedbackMode == FeedbackMode.speech ? speechGap : earconGap;
 
   void _setPhase(VoicePhase phase) {
+    // Uygulama kapanırken süren bir dinleme (izin/tanıyıcı beklerken ya da
+    // komut işlenirken) sonradan buraya ulaşabilir.
+    if (_disposed) return;
     _phase = phase;
     notifyListeners();
   }
@@ -295,6 +300,11 @@ class VoiceController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    // Bekleyen _listen adımları faz/oturum denetiminde durur: kapanıştan
+    // sonra mikrofon açılmaz, "konuşma tanıma kullanılamıyor" vb. denmez.
+    _phase = VoicePhase.idle;
+    _sessionSeq++;
     _speech.cancel();
     super.dispose();
   }
