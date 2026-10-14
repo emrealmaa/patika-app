@@ -4,6 +4,7 @@ import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
 import '../l10n/strings_tr.dart';
 import '../platform/app_version.dart';
+import '../settings/message_apps.dart';
 import '../settings/settings.dart';
 import '../settings/settings_store.dart';
 import '../settings/test_mode_access.dart';
@@ -134,6 +135,22 @@ class SettingsScreen extends StatelessWidget {
             summary: Tr.muteNotificationsSummary,
             details: Tr.muteNotificationsDetails,
           ),
+        ]),
+        // Madde 4: hangi uygulamaların mesajları okunur (sabit beyaz liste).
+        // Sesle de: "mesaj uygulamaları", "WhatsApp bildirimlerini kapat".
+        _Section(Tr.messageAppsSection, [
+          for (final app in MessageApp.values)
+            AnahtarSatiri(
+              title: Tr.messageAppName(app.name),
+              value: s.messageApps.contains(app),
+              onChanged: (v) {
+                // Dokunuş anındaki güncel değer (art arda dokunuşta eski kopya değil).
+                final now = store.value;
+                final next = v ? {...now.messageApps, app} : now.messageApps.difference({app});
+                _update(now.copyWith(messageApps: next));
+                if (next.isEmpty) feedback.say(Tr.messageAppsAllOff);
+              },
+            ),
         ]),
         _Section(Tr.sosSettingsSection, [
           AnahtarSatiri(

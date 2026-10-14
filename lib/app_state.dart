@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode, setEquals;
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -69,6 +69,7 @@ import 'platform/location_service.dart';
 import 'platform/notification_access.dart';
 import 'platform/phone_call_service.dart';
 import 'platform/simulated_call_service.dart';
+import 'settings/message_apps.dart';
 import 'settings/settings_store.dart';
 import 'sos/emergency_contacts.dart';
 import 'sos/emergency_number.dart';
@@ -251,6 +252,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     Future<bool> Function()? ensureSmsPermission,
     PatikaCallService? callService,
     PatikaCallService Function()? realCallFactory,
+    Future<void> Function(Set<MessageApp> apps)? pushWatchedApps,
     Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
     BatteryOptimization? batteryOptimization,
     NotificationAccess? notificationAccess,
@@ -492,6 +494,18 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.incomingMessages = incomingMessages ?? MethodChannelIncomingMessages();
     this.loudMessagesNotice = loudMessagesNotice ?? SharedPrefsLoudMessagesNotice();
     _messageSub = this.incomingMessages.messages.listen(_onIncomingMessage);
+    // İzlenen mesaj uygulamaları native dinleyiciye: açılışta ve her değişimde.
+    final push = pushWatchedApps ?? pushWatchedMessageApps;
+    Set<MessageApp>? pushed;
+    void pushIfChanged() {
+      final apps = this.settings.value.messageApps;
+      if (pushed != null && setEquals(pushed, apps)) return;
+      pushed = apps;
+      unawaited(push(apps));
+    }
+
+    this.settings.addListener(pushIfChanged);
+    pushIfChanged();
 
     _attach(isSimulated ? SimulatedBleService() : _realBle());
     if (autoStart) start();
@@ -922,6 +936,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// bir kerelik sesli gizlilik uyarısı verilir; kapalıysa yalnızca kimden
   /// geldiği söylenir.
   Future<void> _onIncomingMessage(IncomingMessage message) async {
+    // Kapatılmış uygulamanın mesajı hiç işlenmez (günlüğe de girmez).
+    if (!isWatchedMessage(message, settings.value.messageApps)) return;
     _messageLog.add(message);
     if (settings.value.notificationsMuted) return;
     // Görüşme sürerken TTS araya girmez; mesaj günlükte, "mesajlarımı oku" ile.

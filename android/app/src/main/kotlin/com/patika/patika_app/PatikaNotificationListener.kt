@@ -21,7 +21,8 @@ import io.flutter.plugin.common.MethodChannel
  * Hangi bildirimler işlenir:
  * - Varsayılan SMS uygulaması (Telephony.Sms.getDefaultSmsPackage ile ÇALIŞMA
  *   ZAMANINDA sorgulanır - kullanıcı farklı bir uygulama seçmiş olabilir).
- * - WhatsApp (kişisel + iş).
+ * - Kullanıcının seçtiği uygulamalar (Madde 4; varsayılan WhatsApp kişisel +
+ *   iş, isteğe bağlı Telegram, Signal) - yalnızca [KNOWN_PACKAGES] içinden.
  * - Arama ekranı (`CATEGORY_CALL`, varsayılan arama uygulaması ya da sistem
  *   arama arayüzü): yalnızca başlık.
  * Başka hiçbir uygulamadan bildirim okunmaz/iletilmez.
@@ -40,7 +41,30 @@ class PatikaNotificationListener : NotificationListenerService() {
     companion object {
         private const val TAG = "PatikaNotifListener"
         private const val CHANNEL = "patika/notifications"
-        private val WHATSAPP_PACKAGES = setOf("com.whatsapp", "com.whatsapp.w4b")
+        /**
+         * Seçilebilecek mesajlaşma uygulamalarının SABİT beyaz listesi
+         * (Dart `MessageApp` ile aynı). Bunun dışındaki paket asla izlenmez.
+         */
+        val KNOWN_PACKAGES = setOf(
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "org.thoughtcrime.securesms",
+        )
+
+        /** Kullanıcının seçtiği paketler (Dart `setWatchedApps`). Varsayılan: Faz 4b. */
+        @Volatile
+        var watchedPackages: Set<String> = setOf("com.whatsapp", "com.whatsapp.w4b")
+
+        /** Varsayılan SMS uygulaması izlensin mi. */
+        @Volatile
+        var watchSms: Boolean = true
+
+        /** Dart'tan gelen listeyi beyaz listeyle süzerek uygular. */
+        fun setWatched(sms: Boolean, packages: List<String>) {
+            watchSms = sms
+            watchedPackages = packages.filter { it in KNOWN_PACKAGES }.toSet()
+        }
 
         /** Varsayılan arama uygulaması dışında arama ekranını gösteren sistem paketleri. */
         private val IN_CALL_UI_PACKAGES = setOf(
@@ -116,7 +140,8 @@ class PatikaNotificationListener : NotificationListenerService() {
     }
 
     private fun isTracked(packageName: String): Boolean {
-        if (packageName in WHATSAPP_PACKAGES) return true
+        if (packageName in KNOWN_PACKAGES) return packageName in watchedPackages
+        if (!watchSms) return false
         val defaultSms = try {
             Telephony.Sms.getDefaultSmsPackage(this)
         } catch (e: Exception) {

@@ -23,6 +23,12 @@ class NotificationAccess(private val context: Context) {
         MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "isEnabled" -> result.success(isEnabled())
+                "setWatchedApps" -> {
+                    val sms = call.argument<Boolean>("sms") ?: true
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    PatikaNotificationListener.setWatched(sms, packages)
+                    result.success(null)
+                }
                 "openSettings" -> {
                     openSettings()
                     result.success(null)

@@ -273,6 +273,22 @@ abstract final class Tr {
   // Ekranda tek cümlelik özet + "Ayrıntıyı göster" ile açılan ayrıntı.
   static const muteNotificationsSummary =
       'Açıkken gelen mesaj bildirimleri hiç seslendirilmez.';
+  // Mesaj uygulamaları (Madde 4).
+  static const messageAppsSection = 'Mesajları okunan uygulamalar';
+  static String messageAppName(String id) => switch (id) {
+        'sms' => 'SMS',
+        'whatsapp' => 'WhatsApp',
+        'whatsappBusiness' => 'WhatsApp Business',
+        'telegram' => 'Telegram',
+        'signal' => 'Signal',
+        _ => id,
+      };
+  static String messageAppsList(List<String> names) =>
+      'Mesajları okunan uygulamalar: ${names.join(', ')}';
+  static String messageAppOn(String name) => '$name mesajları okunacak';
+  static String messageAppOff(String name) => '$name mesajları artık okunmayacak';
+  static const messageAppsAllOff =
+      'Mesaj duyuruları kapalı: hiçbir uygulamanın mesajı okunmuyor';
   static const muteNotificationsDetails = [
     'Mesajlar yine de "mesajlarımı oku" ile okunabilir.',
     'Gelen aramalar bundan etkilenmez.',

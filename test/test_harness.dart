@@ -19,6 +19,7 @@ import 'package:patika_app/platform/location_service.dart';
 import 'package:patika_app/platform/notification_access.dart';
 import 'package:patika_app/ble/device_memory.dart';
 import 'package:patika_app/ble/patika_ble_service.dart';
+import 'package:patika_app/settings/message_apps.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
 import 'package:patika_app/sos/emergency_contacts.dart';
@@ -105,6 +106,7 @@ class Harness {
     PatikaCallService Function()? realCallFactory,
     Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
     BatteryOptimization? batteryOptimization,
+    Future<void> Function(Set<MessageApp> apps)? pushWatchedApps,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     // AppState kurulurken (açılış guard'ı ilk mikro-görevde çalışır) hazır olsun.
@@ -120,6 +122,7 @@ class Harness {
       realCallFactory: realCallFactory,
       ensurePhoneStatePermission: ensurePhoneStatePermission,
       batteryOptimization: batteryOptimization ?? const NoBatteryOptimization(),
+      pushWatchedApps: pushWatchedApps ?? (_) async {},
       speech: tts,
       speechInput: speech,
       haptics: haptics,

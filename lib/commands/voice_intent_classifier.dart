@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../ble/ble_command.dart';
+import '../settings/message_apps.dart';
 import '../settings/settings.dart';
 import 'intent.dart';
 import 'intent_lexicon.dart';
@@ -36,6 +37,16 @@ BleCommand classifyVoiceCommand(String text) {
 
   final control = _controlIntent(lowered, dictation: false);
   if (control != null) return BleCommand.fromWire(control, null);
+
+  // Mesaj uygulamaları (Madde 4): genel "bildirimleri kapat"tan ÖNCE, yoksa
+  // "WhatsApp bildirimlerini kapat" tümünü susturmaya giderdi.
+  if (_messageAppsList.hasMatch(lowered)) return BleCommand.fromWire('AYAR', messageAppsListEntity);
+  final appToggle = _messageAppToggle.firstMatch(lowered);
+  if (appToggle != null) {
+    final app = _spokenApp(appToggle.group(1)!);
+    final on = appToggle.group(2) == 'aç';
+    return BleCommand.fromWire('AYAR', messageAppEntity(app, on: on));
+  }
 
   for (final (pattern, action) in _settingRules) {
     if (pattern.hasMatch(lowered)) {
@@ -152,6 +163,39 @@ final _settingRules = [
   (r'bildirim\p{L}*\s+(?:sustur|kapat)', SettingAction.notificationsMuteOn),
   (r'bildirim\p{L}*\s+aç', SettingAction.notificationsMuteOff),
 ].map((r) => (RegExp(r.$1, unicode: true), r.$2)).toList();
+
+/// "mesaj uygulamaları", "mesaj uygulamalarını oku" - hangi uygulamaların
+/// mesajları okunuyor (Madde 4).
+final _messageAppsList = RegExp(r'mesaj\s+uygulamalar', unicode: true);
+
+/// "WhatsApp bildirimlerini kapat", "SMS bildirimlerini aç", "telegram'ın
+/// bildirimlerini sustur". Uygulama adı + "bildirim" + eylem birlikte gerekir
+/// ("WhatsApp'ı aç" uygulamayı açmak sanılmasın).
+final _messageAppToggle = RegExp(
+    r"(whatsapp|vatsap|sms|kısa\s+mesaj|telegram|signal|sinyal)['’]?\p{L}*\s+"
+    r'bildirim\p{L}*\s+(kapat|sustur|aç)',
+    unicode: true);
+
+MessageApp _spokenApp(String spoken) => switch (spoken) {
+      'whatsapp' || 'vatsap' => MessageApp.whatsapp,
+      'telegram' => MessageApp.telegram,
+      'signal' || 'sinyal' => MessageApp.signal,
+      _ => MessageApp.sms,
+    };
+
+/// AYAR entity'leri (SettingAction adlarıyla çakışmaz).
+const messageAppsListEntity = 'mesajUygulamalari';
+String messageAppEntity(MessageApp app, {required bool on}) =>
+    'mesajUygulamasi:${app.name}:${on ? 'ac' : 'kapat'}';
+
+/// [messageAppEntity]'yi çözer; değilse null.
+(MessageApp, bool)? parseMessageAppEntity(String? entity) {
+  final parts = entity?.split(':');
+  if (parts == null || parts.length != 3 || parts[0] != 'mesajUygulamasi') return null;
+  final app = MessageApp.fromName(parts[1]);
+  if (app == null) return null;
+  return (app, parts[2] == 'ac');
+}
 
 // --- Takma ad komutları (katı, puanlamadan önce) -------------------------------
 

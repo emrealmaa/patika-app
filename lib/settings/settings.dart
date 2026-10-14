@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart' show setEquals;
+
 import '../l10n/strings_tr.dart';
+import 'message_apps.dart';
 
 enum Verbosity { short, long }
 
@@ -68,6 +71,11 @@ class Settings {
   /// açılır; açılırken sesli uyarı verilir.
   final bool emergencyCall112;
 
+  /// Gelen mesaj bildirimi okunan uygulamalar (Madde 4). Varsayılan Faz 4b
+  /// davranışı: varsayılan SMS + WhatsApp. Boşsa hiçbir mesaj duyurulmaz
+  /// (kullanıcıya sesle söylenir). Yedeğe girebilir (hassas değil).
+  final Set<MessageApp> messageApps;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -79,6 +87,7 @@ class Settings {
     this.readMessagesAloud = true,
     this.notificationsMuted = false,
     this.emergencyCall112 = false,
+    this.messageApps = MessageApp.defaults,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -103,6 +112,7 @@ class Settings {
     bool? readMessagesAloud,
     bool? notificationsMuted,
     bool? emergencyCall112,
+    Set<MessageApp>? messageApps,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -116,6 +126,7 @@ class Settings {
       readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
+      messageApps: messageApps ?? this.messageApps,
     );
   }
 
@@ -147,6 +158,7 @@ class Settings {
         'readMessagesAloud': readMessagesAloud,
         'notificationsMuted': notificationsMuted,
         'emergencyCall112': emergencyCall112,
+        'messageApps': [for (final a in MessageApp.values) if (messageApps.contains(a)) a.name],
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -175,6 +187,13 @@ class Settings {
       emergencyCall112: json['emergencyCall112'] is bool
           ? json['emergencyCall112'] as bool
           : d.emergencyCall112,
+      // Listede olmayan (bilinmeyen) adlar atılır: beyaz liste.
+      messageApps: json['messageApps'] is List
+          ? {
+              for (final n in json['messageApps'] as List)
+                ?MessageApp.fromName(n is String ? n : null),
+            }
+          : d.messageApps,
     );
   }
 
@@ -190,12 +209,14 @@ class Settings {
       other.nodToListen == nodToListen &&
       other.readMessagesAloud == readMessagesAloud &&
       other.notificationsMuted == notificationsMuted &&
-      other.emergencyCall112 == emergencyCall112;
+      other.emergencyCall112 == emergencyCall112 &&
+      setEquals(other.messageApps, messageApps);
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud, notificationsMuted, emergencyCall112);
+      readMessagesAloud, notificationsMuted, emergencyCall112,
+      Object.hashAllUnordered(messageApps));
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

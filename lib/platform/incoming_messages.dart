@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../settings/message_apps.dart';
+
 /// Bildirimden yakalanan bir mesaj (Faz 4b) - `PatikaNotificationListener.kt`
 /// yalnızca izlenen uygulamalardan (varsayılan SMS + WhatsApp) gelenleri
 /// gönderir.
@@ -117,4 +119,29 @@ class MemoryLoudMessagesNotice implements LoudMessagesNotice {
 
   @override
   Future<void> markShown() async => shown = true;
+}
+
+/// İzlenen mesaj uygulamalarını native dinleyiciye bildirir (Madde 4).
+/// Native taraf yalnızca bilinen paketleri kabul eder (beyaz liste).
+Future<void> pushWatchedMessageApps(Set<MessageApp> apps) async {
+  try {
+    await const MethodChannel('patika/notifications').invokeMethod('setWatchedApps', {
+      'sms': apps.contains(MessageApp.sms),
+      'packages': [for (final a in apps) if (a.package != null) a.package],
+    });
+  } catch (e) {
+    // iOS / testler: dinleyici yok.
+    debugPrint('[Notifications] uygulama listesi iletilemedi: ${e.runtimeType}');
+  }
+}
+
+/// Dart tarafında ikinci güvence: native süzgeç eski bir listeyle çalışsa da
+/// kapatılmış uygulamanın mesajı okunmaz. Paketi bilinen uygulamalardan
+/// biri değilse varsayılan SMS uygulamasıdır (native yalnızca onu ve
+/// listedekileri gönderir).
+bool isWatchedMessage(IncomingMessage message, Set<MessageApp> apps) {
+  for (final a in MessageApp.values) {
+    if (a.package != null && a.package == message.appPackage) return apps.contains(a);
+  }
+  return apps.contains(MessageApp.sms);
 }

@@ -338,8 +338,13 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
 - [ ] **4b:** Bildirim dinleyici gerçek WhatsApp/SMS mesajlarıyla; bir
   kerelik gizlilik uyarısı; "mesajlarımı oku", "son bildirimleri oku",
   "bildirimleri sustur/aç".
-- [ ] **4b:** Uygulama seçimi ayarı **yapılmadı** (SMS + WhatsApp sabit) -
-  yazılınca cihazda denenmeli.
+- [ ] **Madde 4 - uygulama seçimi (yazıldı, denenmedi):** gerçek WhatsApp,
+  WhatsApp Business, Telegram, Signal ve varsayılan SMS ile süzgeç: kapatılan
+  uygulamanın bildirimi duyurulmuyor mu, açılan Telegram/Signal mesajının
+  göndereni ve metni MessagingStyle ile doğru çıkıyor mu; Ayarlar ekranındaki
+  anahtarlar TalkBack ile; sesli "WhatsApp bildirimlerini kapat" STT çıktısı
+  ("vatsap", "WhatsApp'ın") tanınıyor mu; uygulama yeniden açılınca seçimin
+  native süzgece ulaşması (açılışta gönderiliyor).
 - [ ] **Faz 2:** Kulaklıkla sesle araya girme (barge-in, ertelendi);
   TalkBack ile uçtan uca kontrol.
 - [ ] **Faz 6 (kullanıcı testi):** Navigasyon cümle tarzının ("rota sağa
@@ -621,8 +626,13 @@ izleniyor (geri sayım + iptal varsayılanı GÖNDER, Faz 7 kararları madde 2).
    okunuyor, kalabalık ortamda dikkat edin, ayarlardan kapatabilirsiniz."
 4. "Bildirimleri sustur" **yalnızca uygulamanın kendi duyurularını**
    susturur; gelen aramalar yine duyurulur.
-5. Uygulama seçimi: varsayılan SMS uygulamaları + WhatsApp. (Şu an sabit;
-   ayarlardan değiştirme henüz yok.)
+5. Uygulama seçimi: varsayılan SMS uygulamaları + WhatsApp (kişisel + iş).
+   **Madde 4 (2026-10-14):** Ayarlar > "Mesajları okunan uygulamalar" ve
+   sesle ("mesaj uygulamaları", "WhatsApp bildirimlerini kapat/aç") seçilir;
+   sabit beyaz liste (SMS, WhatsApp, WhatsApp Business, Telegram, Signal),
+   rastgele paket kabul edilmez (Dart `MessageApp` + Kotlin `KNOWN_PACKAGES`,
+   testle eşit). Hepsi kapanınca "mesaj duyuruları kapalı" denir. Kapatılan
+   uygulamanın mesajı günlüğe de girmez; "bildirimleri sustur" ayrı ve aynen.
 6. "Mesajlarımı oku" okunmamışları içerikle okur ve okunmuş sayar; "son
    bildirimleri oku" yalnızca göndereni özetler, okunmuşluğu etkilemez.
    Susturma kaydı değil yalnızca duyuruyu engeller.
