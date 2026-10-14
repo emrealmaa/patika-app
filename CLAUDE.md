@@ -358,6 +358,12 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   native süzgece ulaşması (açılışta gönderiliyor).
 - [ ] **Faz 2:** Kulaklıkla sesle araya girme (barge-in, ertelendi);
   TalkBack ile uçtan uca kontrol.
+  **Madde 9 (2026-10-14): kod YAZILMADI**, tasarım notu
+  [docs/barge_in_tasarim.md](docs/barge_in_tasarim.md): bulut STT sürekli
+  dinlemeye uygun değil, Bluetooth SCO hem TTS'i dar banda düşürür hem SOS'un
+  arama algısını (`getMode`) etkileyebilir. Önkoşullar: yerel anahtar kelime
+  tanıyıcı (Vosk, yeni paket - onay gerekir) + SCO/yankı/bip/pil cihaz
+  testleri. Bugünkü davranış `test/barge_in_lock_test.dart` ile kilitli.
 - [ ] **Faz 6 (kullanıcı testi):** Navigasyon cümle tarzının ("rota sağa
   sapıyor", "30 metre sonra") gerçek görme engelli kullanıcılarla
   denenmesi (Altınokta Körler Derneği / Mustafa Özhan Kalaç). Emir kipi
