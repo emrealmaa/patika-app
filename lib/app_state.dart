@@ -66,6 +66,7 @@ import 'platform/direct_actions.dart';
 import 'platform/incoming_messages.dart';
 import 'platform/location_service.dart';
 import 'platform/notification_access.dart';
+import 'platform/phone_call_service.dart';
 import 'platform/simulated_call_service.dart';
 import 'settings/settings_store.dart';
 import 'sos/emergency_contacts.dart';
@@ -116,9 +117,23 @@ class AppState extends ChangeNotifier implements ControlActions {
   static bool defaultSimulated({bool release = kReleaseMode}) => !release;
 
   /// Telefonun kendi gelen arama durumu (Faz 4b) - BLE'den bağımsız, bkz.
-  /// `lib/platform/call_service.dart`. Gerçek `NotificationListenerService`
-  /// gelene kadar hep [SimulatedCallService].
-  late final PatikaCallService callService;
+  /// `lib/platform/call_service.dart`. Simülasyon anahtarıyla birlikte değişir:
+  /// simülasyonda [SimulatedCallService] (Test Modu), gerçek modda (release
+  /// varsayılanı) [MethodChannelCallService] (`CallStateProbe.kt`).
+  late PatikaCallService callService;
+
+  /// Gerçek arama servisi fabrikası (testler sahte verir).
+  late final PatikaCallService Function() _realCalls;
+
+  /// Arama durumu izni (READ_PHONE_STATE + ANSWER_PHONE_CALLS). [ask] false:
+  /// yalnızca yoklar, pencere açmaz.
+  late final Future<bool> Function({required bool ask}) _phoneState;
+
+  /// Bir telefon görüşmesi sürüyor (açılmış gelen ya da giden arama):
+  /// TTS araya girmez - pil uyarısı, gözlük kamerası ve mesaj duyuruları
+  /// bekletilir/susturulur (SOS'un kendi araması için ayrıca SOS kuralı).
+  bool _inPhoneCall = false;
+  StreamSubscription? _callStateSub;
 
   /// Sesli navigasyon (Faz 6): rota + konum + duyurular. Konum kaynağı
   /// varsayılan olarak gerçek (`geolocator`); Test Modu kendi simülasyon
@@ -205,7 +220,7 @@ class AppState extends ChangeNotifier implements ControlActions {
   final List<StreamSubscription> _subs = [];
 
   /// BLE'den ayrı: `toggleMode`'daki [_detach]/[_attach] döngüsü bunu
-  /// kapatıp yeniden açmamalı, [callService] BLE moduyla değişmiyor.
+  /// kapatıp yeniden açmamalı; arama servisi değişince [_bindCallService].
   StreamSubscription? _callSub;
 
   /// Aynı gerekçeyle BLE _detach/_attach döngüsünden ayrı tutuluyor.
@@ -230,6 +245,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     Future<bool> Function()? ensureCallPermission,
     Future<bool> Function()? ensureSmsPermission,
     PatikaCallService? callService,
+    PatikaCallService Function()? realCallFactory,
+    Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
     NotificationAccess? notificationAccess,
     IncomingMessages? incomingMessages,
     LoudMessagesNotice? loudMessagesNotice,
@@ -373,7 +390,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     tutorial = Tutorial(
       feedback,
       tutorialProgress ?? SharedPrefsTutorialProgress(),
-      onFirstRunCompleted: _offerLocationAfterTutorial,
+      onFirstRunCompleted: _afterTutorial,
     );
     voice = VoiceController(
       speech: speechInput ?? SpeechInputService(),
@@ -424,7 +441,7 @@ class AppState extends ChangeNotifier implements ControlActions {
       service: _glassesWifiFactory(isSimulated),
       ensurePermission: () =>
           permissions.ensure(Permission.nearbyWifiDevices, Tr.glassesWifiPermissionWhy),
-      holdSpeech: () => sos.callInProgress,
+      holdSpeech: () => sos.callInProgress || _inPhoneCall,
     );
     sos.status.addListener(glassesWifi.flushHeld);
     camera = MjpegFrameSource(
@@ -433,7 +450,7 @@ class AppState extends ChangeNotifier implements ControlActions {
       wifi: glassesWifi,
       transport: () => isSimulated ? cameraSimTransport : const NativeMjpegTransport(),
       feedback: feedback,
-      holdSpeech: () => sos.callInProgress,
+      holdSpeech: () => sos.callInProgress || _inPhoneCall,
     );
     sos.status.addListener(camera.flushHeld);
     voice.onSosSpeech = _onSosSpeech;
@@ -446,8 +463,23 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.settings.load();
     _applySettings();
 
-    this.callService = callService ?? SimulatedCallService();
-    _callSub = this.callService.incomingCall.listen(_onIncomingCall);
+    _realCalls = realCallFactory ??
+        () => MethodChannelCallService(match: (name) async {
+              // Çalarken izin PENCERESİ açılmaz: yalnızca zaten verilmişse.
+              if (!await Permission.contacts.status.isGranted) return null;
+              return resolver.resolveInContacts(name);
+            });
+    _phoneState = ensurePhoneStatePermission ??
+        ({required bool ask}) async {
+          try {
+            if (await Permission.phone.status.isGranted) return true;
+          } catch (_) {
+            return false; // eklenti yok (testler, iOS)
+          }
+          if (!ask) return false;
+          return permissions.ensure(Permission.phone, Tr.phoneStatePermissionWhy);
+        };
+    _bindCallService(callService ?? (isSimulated ? SimulatedCallService() : _realCalls()));
     this.notificationAccess = notificationAccess ?? MethodChannelNotificationAccess();
     this.incomingMessages = incomingMessages ?? MethodChannelIncomingMessages();
     this.loudMessagesNotice = loudMessagesNotice ?? SharedPrefsLoudMessagesNotice();
@@ -465,7 +497,16 @@ class AppState extends ChangeNotifier implements ControlActions {
     _batteryTimer ??= Timer.periodic(batteryPollInterval, (_) => pollPhoneBattery());
     unawaited(pollPhoneBattery());
     await _supervisor.start();
+    // İzin zaten verildiyse sessizce başlar; yoksa eğitim sonunda istenir.
+    unawaited(enableCallDetection(ask: false));
     await tutorial.startIfFirstRun();
+  }
+
+  /// Eğitimin sonunda: konum, ardından gelen arama izni (ikisi de sesli
+  /// açıklamayla, kullanıcı başındayken).
+  Future<void> _afterTutorial() async {
+    await _offerLocationAfterTutorial();
+    await enableCallDetection(ask: true);
   }
 
   /// Eğitimin sonunda: konum izni yoksa sesli açıklamayla ister. Ekran açık,
@@ -596,7 +637,11 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// SOS (geri sayım, gönderim, SOS'un başlattığı arama), gelen arama ya da
   /// karşıya geçiş duraklaması sürerken pil uyarıları konuşmaz; ertelenir.
   bool get _batteryAlertsHeld =>
-      sos.busy || sos.callInProgress || _ringingCall != null || navigation.isPausedForCrossing;
+      sos.busy ||
+      sos.callInProgress ||
+      _ringingCall != null ||
+      _inPhoneCall ||
+      navigation.isPausedForCrossing;
 
   void _onBattery(BatterySource source, int percent, {bool? charging}) {
     // Önce eskiden bekleyenler: sıra korunsun.
@@ -680,8 +725,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     switch (button) {
       case GlassesButton.tap:
         if (ringing != null) {
-          callService.answer();
-          feedback.signal(FeedbackEvent.success, text: Tr.callAnswered(ringing.callerName));
+          unawaited(_answer(ringing));
         } else {
           // Karşıya geçiş duraklamasında da dinler: SOS ve sesli komutlar
           // kavşakta erişilebilir kalmalı (duraklama çıkışı çift dokunuşta).
@@ -698,8 +742,7 @@ class AppState extends ChangeNotifier implements ControlActions {
         }
       case GlassesButton.longPress:
         if (ringing != null) {
-          callService.reject();
-          feedback.signal(FeedbackEvent.success, text: Tr.callRejected(ringing.callerName));
+          unawaited(_reject(ringing));
         } else {
           _startSos(SosSource.glasses);
         }
@@ -752,14 +795,107 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   /// Gelen arama başladığında/bittiğinde: [_ringingCall] güncellenir, çalmaya
   /// başlarken yüksek öncelikle "$ad arıyor" duyurulur (bkz. §4b/2).
+  ///
+  /// SOS sürerken (geri sayım, gönderim, SOS'un araması) duyurulmaz: SOS'u
+  /// bölmemeli. Dokunuşlar o sırada yine önce SOS'a gider ([_onSosButton]);
+  /// uzun basış (SOS'ta anlamı yok) çalan aramayı reddeder.
+  /// Karşıya geçiş duraklamasında DUYURULUR (telefon zaten çalıyor, kimin
+  /// aradığı bilinmeli); duraklama kuralı değişmez: çift dokunuş yine
+  /// navigasyonu sürdürür, tek dokunuş çalarken aramayı açar.
   void _onIncomingCall(IncomingCall? call) {
     _ringingCall = call;
-    if (call != null) {
+    if (call != null && !sos.busy && !sos.callInProgress) {
       feedback.signal(FeedbackEvent.incomingCall,
-          text: Tr.incomingCall(call.callerName), priority: AnnouncementPriority.high);
+          text: _incomingCallText(call), priority: AnnouncementPriority.high);
     }
     notifyListeners();
   }
+
+  static String _incomingCallText(IncomingCall call) => switch (call.kind) {
+        CallerKind.named => Tr.incomingCall(call.callerName),
+        CallerKind.unknownNumber => Tr.incomingCallUnknownNumber,
+        CallerKind.unidentified => Tr.incomingCallUnidentified,
+      };
+
+  Future<void> _answer(IncomingCall ringing) async {
+    if (!callService.canAnswer) {
+      feedback.signal(FeedbackEvent.error, text: Tr.callAnswerUnavailable);
+      return;
+    }
+    // Onay arama bağlanmadan söylenir; görüşme başlayınca (offhook) TTS susar.
+    final named = ringing.kind == CallerKind.named;
+    feedback.signal(FeedbackEvent.success,
+        text: named ? Tr.callAnswered(ringing.callerName) : Tr.callAnsweredGeneric);
+    if (!await callService.answer()) {
+      feedback.signal(FeedbackEvent.error, text: Tr.callAnswerFailed);
+    }
+  }
+
+  Future<void> _reject(IncomingCall ringing) async {
+    if (!callService.canAnswer) {
+      feedback.signal(FeedbackEvent.error, text: Tr.callAnswerUnavailable);
+      return;
+    }
+    if (await callService.reject()) {
+      final named = ringing.kind == CallerKind.named;
+      feedback.signal(FeedbackEvent.success,
+          text: named ? Tr.callRejected(ringing.callerName) : Tr.callRejectedGeneric);
+    } else {
+      feedback.signal(FeedbackEvent.error, text: Tr.callRejectFailed);
+    }
+  }
+
+  /// Arama servisini bağlar (açılışta ve simülasyon anahtarı değişince).
+  void _bindCallService(PatikaCallService service) {
+    _callSub?.cancel();
+    _callStateSub?.cancel();
+    callService = service;
+    _ringingCall = null;
+    _inPhoneCall = false;
+    _callSub = service.incomingCall.listen(_onIncomingCall);
+    _callStateSub = service.callState.listen(_onCallState);
+  }
+
+  /// Görüşme başlayınca TTS susar (araya girmez); bitince bekleyen pil ve
+  /// kamera duyuruları söylenir. SOS'un kendi araması SOS kurallarıyla.
+  void _onCallState(PhoneCallState state) {
+    final inCall = state == PhoneCallState.offhook;
+    if (inCall == _inPhoneCall) return;
+    _inPhoneCall = inCall;
+    if (inCall) {
+      if (!sos.busy && !sos.callInProgress) feedback.queue.stopAll();
+    } else {
+      _flushBattery();
+      glassesWifi.flushHeld();
+      camera.flushHeld();
+    }
+    notifyListeners();
+  }
+
+  /// Gerçek gelen arama algılamayı açar. [ask]: izin yoksa sesli açıklamayla
+  /// ister (eğitim sonu, Test Modu); false ise yalnızca izin zaten varsa
+  /// sessizce başlar (açılış). İzin verilmezse sessiz kalmaz: "kısıtlı" der.
+  Future<void> enableCallDetection({required bool ask}) async {
+    if (callService is SimulatedCallService) return;
+    final granted = await _phoneState(ask: ask);
+    if (!granted) {
+      if (ask) feedback.say(Tr.callFeaturesLimited);
+      return;
+    }
+    final active = await callService.start();
+    if (!active) {
+      if (ask) feedback.say(Tr.callFeaturesLimited);
+      return;
+    }
+    if (ask && !await notificationAccess.isEnabled()) {
+      feedback.say(Tr.callerNameNeedsNotificationAccess);
+    }
+  }
+
+  /// Test Modu: arama simülasyonu mu gerçek mi.
+  bool get callDetectionSimulated => callService is SimulatedCallService;
+
+  bool get inPhoneCall => _inPhoneCall;
 
   /// Bildirimden yakalanan yeni mesaj (bkz. §4b/3). Günlüğe (bkz.
   /// [_messageLog]) susturulmuş olsa bile eklenir - "bildirimleri sustur"
@@ -770,6 +906,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   Future<void> _onIncomingMessage(IncomingMessage message) async {
     _messageLog.add(message);
     if (settings.value.notificationsMuted) return;
+    // Görüşme sürerken TTS araya girmez; mesaj günlükte, "mesajlarımı oku" ile.
+    if (_inPhoneCall || sos.callInProgress) return;
 
     final senderAblative = ablative(message.senderName);
     if (!settings.value.readMessagesAloud) {
@@ -879,6 +1017,10 @@ class AppState extends ChangeNotifier implements ControlActions {
     await _detach();
 
     isSimulated = simulated;
+    // Arama servisi de simülasyon anahtarıyla değişir.
+    final oldCalls = callService;
+    _bindCallService(simulated ? SimulatedCallService() : _realCalls());
+    oldCalls.dispose();
     final oldWifi = glassesWifi.service;
     await oldWifi.disconnect();
     glassesWifi
@@ -893,6 +1035,8 @@ class AppState extends ChangeNotifier implements ControlActions {
         : _realBle());
     _refresh();
     await _supervisor.start();
+    // İzin zaten verildiyse sessizce başlar; yoksa eğitim sonunda istenir.
+    unawaited(enableCallDetection(ask: false));
   }
 
   Future<void> startScan() => bleService.startScan();
@@ -935,6 +1079,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     a11y.attachFeedbackHub(null);
     _detach();
     _callSub?.cancel();
+    _callStateSub?.cancel();
     callService.dispose();
     _messageSub?.cancel();
     incomingMessages.dispose();

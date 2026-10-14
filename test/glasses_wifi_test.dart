@@ -317,7 +317,9 @@ void main() {
     Future<void> tap(String label) async {
       final finder = find.text(label);
       await tester.scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
-      await tester.tap(finder);
+      await tester.ensureVisible(finder);
+      await tester.pump();
+      await tester.tap(finder, warnIfMissed: true);
       await tester.pump();
     }
 

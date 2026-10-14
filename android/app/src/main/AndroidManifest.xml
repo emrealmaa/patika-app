@@ -37,6 +37,12 @@
          olmazsa release/direct derlemesinde hiçbir ağ isteği çıkamaz. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <!-- Gerçek gelen arama (CallStateProbe.kt): arama durumu ve gözlükten
+         aç/reddet. İkisi de "play" türünde de kullanılabilir (Play'in kısıtlı
+         izin listesinde değiller; READ_CALL_LOG bilerek YOK). İlk açılış
+         eğitiminin sonunda sesli açıklamayla istenir. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <!-- Gözlük SoftAP'ına uygulamaya özel bağlantı (GlassesNetwork.kt,
          WifiNetworkSpecifier). Wi-Fi açık mı (ACCESS_WIFI_STATE) ve ağ isteği
          (CHANGE_WIFI_STATE) normal izinlerdir, onay penceresi yok. Android 13+

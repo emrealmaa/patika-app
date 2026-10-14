@@ -149,6 +149,13 @@ class _TestModeScreenState extends State<TestModeScreen> {
           const SizedBox(height: 24),
           _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
+        if (!state.callDetectionSimulated) ...[
+          const SizedBox(height: 24),
+          OutlinedButton(
+            onPressed: () => state.enableCallDetection(ask: true),
+            child: const Text(Tr.enableCallDetection),
+          ),
+        ],
         const SizedBox(height: 24),
         _GlassesWifiSection(state: state),
         const SizedBox(height: 24),
@@ -542,9 +549,18 @@ class _IncomingCallSimulationSectionState extends State<_IncomingCallSimulationS
           label: const Text(Tr.startIncomingCall),
         ),
         const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: widget.simulator.endCall,
+          child: const Text(Tr.endSimulatedCall),
+        ),
+        const SizedBox(height: 8),
         Semantics(
           container: true,
-          child: Text(ringing == null ? Tr.noActiveCall : Tr.activeCall(ringing.callerName)),
+          child: Text(ringing != null
+              ? Tr.activeCall(ringing.callerName)
+              : widget.simulator.currentState == PhoneCallState.offhook
+                  ? Tr.callStateInCall
+                  : Tr.noActiveCall),
         ),
       ],
     );

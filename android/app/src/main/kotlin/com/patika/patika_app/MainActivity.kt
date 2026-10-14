@@ -91,6 +91,7 @@ class MainActivity : FlutterActivity() {
         EmergencyContactsStorage(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         GlassesNetwork.get(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         GlassesMjpegStream(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        CallStateProbe.get(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

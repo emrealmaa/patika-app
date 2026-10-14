@@ -120,9 +120,10 @@ Jakarta Sans, Konuş/Bağlantı/Ayarlar/SOS tam ekranı. Kararlar:
 - **Gerçek telefon testleri ertelendi (2026-09-28)** - liste aşağıda,
   "Bekleyen telefon testleri". `direct` türü ve
   `PatikaNotificationListener.kt` gerçek cihazda **henüz hiç denenmedi**.
-- Gerçek gelen arama durumu **yazılmadı**: `PatikaCallService` hâlâ yalnızca
-  simülasyon. Gereken: `READ_PHONE_STATE`, `ANSWER_PHONE_CALLS` (aç/reddet)
-  ve arayan kimliği (karar 1: NotificationListenerService'ten).
+- Gerçek gelen arama **yazıldı (Madde 3, 2026-10-14)**, cihazda denenmedi:
+  `READ_PHONE_STATE` + `ANSWER_PHONE_CALLS` (eğitim sonunda istenir),
+  arayan adı bildirimden; numara hiç okunmaz/seslendirilmez. iOS'ta
+  yazılmadı (`CXCallObserver` yalnızca durumu verebilir, ad ve aç/reddet yok).
 - Ertelenenler: kulaklıkla deneysel sesli araya girme (barge-in); TalkBack'in
   gerçek cihazda baştan sona kontrolü.
 - **Karara bağlandı:** Dikte sırasında (mesaj gövdesi yazdırılırken) SOS
@@ -310,9 +311,22 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   anlatılacağı.
 - [ ] **4a:** `direct` türü gerçek arama ve SMS (kullanıcının ikinci
   numarasıyla); izin reddinde `play` davranışına düşme.
-- [ ] **4b:** Gerçek gelen arama tespiti - **henüz yazılmadı**, yalnızca
-  simülasyon var (`READ_PHONE_STATE`, `ANSWER_PHONE_CALLS`, arayan kimliği
-  NotificationListenerService'ten). Yazılınca cihazda denenmeli.
+- [ ] **4b / Madde 3 - gerçek gelen arama (yazıldı, cihazda hiç denenmedi):**
+  `CallStateProbe.kt` + `MethodChannelCallService` + arayan adı
+  `PatikaNotificationListener.kt` (arama bildiriminin başlığı). İkinci
+  numarayla denenecekler: (a) çalma/açık/boşta durumları Galaxy S24 FE /
+  Android 16'da (`TelephonyCallback`) ve eski bir Android'da
+  (`PhoneStateListener`); (b) gözlük dokunuşuyla açma (`acceptRingingCall`),
+  uzun basışla reddetme (`endCall`); (c) arayan adı: One UI arama ekranı
+  bildirimi `CATEGORY_CALL` mı, paket `com.samsung.android.incallui` mu,
+  başlık rehberdeki ad mı; bildirim çalmadan ne kadar sonra geliyor (1,5 sn
+  bekleme yetiyor mu); rehberde olmayan numarada "bilinmeyen bir numara";
+  bildirim erişimi kapalıyken "bir arama geliyor"; (d) çift SIM; (e) ekran
+  kilitliyken ve uygulama arka plandayken algılama; (f) Bluetooth
+  kulaklıkla: "görüşme açılıyor" onayı ve görüşme başlayınca TTS'in
+  susması, görüşme bitince bekleyen pil uyarısının gelmesi; (g) izin
+  penceresi (eğitim sonunda) TalkBack ile; reddedilince "arama özellikleri
+  kısıtlı"; (h) `play` derlemesinde de çalıştığı.
 - [ ] **4b:** Bildirim dinleyici gerçek WhatsApp/SMS mesajlarıyla; bir
   kerelik gizlilik uyarısı; "mesajlarımı oku", "son bildirimleri oku",
   "bildirimleri sustur/aç".

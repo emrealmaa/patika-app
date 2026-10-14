@@ -213,6 +213,23 @@ abstract final class Tr {
   static String incomingCall(String callerName) => '$callerName arıyor';
   static String callAnswered(String callerName) => '$callerName ile görüşme açılıyor';
   static String callRejected(String callerName) => '$callerName için gelen arama reddedildi';
+  // Numara hiçbir zaman seslendirilmez (bkz. phone_call_service.dart).
+  static const incomingCallUnknownNumber = 'Bilinmeyen bir numara arıyor';
+  static const incomingCallUnidentified = 'Bir arama geliyor';
+  static const callAnsweredGeneric = 'Görüşme açılıyor';
+  static const callRejectedGeneric = 'Gelen arama reddedildi';
+  static const callAnswerFailed = 'Arama açılamadı';
+  static const callRejectFailed = 'Arama reddedilemedi';
+  static const callAnswerUnavailable =
+      'Arama gözlükten açılıp kapatılamıyor, telefon izni verilmedi';
+  static const phoneStatePermissionWhy =
+      'Gelen aramayı söyleyebilmem ve gözlükten açıp reddedebilmeniz için '
+      'telefon izni isteyeceğim.';
+  static const callFeaturesLimited =
+      'Telefon izni verilmedi. Arama özellikleri kısıtlı: gelen aramalar söylenmez.';
+  static const callerNameNeedsNotificationAccess =
+      'Arayanın adını söyleyebilmem için bildirim erişimi de gerekiyor, '
+      'ayarlardan verilebilir. O zamana kadar yalnızca bir arama geldiği söylenir.';
   static const notificationAccessWhy =
       'Gelen arama ve mesaj bildirimlerini okuyabilmem için bildirim '
       'erişimi izni gerekiyor. Şimdi ayarlar açılacak, listede Patika\'yı '
@@ -357,8 +374,12 @@ abstract final class Tr {
       'Bu sürede telefonu kilitleyin: ekran kapalıyken dinlemenin başlayıp başlamadığını dener.';
   static const incomingCallSimulation = 'Gelen arama simülasyonu';
   static const incomingCallSimulationHint =
-      'Bildirim dinleyici henüz yok - burada arayan adı girip aramayı çaldırabilir, '
-      'sonra gözlük butonuyla (dokun = aç, uzun bas = reddet) deneyebilirsiniz.';
+      'Simülasyon modunda: arayan adı girip aramayı çaldırın, sonra gözlük '
+      'butonuyla (dokun = aç, uzun bas = reddet) deneyin. Gerçek modda gerçek '
+      'gelen aramalar algılanır.';
+  static const endSimulatedCall = 'Görüşme bitsin';
+  static const enableCallDetection = 'Gerçek arama algılamayı aç (izin iste)';
+  static const callStateInCall = 'Görüşme sürüyor';
   static const callerNameLabel = 'Arayan adı';
   static const callerNameHint = 'örn. Ahmet Yılmaz';
   static const startIncomingCall = 'Aramayı çaldır';

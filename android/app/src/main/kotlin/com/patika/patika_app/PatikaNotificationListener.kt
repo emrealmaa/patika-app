@@ -2,6 +2,7 @@ package com.patika.patika_app
 
 import android.app.Notification
 import android.provider.Telephony
+import android.telecom.TelecomManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -11,15 +12,18 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * Gelen mesaj bildirimlerini (varsayılan SMS uygulaması + WhatsApp) yakalayıp
- * Dart'a iletir (bkz. lib/platform/incoming_messages.dart). Gelen arama
- * kimliği bu servise DAHİL DEĞİL - CLAUDE.md'deki karar 1 arayan kimliğini
- * de buradan almayı öngörüyor ama o, gerçek telefon durumu PatikaCallService'e
- * bağlanınca ayrı bir adımda ele alınacak.
+ * Dart'a iletir (bkz. lib/platform/incoming_messages.dart). Gelen aramada
+ * arama ekranı bildiriminin BAŞLIĞI (arayanın adı ya da numarası) da
+ * `patika/call_state` kanalına `callerHint` olarak gider (Faz 4b karar 1):
+ * Dart rehberle eşleştirir, numara gibi görünüyorsa "bilinmeyen numara"
+ * der ve numarayı asla seslendirmez. Başlık günlüğe yazılmaz.
  *
  * Hangi bildirimler işlenir:
  * - Varsayılan SMS uygulaması (Telephony.Sms.getDefaultSmsPackage ile ÇALIŞMA
  *   ZAMANINDA sorgulanır - kullanıcı farklı bir uygulama seçmiş olabilir).
  * - WhatsApp (kişisel + iş).
+ * - Arama ekranı (`CATEGORY_CALL`, varsayılan arama uygulaması ya da sistem
+ *   arama arayüzü): yalnızca başlık.
  * Başka hiçbir uygulamadan bildirim okunmaz/iletilmez.
  *
  * Ne çıkarılır: önce MessagingStyle (son mesajın göndereni + metni - WhatsApp
@@ -37,6 +41,14 @@ class PatikaNotificationListener : NotificationListenerService() {
         private const val TAG = "PatikaNotifListener"
         private const val CHANNEL = "patika/notifications"
         private val WHATSAPP_PACKAGES = setOf("com.whatsapp", "com.whatsapp.w4b")
+
+        /** Varsayılan arama uygulaması dışında arama ekranını gösteren sistem paketleri. */
+        private val IN_CALL_UI_PACKAGES = setOf(
+            "com.android.incallui",
+            "com.samsung.android.incallui",
+            "com.google.android.dialer",
+            "com.android.server.telecom",
+        )
     }
 
     private val lastSeen = mutableMapOf<String, Pair<String, String>>()
@@ -62,6 +74,12 @@ class PatikaNotificationListener : NotificationListenerService() {
     }
 
     private fun handle(sbn: StatusBarNotification) {
+        if (isCallNotification(sbn)) {
+            sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+                ?.takeIf { it.isNotBlank() }
+                ?.let(::sendCallerHint)
+            return
+        }
         if (!isTracked(sbn.packageName)) return
         val notification = sbn.notification
         // Özet bildirimi: aynı sohbetin son mesajı zaten ayrı bir bildirimle
@@ -77,6 +95,24 @@ class PatikaNotificationListener : NotificationListenerService() {
         lastSeen[key] = sender to body
 
         send(sender, body, sbn.packageName)
+    }
+
+    private fun isCallNotification(sbn: StatusBarNotification): Boolean {
+        if (sbn.notification.category != Notification.CATEGORY_CALL) return false
+        if (sbn.packageName in IN_CALL_UI_PACKAGES) return true
+        val dialer = try {
+            (getSystemService(TELECOM_SERVICE) as TelecomManager).defaultDialerPackage
+        } catch (e: Exception) {
+            null
+        }
+        return sbn.packageName == dialer
+    }
+
+    private fun sendCallerHint(name: String) {
+        val engine = FlutterEngineCache.getInstance().get(MainActivity.ENGINE_ID) ?: return
+        if (!engine.dartExecutor.isExecutingDart) return
+        MethodChannel(engine.dartExecutor.binaryMessenger, CallStateProbe.CHANNEL)
+            .invokeMethod("callerHint", mapOf("name" to name))
     }
 
     private fun isTracked(packageName: String): Boolean {

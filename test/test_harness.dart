@@ -11,6 +11,7 @@ import 'package:patika_app/contacts/contact_matcher.dart';
 import 'package:patika_app/glasses_wifi/glasses_wifi_service.dart';
 import 'package:patika_app/navigation/place_search.dart';
 import 'package:patika_app/navigation/route_planner.dart';
+import 'package:patika_app/platform/call_service.dart';
 import 'package:patika_app/platform/direct_actions.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/location_service.dart';
@@ -99,6 +100,9 @@ class Harness {
     bool? simulated,
     PatikaBleService Function()? realBleFactory,
     GlassesWifiService Function(bool simulated)? glassesWifiFactory,
+    PatikaCallService? callService,
+    PatikaCallService Function()? realCallFactory,
+    Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     // AppState kurulurken (açılış guard'ı ilk mikro-görevde çalışır) hazır olsun.
@@ -110,6 +114,9 @@ class Harness {
       simulated: simulated,
       realBleFactory: realBleFactory,
       glassesWifiFactory: glassesWifiFactory,
+      callService: callService,
+      realCallFactory: realCallFactory,
+      ensurePhoneStatePermission: ensurePhoneStatePermission,
       speech: tts,
       speechInput: speech,
       haptics: haptics,
