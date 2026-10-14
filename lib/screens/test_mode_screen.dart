@@ -157,6 +157,11 @@ class _TestModeScreenState extends State<TestModeScreen> {
           ),
         ],
         const SizedBox(height: 24),
+        OutlinedButton(
+          onPressed: state.requestBatteryExemption,
+          child: const Text(Tr.testBatteryOpt),
+        ),
+        const SizedBox(height: 24),
         _GlassesWifiSection(state: state),
         const SizedBox(height: 24),
         _CameraStreamSection(state: state),

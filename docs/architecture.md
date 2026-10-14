@@ -159,6 +159,7 @@ geriler, uygulama çökmez.
 | Rehber | İlk ARA / MESAJ / NUMARA'da |
 | Bluetooth (+ API ≤30 konum) | Gözlük taraması / bağlanma |
 | Arama, SMS (yalnızca `direct`) | İlk doğrudan arama / SMS'te |
+| Pil optimizasyonu muafiyeti (`direct`: `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` penceresi; `play`: ayar ekranı + sesli yönlendirme, `BatteryOptimization.kt`) | İlk açılış eğitiminin en sonunda (Test Modu'ndan da); sonuç 60 sn yoklanıp söylenir |
 | Telefon durumu + aramayı aç/reddet (`READ_PHONE_STATE`, `ANSWER_PHONE_CALLS`; her iki türde) | İlk açılış eğitiminin sonunda (Test Modu'ndan da) |
 | Yakındaki Wi-Fi cihazları (Android 13+, `neverForLocation`) | İlk gözlük kamerası Wi-Fi bağlantısında |
 

@@ -327,6 +327,14 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   susması, görüşme bitince bekleyen pil uyarısının gelmesi; (g) izin
   penceresi (eğitim sonunda) TalkBack ile; reddedilince "arama özellikleri
   kısıtlı"; (h) `play` derlemesinde de çalıştığı.
+- [ ] **Madde 3b - pil optimizasyonu muafiyeti (yazıldı, denenmedi):**
+  `direct`te sistem penceresi (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)
+  TalkBack ile onaylanabiliyor mu; `play`de ayar ekranı (One UI'da "Pil" >
+  "Kısıtlanmamış" yolu) sesli yönlendirmeyle bulunabiliyor mu, cümle doğru
+  mu; 60 sn yoklama yetiyor mu (geri dönünce "kaldırıldı"); muafiyet
+  verilince ekran kilitli saatlerce bağlantı/navigasyon sürüyor mu (Galaxy
+  S24 FE "uyku modundaki uygulamalar" listesi ayrıca). Play yayını gündeme
+  gelirse: bu izin Play'de kısıtlı, `play` türünde zaten istenmiyor.
 - [ ] **4b:** Bildirim dinleyici gerçek WhatsApp/SMS mesajlarıyla; bir
   kerelik gizlilik uyarısı; "mesajlarımı oku", "son bildirimleri oku",
   "bildirimleri sustur/aç".

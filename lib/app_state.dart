@@ -61,6 +61,7 @@ import 'navigation/place_search.dart';
 import 'navigation/route_planner.dart';
 import 'permissions/location_access.dart';
 import 'permissions/permission_explainer.dart';
+import 'platform/battery_optimization.dart';
 import 'platform/call_service.dart';
 import 'platform/direct_actions.dart';
 import 'platform/incoming_messages.dart';
@@ -146,6 +147,10 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// Yalnızca `direct` derlemesinde gönderir; `play`'de "desteklenmiyor" der.
   late final SosController sos;
   late final EmergencyContactStore emergencyContacts;
+
+  /// Pil optimizasyonu (Doze) muafiyeti, bkz. [requestBatteryExemption].
+  late final BatteryOptimization batteryOptimization;
+  late final DirectActions _directActions;
 
   /// Gözlük kamerası Wi-Fi'ı (SoftAP, uygulamaya özel ağ): internet istekleri
   /// varsayılan ağdan (mobil veri) gitmeye devam eder. Bkz. `lib/glasses_wifi/`.
@@ -247,6 +252,7 @@ class AppState extends ChangeNotifier implements ControlActions {
     PatikaCallService? callService,
     PatikaCallService Function()? realCallFactory,
     Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
+    BatteryOptimization? batteryOptimization,
     NotificationAccess? notificationAccess,
     IncomingMessages? incomingMessages,
     LoudMessagesNotice? loudMessagesNotice,
@@ -333,6 +339,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     );
 
     final directActions = direct ?? MethodChannelDirectActions();
+    _directActions = directActions;
+    this.batteryOptimization = batteryOptimization ?? const MethodChannelBatteryOptimization();
     final sentMessages = SentMessageLog();
     // Acil kişi deposu burada oluşturuluyor (SosController'dan önce): hem
     // SOS'un kendi gönderimi hem acil kişi ekle/sil diyaloğu aynı depoyu
@@ -507,6 +515,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   Future<void> _afterTutorial() async {
     await _offerLocationAfterTutorial();
     await enableCallDetection(ask: true);
+    // En son: ayar ekranı/pencere en fazla 60 sn yoklanır, akışı bekletmez.
+    unawaited(requestBatteryExemption());
   }
 
   /// Eğitimin sonunda: konum izni yoksa sesli açıklamayla ister. Ekran açık,
@@ -896,6 +906,14 @@ class AppState extends ChangeNotifier implements ControlActions {
   bool get callDetectionSimulated => callService is SimulatedCallService;
 
   bool get inPhoneCall => _inPhoneCall;
+
+  /// Pil optimizasyonu muafiyeti (Madde 3b): `direct`te sistem penceresi
+  /// (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), `play`de ayar ekranı + sesli
+  /// yönlendirme. Zaten muafsa sessiz. Eğitim sonunda ve Test Modu'ndan.
+  Future<bool> requestBatteryExemption() async {
+    final direct = await _directActions.isAvailable();
+    return permissions.ensureBatteryExemption(batteryOptimization, direct: direct);
+  }
 
   /// Bildirimden yakalanan yeni mesaj (bkz. §4b/3). Günlüğe (bkz.
   /// [_messageLog]) susturulmuş olsa bile eklenir - "bildirimleri sustur"

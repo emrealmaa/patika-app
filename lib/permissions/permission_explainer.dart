@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../accessibility/feedback_hub.dart';
 import '../l10n/strings_tr.dart';
+import '../platform/battery_optimization.dart';
 import '../platform/notification_access.dart';
 
 /// Çalışma zamanı izinlerini "önce sesli açıkla, sonra sor" şeklinde ister.
@@ -58,6 +59,37 @@ class PermissionExplainer {
   /// açıklayıp ayarları açar; dönüşte etkin olup olmadığını çağıran taraf
   /// (ekrana her dönüldüğünde) tekrar [access.isEnabled] ile kontrol etmeli -
   /// burada senkron bir "verildi" cevabı yok.
+  /// Pil optimizasyonu muafiyeti (bkz. `BatteryOptimization`). Zaten muafsa
+  /// hiçbir şey söylemez. Değilse önce sesle açıklar ([direct]: sistem
+  /// penceresi; play: ayar ekranı ve orada ne seçileceği), sonra açar ve
+  /// sonucu [pollFor] boyunca [every] aralıkla yoklar: verilince "kaldırıldı",
+  /// süre dolunca "kaldırılmadı" der - sessiz kalmaz.
+  Future<bool> ensureBatteryExemption(
+    BatteryOptimization access, {
+    required bool direct,
+    Duration pollFor = const Duration(seconds: 60),
+    Duration every = const Duration(seconds: 1),
+  }) async {
+    if (await access.isIgnoring()) return true;
+    await _feedback
+        .say(direct ? Tr.batteryOptWhyDirect : Tr.batteryOptWhyPlay)
+        .timeout(_explainTimeout, onTimeout: () => false);
+    if (await access.request() == BatteryExemptionUi.failed) {
+      _feedback.say(Tr.batteryOptFailed);
+      return false;
+    }
+    final deadline = pollFor.inMilliseconds ~/ every.inMilliseconds;
+    for (var i = 0; i < deadline; i++) {
+      await Future<void>.delayed(every);
+      if (await access.isIgnoring()) {
+        _feedback.say(Tr.batteryOptGranted);
+        return true;
+      }
+    }
+    _feedback.say(Tr.batteryOptNotGranted);
+    return false;
+  }
+
   Future<bool> ensureNotificationAccess(
       NotificationAccess access, String explanation) async {
     if (await access.isEnabled()) return true;

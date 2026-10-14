@@ -113,6 +113,24 @@ abstract final class Tr {
   static const permissionPermanentlyDenied =
       'Bu izin daha önce reddedildi. Telefon ayarlarından, uygulamalar bölümünden Patika için izin verebilirsiniz.';
 
+  // --- Pil optimizasyonu muafiyeti ---------------------------------------------
+  // Bilgi kipi. test/battery_optimization_test.dart yasaklı kelime tarar.
+  static const batteryOptWhyDirect =
+      'Ekran kapalıyken de gözlük bağlantısı ve navigasyon kesilmesin diye '
+      'Patika\'nın pil kısıtlamasından muaf tutulmasını isteyeceğim. '
+      'Açılan pencerede bir İzin ver düğmesi var.';
+  static const batteryOptWhyPlay =
+      'Ekran kapalıyken de gözlük bağlantısı ve navigasyon kesilmesin diye '
+      'şimdi pil ayarları açılacak. Listede Patika seçilip pil kısıtlaması '
+      'kaldırılabilir; bu seçeneğin adı Samsung telefonlarda Kısıtlanmamış, '
+      'diğerlerinde Optimize etme.';
+  static const batteryOptGranted = 'Pil kısıtlaması kaldırıldı';
+  static const batteryOptNotGranted =
+      'Pil kısıtlaması kaldırılmadı. Ekran kapalıyken bağlantı kesilebilir; '
+      'bu daha sonra Test Modu ya da telefon ayarlarından değiştirilebilir.';
+  static const batteryOptFailed = 'Pil ayarları açılamadı';
+  static const testBatteryOpt = 'Pil kısıtlamasını kaldır (muafiyet iste)';
+
   // --- Komut geçmişi -------------------------------------------------------
   static const success = 'Başarılı';
   static const failure = 'Başarısız';

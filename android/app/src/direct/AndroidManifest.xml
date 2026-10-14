@@ -7,4 +7,8 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <!-- Onaydan sonra doğrudan SMS (SmsManager). -->
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Pil optimizasyonu muafiyetini doğrudan pencereyle isteme
+         (BatteryOptimization.kt). Play bunu kısıtlıyor; "play" türünde
+         izin yerine liste ayar ekranı açılır. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>
