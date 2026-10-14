@@ -1,5 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:patika_app/navigation/guidance_engine.dart';
 
 import 'package:patika_app/ble/ble_command.dart';
 import 'package:patika_app/ble/glasses_protocol.dart';
@@ -191,7 +192,9 @@ void main() {
   group('gözlük butonu karşıya geçiş duraklamasında', () {
     /// Navigasyonu başlatıp geçiş noktasında duraklatır.
     Harness pausedHarness(FakeAsync async) {
-      final h = Harness();
+      // Çift dokunuş koruması (Madde 8, varsayılan 3 sn) burada kapalı: koruma
+      // test/crossing_double_tap_guard_test.dart'ta, sahte saatle sınanıyor.
+      final h = Harness(guidanceConfig: const GuidanceConfig(crossingDoubleTapGuard: Duration.zero));
       h.app.navigation.start(testRoute());
       async.flushMicrotasks();
       for (final (x, y) in walkPath([(0, 0), (0, 200), (140, 200)])) {

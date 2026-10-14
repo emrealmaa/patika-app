@@ -7,8 +7,8 @@
 ///    WebSocket istemcisi: Android'de yerleşik istemci yok, OkHttp gibi bir
 ///    bağımlılık gerekir (Apache-2.0).
 /// 2. `web_socket_channel` (BSD-3) - yine ağ seçemez, tek başına yetmez.
-/// Proje kuralı: yeni paket kurulmadan önce kullanıcı onayı. Onay gelene kadar
-/// yalnızca arayüz var; her çağrı [UnimplementedError] fırlatır.
+/// **Karar (2026-10-14):** seçenek 1 (Kotlin + OkHttp), firmware gelince eklenecek.
+/// O zamana kadar yalnızca arayüz var; her çağrı [UnimplementedError] fırlatır.
 abstract class GlassesControlSocket {
   Future<void> connect(Uri uri);
   Stream<List<int>> get audio;

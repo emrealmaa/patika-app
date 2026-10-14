@@ -13,8 +13,9 @@ enum CallerKind {
 }
 
 /// Gelen arama bilgisi. Arayanın adı `NotificationListenerService`'ten
-/// gelir (bkz. CLAUDE.md, Faz 4b karar 1); telefon numarası okunmaz
-/// (`READ_CALL_LOG` yok). [number] yalnızca simülasyonda dolu olabilir.
+/// gelir (bkz. CLAUDE.md, Faz 4b karar 1); numara arama kaydından alınmaz
+/// (`READ_CALL_LOG` yok); [number] yalnızca arama ekranı bildirimi numara
+/// gösterdiyse (rehberde olmayan arayan) ya da simülasyonda dolu.
 class IncomingCall {
   final String callerName;
   final String? number;

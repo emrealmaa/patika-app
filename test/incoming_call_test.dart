@@ -8,11 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:patika_app/ble/glasses_protocol.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
 import 'package:patika_app/platform/direct_actions.dart';
+import 'package:patika_app/navigation/guidance_engine.dart';
 import 'package:patika_app/l10n/strings_tr.dart';
 import 'package:patika_app/battery/phone_battery.dart';
 import 'package:patika_app/platform/call_service.dart';
 import 'package:patika_app/platform/incoming_messages.dart';
 import 'package:patika_app/platform/phone_call_service.dart';
+import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/sos/emergency_contacts.dart';
 import 'package:patika_app/sos/sos_config.dart';
 import 'package:patika_app/sos/sos_controller.dart';
@@ -98,11 +100,12 @@ void main() {
       expect((c.kind, c.callerName), (CallerKind.named, 'Ahmet Yılmaz'));
     });
 
-    test('numara gibi başlık: bilinmeyen numara, numara taşınmaz', () {
+    test('numara gibi başlık: bilinmeyen numara, numarayı taşır (okunup okunmayacağı ayar)', () {
       for (final title in ['0555 000 00 09', '+90 555 000 0009', '(0555) 000-00-09']) {
         final c = identifyCaller(title, null);
         expect(c.kind, CallerKind.unknownNumber, reason: title);
         expect(c.callerName, isEmpty);
+        expect(c.number, title);
       }
     });
 
@@ -337,7 +340,12 @@ void main() {
     test('karşıya geçiş duraklamasında arama duyurulur; çift dokunuş yine navigasyonu sürdürür', () {
       fakeAsync((async) {
         final calls = FakePhoneCalls();
-        final h = real(calls);
+        // Çift dokunuş koruması kapalı (bkz. crossing_double_tap_guard_test.dart).
+        final h = Harness(
+          callService: calls,
+          ensurePhoneStatePermission: ({required bool ask}) async => true,
+          guidanceConfig: const GuidanceConfig(crossingDoubleTapGuard: Duration.zero),
+        );
         h.app.navigation.start(testRoute());
         async.flushMicrotasks();
         for (final (x, y) in walkPath([(0, 0), (0, 200), (140, 200)])) {
@@ -394,6 +402,50 @@ void main() {
       });
     });
   });
+  group('rehberde olmayan numaranın okunması (ayar, varsayılan açık)', () {
+    const unknown = IncomingCall(callerName: '', number: '0555 000 00 09', kind: CallerKind.unknownNumber);
+
+    test('varsayılan: numara rakam rakam okunur; rehberdeki kişide ad', () {
+      fakeAsync((async) {
+        expect(const Settings().readUnknownCallerNumber, isTrue);
+        final calls = FakePhoneCalls();
+        final h = Harness(callService: calls, ensurePhoneStatePermission: ({required bool ask}) async => true);
+        calls.ring(unknown);
+        h.speakAll(async);
+        expect(h.tts.spoken.last, '0 5 5 5, 0 0 0, 0 0, 0 9 arıyor');
+        calls.idle();
+        calls.ring(const IncomingCall(callerName: 'Ahmet Yılmaz'));
+        h.speakAll(async);
+        expect(h.tts.spoken.last, 'Ahmet Yılmaz arıyor');
+        h.dispose();
+      });
+    });
+
+    test('ayar kapalıyken numara okunmaz', () {
+      fakeAsync((async) {
+        final calls = FakePhoneCalls();
+        final h = Harness(
+          callService: calls,
+          ensurePhoneStatePermission: ({required bool ask}) async => true,
+          initial: const Settings(readUnknownCallerNumber: false),
+        );
+        calls.ring(unknown);
+        h.speakAll(async);
+        expect(h.tts.spoken.last, Tr.incomingCallUnknownNumber);
+        expect(h.tts.spoken.join(), isNot(contains('0 5 5 5')));
+        h.dispose();
+      });
+    });
+
+    test('ayar kalıcı (JSON) ve Ayarlar ekranında anahtar var', () {
+      const s = Settings(readUnknownCallerNumber: false);
+      expect(Settings.fromJson(s.toJson()).readUnknownCallerNumber, isFalse);
+      expect(Settings.fromJson(const {}).readUnknownCallerNumber, isTrue);
+      expect(File('lib/screens/settings_screen.dart').readAsStringSync(),
+          contains('Tr.readUnknownCallerNumber'));
+    });
+  });
+
 
   test('strings_tr.dart "Gelen arama" bölümü yasaklı kelime içermez', () {
     final source = File('lib/l10n/strings_tr.dart').readAsStringSync();

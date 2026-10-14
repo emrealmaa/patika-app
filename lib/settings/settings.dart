@@ -76,6 +76,11 @@ class Settings {
   /// (kullanıcıya sesle söylenir). Yedeğe girebilir (hassas değil).
   final Set<MessageApp> messageApps;
 
+  /// Rehberde olmayan arayanın numarası sesle okunsun mu (varsayılan açık,
+  /// kullanıcı kararı 2026-10-14). Kapalıyken yalnızca "bilinmeyen bir numara
+  /// arıyor" denir. Rehberdeki kişilerde her zaman ad okunur.
+  final bool readUnknownCallerNumber;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -88,6 +93,7 @@ class Settings {
     this.notificationsMuted = false,
     this.emergencyCall112 = false,
     this.messageApps = MessageApp.defaults,
+    this.readUnknownCallerNumber = true,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -113,6 +119,7 @@ class Settings {
     bool? notificationsMuted,
     bool? emergencyCall112,
     Set<MessageApp>? messageApps,
+    bool? readUnknownCallerNumber,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -127,6 +134,7 @@ class Settings {
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
       messageApps: messageApps ?? this.messageApps,
+      readUnknownCallerNumber: readUnknownCallerNumber ?? this.readUnknownCallerNumber,
     );
   }
 
@@ -159,6 +167,7 @@ class Settings {
         'notificationsMuted': notificationsMuted,
         'emergencyCall112': emergencyCall112,
         'messageApps': [for (final a in MessageApp.values) if (messageApps.contains(a)) a.name],
+        'readUnknownCallerNumber': readUnknownCallerNumber,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -194,6 +203,9 @@ class Settings {
                 ?MessageApp.fromName(n is String ? n : null),
             }
           : d.messageApps,
+      readUnknownCallerNumber: json['readUnknownCallerNumber'] is bool
+          ? json['readUnknownCallerNumber'] as bool
+          : d.readUnknownCallerNumber,
     );
   }
 
@@ -210,13 +222,14 @@ class Settings {
       other.readMessagesAloud == readMessagesAloud &&
       other.notificationsMuted == notificationsMuted &&
       other.emergencyCall112 == emergencyCall112 &&
-      setEquals(other.messageApps, messageApps);
+      setEquals(other.messageApps, messageApps) &&
+      other.readUnknownCallerNumber == readUnknownCallerNumber;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
       readMessagesAloud, notificationsMuted, emergencyCall112,
-      Object.hashAllUnordered(messageApps));
+      Object.hashAllUnordered(messageApps), readUnknownCallerNumber);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

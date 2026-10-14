@@ -212,7 +212,7 @@ netleşecek.**
   gözlüğün ısınma/pil durumunu bildirip bildirmeyeceği açık.
 - **WebSocket (ses/kontrol): yazılmadı.** Dart'ın WebSocket istemcisi
   gözlük ağını seçemez; native istemci için yeni bağımlılık (ör. OkHttp)
-  gerekir ve paket onayı bekliyor (`lib/camera/glasses_control_socket.dart`).
+  gerekir; karar: **firmware gelince OkHttp ile** (`lib/camera/glasses_control_socket.dart`).
 - **Telefon tarafı:** Android, internetsiz bir Wi-Fi'ye normal bağlanınca
   mobil veriyi bırakabilir; Routes/Places gibi internet isteyen çağrılar
   kırılırdı. Bu yüzden telefon SoftAP'a **uygulamaya özel** bağlanır

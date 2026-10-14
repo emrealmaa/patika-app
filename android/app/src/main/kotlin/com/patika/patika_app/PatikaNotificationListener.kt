@@ -16,7 +16,7 @@ import io.flutter.plugin.common.MethodChannel
  * arama ekranı bildiriminin BAŞLIĞI (arayanın adı ya da numarası) da
  * `patika/call_state` kanalına `callerHint` olarak gider (Faz 4b karar 1):
  * Dart rehberle eşleştirir, numara gibi görünüyorsa "bilinmeyen numara"
- * der ve numarayı asla seslendirmez. Başlık günlüğe yazılmaz.
+ * der; numarayı okuyup okumamak Dart ayarıdır (`readUnknownCallerNumber`). Başlık günlüğe yazılmaz.
  *
  * Hangi bildirimler işlenir:
  * - Varsayılan SMS uygulaması (Telephony.Sms.getDefaultSmsPackage ile ÇALIŞMA

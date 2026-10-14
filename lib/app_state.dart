@@ -844,11 +844,19 @@ class AppState extends ChangeNotifier implements ControlActions {
     notifyListeners();
   }
 
-  static String _incomingCallText(IncomingCall call) => switch (call.kind) {
-        CallerKind.named => Tr.incomingCall(call.callerName),
-        CallerKind.unknownNumber => Tr.incomingCallUnknownNumber,
-        CallerKind.unidentified => Tr.incomingCallUnidentified,
-      };
+  /// Rehberdeki kişide ad; rehberde olmayan numarada (ayar açıksa, varsayılan)
+  /// numara rakam rakam (NUMARA komutuyla aynı gruplama), kapalıysa yalnızca
+  /// "bilinmeyen bir numara".
+  String _incomingCallText(IncomingCall call) {
+    final number = call.number;
+    return switch (call.kind) {
+      CallerKind.named => Tr.incomingCall(call.callerName),
+      CallerKind.unknownNumber when number != null && settings.value.readUnknownCallerNumber =>
+        Tr.incomingCallNumber(NumberHandler.spokenDigits(number)),
+      CallerKind.unknownNumber => Tr.incomingCallUnknownNumber,
+      CallerKind.unidentified => Tr.incomingCallUnidentified,
+    };
+  }
 
   Future<void> _answer(IncomingCall ringing) async {
     if (!callService.canAnswer) {

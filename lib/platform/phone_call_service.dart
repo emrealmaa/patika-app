@@ -7,9 +7,10 @@ import '../contacts/contact_matcher.dart';
 import 'call_service.dart';
 
 /// Arama ekranı bildiriminin başlığından arayan: numara gibi görünen başlık
-/// (harf yok, en az 3 rakam) "bilinmeyen numara"dır; numara hiçbir zaman
-/// seslendirilmez. Ad rehberde bulunursa rehberdeki ad, birden çok aday
-/// varsa arama ekranının gösterdiği ad, hiç yoksa "bilinmeyen numara".
+/// (harf yok, en az 3 rakam) "bilinmeyen numara"dır ve numarayı [IncomingCall.number]
+/// ile taşır: seslendirilip seslendirilmeyeceği ayar (`Settings.readUnknownCallerNumber`,
+/// varsayılan açık). Ad rehberde bulunursa rehberdeki ad, birden çok aday
+/// varsa arama ekranının gösterdiği ad, hiç yoksa "bilinmeyen numara" (numarasız).
 /// [match] null: rehber okunamadı (izin yok) - arama ekranının adı kullanılır
 /// (o adı zaten telefonun kendi rehberi çözmüştür).
 IncomingCall identifyCaller(String? hint, ContactMatch? match) {
@@ -18,7 +19,7 @@ IncomingCall identifyCaller(String? hint, ContactMatch? match) {
     return const IncomingCall(callerName: '', kind: CallerKind.unidentified);
   }
   if (looksLikePhoneNumber(title)) {
-    return const IncomingCall(callerName: '', kind: CallerKind.unknownNumber);
+    return IncomingCall(callerName: '', number: title, kind: CallerKind.unknownNumber);
   }
   return switch (match) {
     ContactFound(:final contact) => IncomingCall(callerName: contact.displayName),

@@ -174,8 +174,8 @@ class GuidanceConfig {
   /// dokunuşu duraklamayı BİTİRMEZ (çantaya çarpma gibi kazara dokunuşa
   /// karşı); o sırada çift dokunuş olağan anlamına (son duyuruyu tekrarla)
   /// döner, yani kullanıcı hâlâ duraklamada olduğunu duyar. "geçtim" ve
-  /// konum çıkışı etkilenmez. **Varsayılan 0 = koruma yok (eski davranış)**;
-  /// değer kullanıcı kararı.
+  /// konum çıkışı etkilenmez. **Varsayılan 3 sn** (kullanıcı kararı 2026-10-14);
+  /// ayarlanabilir, `Duration.zero` korumayı kapatır (eski davranış).
   final Duration crossingDoubleTapGuard;
 
   /// Yön teyidi (bkz. CLAUDE.md Faz 6 kararları, madde 4). Tek satırla
@@ -216,7 +216,7 @@ class GuidanceConfig {
     this.crossingTimeoutAction = CrossingTimeoutAction.resume,
     this.crossingMaxReminders = 3,
     this.crossingSignalTiming,
-    this.crossingDoubleTapGuard = Duration.zero,
+    this.crossingDoubleTapGuard = const Duration(seconds: 3),
     this.directionCheck = true,
     this.directionMinWalk = 15,
     this.directionMaxAccuracy = 10,

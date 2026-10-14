@@ -231,9 +231,14 @@ abstract final class Tr {
   static String incomingCall(String callerName) => '$callerName arıyor';
   static String callAnswered(String callerName) => '$callerName ile görüşme açılıyor';
   static String callRejected(String callerName) => '$callerName için gelen arama reddedildi';
-  // Numara hiçbir zaman seslendirilmez (bkz. phone_call_service.dart).
+  // Rehberde olmayan numara yalnızca `Settings.readUnknownCallerNumber` açıkken okunur.
   static const incomingCallUnknownNumber = 'Bilinmeyen bir numara arıyor';
   static const incomingCallUnidentified = 'Bir arama geliyor';
+  static String incomingCallNumber(String spokenDigits) => '$spokenDigits arıyor';
+  static const readUnknownCallerNumber = 'Rehberde olmayan arayanın numarasını oku';
+  static const readUnknownCallerNumberHint =
+      'Kapatırsanız yalnızca bilinmeyen bir numaranın aradığı söylenir. '
+      'Rehberdeki kişilerde her zaman ad okunur.';
   static const callAnsweredGeneric = 'Görüşme açılıyor';
   static const callRejectedGeneric = 'Gelen arama reddedildi';
   static const callAnswerFailed = 'Arama açılamadı';

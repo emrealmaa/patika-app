@@ -122,7 +122,7 @@ Jakarta Sans, Konuş/Bağlantı/Ayarlar/SOS tam ekranı. Kararlar:
   `PatikaNotificationListener.kt` gerçek cihazda **henüz hiç denenmedi**.
 - Gerçek gelen arama **yazıldı (Madde 3, 2026-10-14)**, cihazda denenmedi:
   `READ_PHONE_STATE` + `ANSWER_PHONE_CALLS` (eğitim sonunda istenir),
-  arayan adı bildirimden; numara hiç okunmaz/seslendirilmez. iOS'ta
+  arayan adı bildirimden; rehberde olmayan numara ayara bağlı okunur (varsayılan açık). iOS'ta
   yazılmadı (`CXCallObserver` yalnızca durumu verebilir, ad ve aç/reddet yok).
 - Ertelenenler: kulaklıkla deneysel sesli araya girme (barge-in); TalkBack'in
   gerçek cihazda baştan sona kontrolü.
@@ -172,6 +172,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   ekran kilitliyken akışın sürmesi ve pil/ısınma etkisi (telefon ve
   gözlük), gözlük kapanınca "koptu" + geri açılınca akışın kendiliğinden
   dönmesi, `frm` mesajının MTU 20 baytta sığmaması (22 bayt).
+  **WebSocket (ses/kontrol): OkHttp firmware gelince eklenecek** (kullanıcı
+  kararı 2026-10-14); o zamana kadar `UnimplementedGlassesControlSocket`.
 
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - konum, ekran kilitli ve cepteyken:**
   ekran kilitli, telefon cepte, **gözlük uzun basışıyla** tetiklenen SOS'ta
@@ -296,7 +298,7 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   `crossingMaxReminders` kez bilgi kipinde hatırlatır - `Tr.navCrossingReminder`
   - sonra devam), (c) `crossingSignalTiming` (arayüz; veri kaynağı yok).
   **Varsayılan değişmedi** (`resume`, 90 sn). Hangisinin varsayılan olacağı
-  saha verisiyle KULLANICI KARARI (bitiş raporunda soruldu).
+  **Karar (2026-10-14): varsayılan değişmedi**, saha verisi bekleniyor.
 - [ ] **Faz 6:** Yön teyidinin gerçek yürüyüşte doğruluğu (konum geçmişinden
   hesaplanan hareket yönü; 15 m ya da doğruluğun 2 katı yürünmüş, doğruluk
   < 10 m, ~0,7 m/s hız eşiği, ilk 100 m); yanlış "rotanın tersi"/"yan"
@@ -313,7 +315,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   ilk N sn'sinde çift dokunuş duraklamayı bitirmez, "son duyuruyu tekrarla"ya
   düşer (kullanıcı duraklamada olduğunu duyar); tek dokunuş (dinleme/SOS),
   uzun basış (SOS), "geçtim" ve konum çıkışı etkilenmez (testle kilitli).
-  **Varsayılan 0 = koruma yok (eski davranış)**; değer KULLANICI KARARI.
+  **Karar (2026-10-14): varsayılan 3 sn**, ayarlanabilir (`Duration.zero` = eski
+  davranış). Sahada 3 sn'nin yeterli/fazla olduğu denenecek.
 - [ ] **Faz 6:** Uygulamanın "ön planda mı" tespiti (`AppLifecycleState.resumed`):
   Hızlı Ayarlar karosu, gözlük ve kilitli ekrandan başlatmada doğru cevap
   veriyor mu (izin yokken yedek akış bunun üstüne kurulu).
@@ -362,7 +365,7 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   [docs/barge_in_tasarim.md](docs/barge_in_tasarim.md): bulut STT sürekli
   dinlemeye uygun değil, Bluetooth SCO hem TTS'i dar banda düşürür hem SOS'un
   arama algısını (`getMode`) etkileyebilir. Önkoşullar: yerel anahtar kelime
-  tanıyıcı (Vosk, yeni paket - onay gerekir) + SCO/yankı/bip/pil cihaz
+  tanıyıcı (**Vosk eklenmeyecek, kullanıcı kararı 2026-10-14**; başka çözüm gerekir) + SCO/yankı/bip/pil cihaz
   testleri. Bugünkü davranış `test/barge_in_lock_test.dart` ile kilitli.
 - [ ] **Faz 6 (kullanıcı testi):** Navigasyon cümle tarzının ("rota sağa
   sapıyor", "30 metre sonra") gerçek görme engelli kullanıcılarla
@@ -655,6 +658,12 @@ izleniyor (geri sayım + iptal varsayılanı GÖNDER, Faz 7 kararları madde 2).
 6. "Mesajlarımı oku" okunmamışları içerikle okur ve okunmuş sayar; "son
    bildirimleri oku" yalnızca göndereni özetler, okunmuşluğu etkilemez.
    Susturma kaydı değil yalnızca duyuruyu engeller.
+7. **Gelen aramada arayan (kullanıcı kararı, 2026-10-14):** rehberdeki kişide
+   her zaman ad okunur. Rehberde olmayan numara varsayılan olarak **rakam
+   rakam okunur** (NUMARA komutuyla aynı gruplama), Ayarlar > "Rehberde
+   olmayan arayanın numarasını oku" ile kapatılır (`readUnknownCallerNumber`);
+   kapalıyken "bilinmeyen bir numara arıyor". Numara yalnızca arama ekranı
+   bildiriminin başlığından gelir (`READ_CALL_LOG` yok), günlüğe yazılmaz.
 
 ## Faz planı
 

@@ -9,7 +9,7 @@ import 'navigation_fixtures.dart';
 import 'test_harness.dart';
 
 /// Madde 8: karşıya geçiş duraklamasında kazara çift dokunuş koruması.
-/// Varsayılan 0 (eski davranış: çift dokunuş hemen devam ettirir). Koruma
+/// Varsayılan 3 sn (kullanıcı kararı 2026-10-14; 0 = eski davranış). Koruma
 /// açıkken ilk N saniyede çift dokunuş "son duyuruyu tekrarla"ya düşer; tek
 /// dokunuş (dinleme -> SOS/sesli komut) ve uzun basış (SOS) HİÇ etkilenmez.
 void main() {
@@ -37,16 +37,34 @@ void main() {
     h.speakAll(async);
   }
 
-  test('varsayılan (koruma yok): çift dokunuş hemen devam ettirir', () {
+  test('koruma 0 (kapalı, eski davranış): çift dokunuş hemen devam ettirir', () {
     fakeAsync((async) {
       final h = harness(async);
-      expect(const GuidanceConfig().crossingDoubleTapGuard, Duration.zero);
       toCrossing(h, async);
       doubleTap(h, async);
       expect(h.app.navigation.isPausedForCrossing, isFalse);
       h.dispose();
     });
   });
+
+  test('varsayılan 3 sn (kullanıcı kararı): 1. sn sayılmaz, 4. sn devam ettirir', () {
+    fakeAsync((async) {
+      expect(const GuidanceConfig().crossingDoubleTapGuard, const Duration(seconds: 3));
+      final h = Harness(
+        guidanceConfig: const GuidanceConfig(),
+        navigationNow: () => t0.add(async.elapsed),
+      );
+      toCrossing(h, async);
+      async.elapse(const Duration(seconds: 1));
+      doubleTap(h, async);
+      expect(h.app.navigation.isPausedForCrossing, isTrue);
+      async.elapse(const Duration(seconds: 3));
+      doubleTap(h, async);
+      expect(h.app.navigation.isPausedForCrossing, isFalse);
+      h.dispose();
+    });
+  });
+
 
   test('koruma açık: ilk N sn çift dokunuş duraklamayı bitirmez, tekrar eder; sonra bitirir', () {
     fakeAsync((async) {

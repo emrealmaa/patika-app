@@ -125,6 +125,12 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (v) => _update(s.copyWith(readMessagesAloud: v)),
           ),
           AnahtarSatiri(
+            title: Tr.readUnknownCallerNumber,
+            subtitle: Tr.readUnknownCallerNumberHint,
+            value: s.readUnknownCallerNumber,
+            onChanged: (v) => _update(store.value.copyWith(readUnknownCallerNumber: v)),
+          ),
+          AnahtarSatiri(
             title: Tr.muteNotifications,
             value: s.notificationsMuted,
             onChanged: (v) => _update(s.copyWith(notificationsMuted: v)),

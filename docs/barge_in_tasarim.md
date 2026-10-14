@@ -47,7 +47,7 @@ varsayılan kapalı. SOS davranışını asla etkilememeli.
   (Apache-2.0, Türkçe küçük model ~40 MB) ya da Android'in kendi "hotword"
   API'si (yalnızca sistem asistanına açık, kullanılamaz). Porcupine'in
   ücretsiz lisansı ticari kullanıma kapalı: **uygun değil**. Vosk için yeni
-  paket gerekir -> **proje kuralı: kullanıcı onayı**.
+  paket gerekir; **kullanıcı kararı (2026-10-14): Vosk eklenmeyecek**.
 - Telefon testleri: (a) SCO açıkken TTS kalitesi ve `getMode()` değeri,
   (b) kulaklık yankısıyla kendi sesini tanıma oranı, (c) Samsung bip sesi,
   (d) bir saatlik pil tüketimi.
@@ -68,8 +68,8 @@ varsayılan kapalı. SOS davranışını asla etkilememeli.
   açıkken sahte tanıyıcıyla "dur" TTS'i keser; TTS metnindeki "dur" komut
   sayılmaz; SOS sırasında dinleyici kapalı.
 
-## Kullanıcıya sorulacak
+## Kullanıcı kararları (2026-10-14)
 
-1. Vosk (yeni paket, Apache-2.0, model boyutu) onayı ya da özelliğin
-   ertelenmesi.
+1. **Vosk eklenmeyecek.** Barge-in, paket gerektirmeyen güvenli bir yerel
+   tanıyıcı bulunana kadar ertelendi.
 2. Cihaz testleri (yukarıdaki a-d) yapılmadan kod yazılmaması önerilir.
