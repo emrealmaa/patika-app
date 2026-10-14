@@ -32,6 +32,10 @@
          biri YA DA bu (normal, onaysız) izin olmadan başlatılamıyor. Simülasyon
          modunda Bluetooth izni istenmediği için gerekli; gözlüğün Wi-Fi SoftAP
          kamera akışına bağlanırken de kullanılacak. -->
+    <!-- İnternet: Google Routes/Places (navigasyon) ve gözlük MJPEG akışı.
+         Flutter bunu yalnızca debug/profile manifestlerine koyar; burada
+         olmazsa release/direct derlemesinde hiçbir ağ isteği çıkamaz. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <!-- Gözlük SoftAP'ına uygulamaya özel bağlantı (GlassesNetwork.kt,
          WifiNetworkSpecifier). Wi-Fi açık mı (ACCESS_WIFI_STATE) ve ağ isteği

@@ -242,6 +242,11 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   artık gönderiliyor (bkz. Faz 6 kararları, madde 7) ama cihazda
   doğrulanmadı. debug, release/`direct` ve Play imzası için ayrı SHA-1
   satırları Cloud kısıtına eklenmeli.
+- [ ] **Release'te internet (2026-10-14 düzeltildi):** ana manifestte
+  `INTERNET` izni yoktu (Flutter yalnızca debug/profile'a ekler): release ve
+  `direct` derlemesinde Routes/Places istekleri hiç çıkamıyordu. Eklendi;
+  `flutter build apk --flavor direct --release` ile kurulup navigasyonun
+  gerçekten Google'a ulaştığı (Haritalar yedeğine düşmediği) denenecek.
 - [ ] **Faz 6 (Google):** Gerçek anahtarla Routes ve Places: yanıt biçimi
   belgelerden yazıldı, gerçek yanıtla **hiç sınanmadı**; Türkçe yer
   adlarının (STT çıktısı "Kadıköy iskelesi") Places'te bulunma oranı, "hangisi?"
