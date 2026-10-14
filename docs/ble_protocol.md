@@ -6,8 +6,11 @@ Sürüm: **v1 (taslak)** · Uygulama tarafı: `lib/ble/glasses_protocol.dart`,
 Bu doküman ESP32-S3 firmware ekibi ile companion app arasındaki sözleşmedir.
 Firmware bu repoda değil; burada yazan her şey uygulamanın beklentisidir.
 
-> ⚠️ **UUID'ler henüz placeholder.** Firmware kesinleşince yalnızca
-> `real_ble_service.dart` içindeki üç sabit değişecek; mesaj formatı aynı kalır.
+> ⚠️ **UUID'ler henüz placeholder.** Tek kaynak `lib/ble/glasses_gatt_profile.dart`
+> (`GlassesGattProfile`); firmware kesinleşince kod değişmeden derleme anında
+> `--dart-define=PATIKA_BLE_SERVICE_UUID=...`, `PATIKA_BLE_EVENT_UUID`,
+> `PATIKA_BLE_CONTROL_UUID` ile verilir (bkz. "Firmware'de doğrulanacak").
+> Mesaj formatı aynı kalır.
 
 ## 1. GATT yapısı
 
@@ -133,6 +136,28 @@ Sonuçlar:
 - Earcon sesi, ses seviyesi (AGC üst sınırı) ve bağlantı koptu/geldi
   tonlarından ayırt edilebilirliği.
 - Eşik değerleri (0,75 mi 1,0 m mi) gerçek ToF ölçüm hatasına göre.
+
+## 5b. Firmware'de doğrulanacak (sözleşme özeti)
+
+Firmware ekibiyle teyit edilecek liste; uygulamadaki tek kaynak
+`lib/ble/glasses_gatt_profile.dart`.
+
+| Öğe | Uygulamadaki varsayılan (PLACEHOLDER) | Geçersiz kılma |
+|---|---|---|
+| Patika servisi (reklamda yayınlanır) | `0000ff10-0000-1000-8000-00805f9b34fb` | `PATIKA_BLE_SERVICE_UUID` |
+| Olay karakteristiği (notify, gözlük -> telefon) | `0000ff11-0000-1000-8000-00805f9b34fb` | `PATIKA_BLE_EVENT_UUID` |
+| Kontrol karakteristiği (write without response, telefon -> gözlük) | `0000ff12-0000-1000-8000-00805f9b34fb` | `PATIKA_BLE_CONTROL_UUID` |
+
+- Biçim: 128 bit, `8-4-4-4-12` onaltılık. Biçimi bozuk değer verilirse o alan
+  placeholder'da kalır ve günlüğe yazılır (`GlassesGattProfile.invalid`).
+- **JSON mesaj biçimi:** her notify/write tek UTF-8 JSON nesnesi (§2). Komut
+  mesajı Python `siniflandir()` çıktısıyla aynı sözlük:
+  `{"intent":"ARA","entity":"Emre"}`; yeni biçimde `"t":"cmd"` eklenir, `t`siz
+  eski biçim de kabul edilir (§2.1). `intent` değerleri `intent_classifier.py`
+  ile aynı.
+- Diğer olaylar (§2.1): `btn`, `gst`, `batt`, `hb` (2 sn), taslak `wifi`.
+  Telefon -> gözlük (§2.2): taslak `frm` (22 bayt; MTU 20 baytta sığmaz, §7).
+- MTU 247 istenir (244 bayt yük); pazarlık başarısızsa 20 bayt.
 
 ## 6. Açık konular
 

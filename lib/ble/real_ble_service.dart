@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../l10n/strings_tr.dart';
 import '../permissions/permission_explainer.dart';
 import 'ble_connection_state.dart';
+import 'glasses_gatt_profile.dart';
 import 'glasses_protocol.dart';
 import 'patika_ble_service.dart';
 
@@ -18,30 +19,37 @@ import 'patika_ble_service.dart';
 /// büyüklüğünden bağımsız - geliştirme/test dahil) ücretli lisans şartı
 /// getiriyordu, bu yüzden değiştirildi (bkz. patika_app/TODO.md).
 ///
-/// ÖNEMLİ: Aşağıdaki UUID'ler PLACEHOLDER'dır - henüz donanım/firmware
-/// olmadığı için gerçek servis/karakteristik UUID'leri bilinmiyor. Firmware
-/// tarafı belirlendiğinde bu sabitler güncellenmeli, geri kalan kod
-/// (bağlanma/keşif/subscribe akışı) değişmeden kalabilir.
+/// UUID'ler [GlassesGattProfile]'den gelir (tek kaynak; varsayılanı
+/// PLACEHOLDER, firmware gelince `--dart-define` ile değişir).
 ///
 /// Mesaj formatı: bkz. docs/ble_protocol.md ve [GlassesProtocol] - her
 /// bildirim/yazma tek bir UTF-8 JSON nesnesi, `"t"` alanı türü belirler.
 class RealBleService with GlassesEventStreams implements PatikaBleService {
-  static final fble.Uuid _serviceUuid =
-      fble.Uuid.parse('0000ff10-0000-1000-8000-00805f9b34fb');
+  final GlassesGattProfile profile;
+  late final fble.Uuid _serviceUuid = fble.Uuid.parse(profile.service);
+
   /// Gözlük -> telefon (notify): komut, buton, jest, pil, heartbeat.
-  static final fble.Uuid _eventCharacteristicUuid =
-      fble.Uuid.parse('0000ff11-0000-1000-8000-00805f9b34fb');
+  late final fble.Uuid _eventCharacteristicUuid = fble.Uuid.parse(profile.eventCharacteristic);
+
   /// Telefon -> gözlük (write without response): kamera akışı başlat/durdur
   /// (taslak `frm`, bkz. docs/ble_protocol.md).
-  static final fble.Uuid _controlCharacteristicUuid =
-      fble.Uuid.parse('0000ff12-0000-1000-8000-00805f9b34fb');
+  late final fble.Uuid _controlCharacteristicUuid =
+      fble.Uuid.parse(profile.controlCharacteristic);
+
   /// 247 bayt MTU -> 244 bayt yük; en uzun JSON mesaj buna sığmalı.
   static const _requestedMtu = 247;
 
   final fble.FlutterReactiveBle _ble = fble.FlutterReactiveBle();
   final PermissionExplainer? _permissions;
 
-  RealBleService({PermissionExplainer? permissions}) : _permissions = permissions;
+  RealBleService({PermissionExplainer? permissions, GlassesGattProfile? profile})
+      : _permissions = permissions,
+        profile = profile ?? GlassesGattProfile.fromDefines() {
+    if (this.profile.invalid.isNotEmpty) {
+      debugPrint('[BLE] geçersiz UUID verildi, placeholder kullanılıyor: ${this.profile.invalid}');
+    }
+    if (this.profile.isPlaceholder) debugPrint("[BLE] UUID'ler placeholder (firmware yok)");
+  }
 
   final _connectionController =
       StreamController<BleConnectionState>.broadcast();
