@@ -1,5 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:patika_app/l10n/strings_tr.dart';
 
 import 'package:patika_app/accessibility/announcement_queue.dart';
 import 'package:patika_app/ble/ble_command.dart';
@@ -151,7 +152,8 @@ void main() {
           h.speakAll(async);
           async.elapse(const Duration(seconds: 1));
         }
-        final steps = h.app.tutorial.steps;
+        // Test düzeneği varsayılanı `play` (doğrudan eylem yok): SOS cümlesi play metni.
+        final steps = Tr.tutorialStepsFor(direct: false);
         expect(h.tts.spoken.take(steps.length), steps);
         expect(h.tts.spoken.last, startsWith('Eğitim bitti'));
         expect(h.tutorialProgress.done, isTrue);

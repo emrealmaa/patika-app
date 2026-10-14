@@ -363,6 +363,19 @@ abstract final class Tr {
         'butonuna uzun basın; yedi saniye içinde iptal etmezseniz acil kişilerinize mesaj gönderilir. '
         'İptal etmek için iptal deyin ya da gözlüğe dokunun.',
   ];
+
+  /// `play` derlemesinin SOS cümlesi: bu türde acil kişilere mesaj
+  /// GİTMEZ (Faz 7 karar 1), eğitim yanıltmasın. Bilgi kipi.
+  static const tutorialSosPlay =
+      'Patika acil durum servisi değildir. Bu sürümde acil kişilere mesaj '
+      'gönderilemiyor; yardım dendiğinde ya da gözlüğün butonuna uzun '
+      'basıldığında bu söylenir. Acil durumda 112 ya da telefonun kendi acil '
+      'durum özelliği kullanılabilir.';
+
+  /// Derleme türüne göre eğitim: `direct`te [tutorialSteps] aynen, `play`de
+  /// (ve iOS'ta) son SOS adımı [tutorialSosPlay] ile değişir.
+  static List<String> tutorialStepsFor({required bool direct}) =>
+      direct ? tutorialSteps : [...tutorialSteps.take(tutorialSteps.length - 1), tutorialSosPlay];
   static const tutorialDone =
       'Eğitim bitti. Tekrar dinlemek için eğitimi başlat deyin.';
   static const startTutorial = 'Sesli eğitimi başlat';

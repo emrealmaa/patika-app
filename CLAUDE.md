@@ -515,10 +515,12 @@ gözlük uzun basışı.)
    dokunun" denir, çift dokunuş onayıyla 112 aranır. Rıza SMS'i isteğe bağlı
    ve yalnızca `direct`. Canlı konum paylaşımı kapsam dışı.
 8. **Eğitim metni:** "Patika acil durum servisi değildir." cümlesi eğitime
-   girer (SOS anlatılırken). **Bilinen tutarsızlık (TODO.md madde 17):** bu
-   cümle "acil kişilerinize mesaj gönderilir" diyor, ama bu yalnızca
-   `direct` derlemesinde doğru; `play`'de SOS "gönderilemiyor" der. `play`
-   dağıtımı gündeme gelirse eğitim metni derleme türüne göre ayrılmalı.
+   girer (SOS anlatılırken). **Çözüldü (Madde 5, 2026-10-14; TODO 17):**
+   eğitim derleme türüne göre: `direct`te "acil kişilerinize mesaj
+   gönderilir", `play`de (ve iOS'ta) `Tr.tutorialSosPlay` ("bu sürümde acil
+   kişilere mesaj gönderilemiyor ... 112 ya da telefonun kendi acil durum
+   özelliği kullanılabilir"). Tür `DirectActions.isAvailable`'dan; sorulamazsa
+   güvenli taraf (`play` metni). `test/tutorial_flavor_test.dart`.
 9. **Düşme algılama (7c): İPTAL EDİLDİ (2026-10-01)**, bkz. "Faz planı".
    SOS'u yalnızca kullanıcı tetikler; otomatik tetikleyici yok.
 10. **Uzun basış:** Doğrudan geri sayım başlatır; firmware'de 3 sn eşiği

@@ -401,6 +401,8 @@ class AppState extends ChangeNotifier implements ControlActions {
       feedback,
       tutorialProgress ?? SharedPrefsTutorialProgress(),
       onFirstRunCompleted: _afterTutorial,
+      // SOS cümlesi derleme türüne göre: `play`de "gönderilemiyor" (TODO 17).
+      isDirect: directActions.isAvailable,
     );
     voice = VoiceController(
       speech: speechInput ?? SpeechInputService(),

@@ -66,6 +66,10 @@ class Tutorial extends ChangeNotifier {
   final TutorialProgress _progress;
   final List<String> steps;
 
+  /// Derleme türü (`direct` mi): SOS cümlesi buna göre seçilir (bkz.
+  /// [Tr.tutorialStepsFor]). Verilmezse [steps] olduğu gibi okunur.
+  final Future<bool> Function()? _isDirect;
+
   /// İlk açılıştaki tur sonuna kadar dinlendiyse (durdurulmadıysa) çağrılır:
   /// konum izni gibi "kullanıcı başındayken, ekran açıkken" sorulması gereken
   /// şeyler için (bkz. CLAUDE.md Faz 6 kararları, madde 3). Tur "eğitimi
@@ -76,7 +80,21 @@ class Tutorial extends ChangeNotifier {
   int _run = 0;
 
   Tutorial(this._feedback, this._progress,
-      {this.steps = Tr.tutorialSteps, this.onFirstRunCompleted});
+      {this.steps = Tr.tutorialSteps, this.onFirstRunCompleted, Future<bool> Function()? isDirect})
+      : _isDirect = isDirect;
+
+  /// Okunacak adımlar: tür biliniyorsa ona göre, bilinmiyorsa [steps].
+  Future<List<String>> _steps() async {
+    final isDirect = _isDirect;
+    if (isDirect == null) return steps;
+    try {
+      return Tr.tutorialStepsFor(direct: await isDirect());
+    } catch (_) {
+      // Tür sorulamadıysa güvenli taraf: "gönderilemiyor" demek, gönderilir
+      // deyip göndermemekten iyidir.
+      return Tr.tutorialStepsFor(direct: false);
+    }
+  }
 
   bool get running => _running;
 
@@ -97,7 +115,9 @@ class Tutorial extends ChangeNotifier {
     _running = true;
     notifyListeners();
 
-    for (final step in steps) {
+    final playing = await _steps();
+    if (run != _run) return false;
+    for (final step in playing) {
       var spoken = false;
       for (var attempt = 0; attempt < maxAttemptsPerStep && !spoken; attempt++) {
         spoken = await _feedback.say(step);
