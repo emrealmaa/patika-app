@@ -54,6 +54,7 @@ import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
 import 'navigation/app_identity.dart';
 import 'navigation/google_client.dart';
+import 'navigation/guidance_engine.dart';
 import 'navigation/maps_config.dart';
 import 'navigation/navigation_backend.dart';
 import 'navigation/navigation_session.dart';
@@ -253,6 +254,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     PatikaCallService? callService,
     PatikaCallService Function()? realCallFactory,
     Future<void> Function(Set<MessageApp> apps)? pushWatchedApps,
+    GuidanceConfig? guidanceConfig,
+    DateTime Function()? navigationNow,
     Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
     BatteryOptimization? batteryOptimization,
     NotificationAccess? notificationAccess,
@@ -332,6 +335,8 @@ class AppState extends ChangeNotifier implements ControlActions {
       planner: planner,
       access: this.locationAccess,
       isAppVisible: isAppVisible ?? _appIsVisible,
+      config: guidanceConfig ?? const GuidanceConfig(),
+      now: navigationNow,
     );
     final navigationBackend = NavigationBackend(
       session: navigation,
@@ -758,7 +763,9 @@ class AppState extends ChangeNotifier implements ControlActions {
           voice.startListening(ListenSource.glasses);
         }
       case GlassesButton.doubleTap:
-        if (navigation.isPausedForCrossing) {
+        // Madde 8: duraklamanın ilk N saniyesinde (varsayılan 0) çift dokunuş
+        // duraklamayı bitirmez, olağan "son duyuruyu tekrarla"ya düşer.
+        if (navigation.isPausedForCrossing && !navigation.crossingDoubleTapGuarded) {
           // Karşıya geçiş duraklaması: çift dokunuş "karşıya ulaştım" demektir
           // (dört çıkış kanalından biri); "son duyuruyu tekrarla" anlamı o
           // sırada geri planda kalır (sesle "tekrar et" yine çalışır).

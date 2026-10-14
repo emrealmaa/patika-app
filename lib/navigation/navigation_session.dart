@@ -103,6 +103,19 @@ class NavigationSession extends ChangeNotifier {
   bool get active => _engine != null;
   WalkingRoute? get route => _route;
   bool get isPausedForCrossing => _engine?.isPausedForCrossing ?? false;
+
+  /// Duraklamanın başladığı an (oturum saatiyle; duraklı değilken anlamsız).
+  DateTime? _pauseStartedAt;
+
+  /// Kazara çift dokunuş koruması sürüyor mu ([GuidanceConfig.crossingDoubleTapGuard]):
+  /// duraklamanın ilk N saniyesi. Koruma 0 ise hiçbir zaman.
+  bool get crossingDoubleTapGuarded {
+    final since = _pauseStartedAt;
+    if (!isPausedForCrossing || since == null || config.crossingDoubleTapGuard <= Duration.zero) {
+      return false;
+    }
+    return _now().difference(since) < config.crossingDoubleTapGuard;
+  }
   bool get isOffRoute => _engine?.isOffRoute ?? false;
   bool get isGpsWeak => _engine?.isGpsWeak ?? false;
 
@@ -191,6 +204,7 @@ class NavigationSession extends ChangeNotifier {
     final e = _engine;
     if (e == null) return false;
     e.pauseForCrossing(_now());
+    _pauseStartedAt ??= _now();
     notifyListeners();
     return true;
   }
@@ -244,6 +258,8 @@ class NavigationSession extends ChangeNotifier {
 
   /// Motor olaylarını sırayla söyler; varışta oturumu kapatır.
   void _deliver(List<GuidanceEvent> events) {
+    if (events.any((e) => e is CrossingPoint)) _pauseStartedAt = _now();
+    if (!isPausedForCrossing) _pauseStartedAt = null;
     for (final event in events) {
       _feedback.say(describeEvent(event), priority: _priority(event));
     }

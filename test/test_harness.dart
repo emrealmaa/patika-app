@@ -9,6 +9,7 @@ import 'package:patika_app/commands/contact_resolver.dart';
 import 'package:patika_app/contacts/alias_store.dart';
 import 'package:patika_app/contacts/contact_matcher.dart';
 import 'package:patika_app/glasses_wifi/glasses_wifi_service.dart';
+import 'package:patika_app/navigation/guidance_engine.dart';
 import 'package:patika_app/navigation/place_search.dart';
 import 'package:patika_app/navigation/route_planner.dart';
 import 'package:patika_app/platform/battery_optimization.dart';
@@ -107,6 +108,8 @@ class Harness {
     Future<bool> Function({required bool ask})? ensurePhoneStatePermission,
     BatteryOptimization? batteryOptimization,
     Future<void> Function(Set<MessageApp> apps)? pushWatchedApps,
+    GuidanceConfig? guidanceConfig,
+    DateTime Function()? navigationNow,
   })  : settings = SettingsStore(MemorySettingsPersistence()),
         directActions = direct {
     // AppState kurulurken (açılış guard'ı ilk mikro-görevde çalışır) hazır olsun.
@@ -123,6 +126,8 @@ class Harness {
       ensurePhoneStatePermission: ensurePhoneStatePermission,
       batteryOptimization: batteryOptimization ?? const NoBatteryOptimization(),
       pushWatchedApps: pushWatchedApps ?? (_) async {},
+      guidanceConfig: guidanceConfig,
+      navigationNow: navigationNow,
       speech: tts,
       speechInput: speech,
       haptics: haptics,

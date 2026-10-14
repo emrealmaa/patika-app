@@ -170,6 +170,14 @@ class GuidanceConfig {
   /// Geçişe özgü üst süre kaynağı (yoksa null: sabit [crossingMaxPause]).
   final CrossingSignalTiming? crossingSignalTiming;
 
+  /// Madde 8: duraklama başladıktan sonra bu süre içinde gelen gözlük çift
+  /// dokunuşu duraklamayı BİTİRMEZ (çantaya çarpma gibi kazara dokunuşa
+  /// karşı); o sırada çift dokunuş olağan anlamına (son duyuruyu tekrarla)
+  /// döner, yani kullanıcı hâlâ duraklamada olduğunu duyar. "geçtim" ve
+  /// konum çıkışı etkilenmez. **Varsayılan 0 = koruma yok (eski davranış)**;
+  /// değer kullanıcı kararı.
+  final Duration crossingDoubleTapGuard;
+
   /// Yön teyidi (bkz. CLAUDE.md Faz 6 kararları, madde 4). Tek satırla
   /// kapatılır: `directionCheck: false`. Aşağıdakiler varsayım, gerçek
   /// yürüyüşte ayarlanacak: en az [directionMinWalk] metre yürünmüş ve bu
@@ -208,6 +216,7 @@ class GuidanceConfig {
     this.crossingTimeoutAction = CrossingTimeoutAction.resume,
     this.crossingMaxReminders = 3,
     this.crossingSignalTiming,
+    this.crossingDoubleTapGuard = Duration.zero,
     this.directionCheck = true,
     this.directionMinWalk = 15,
     this.directionMaxAccuracy = 10,

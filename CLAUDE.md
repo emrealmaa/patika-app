@@ -309,6 +309,11 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   sırada "son duyuruyu tekrarla" anlamını geçici olarak yitirir
   (`AppState._onButton`). Kullanıcıyı şaşırtıyor mu? Kavşakta yanlışlıkla
   çift dokunuş (ör. çantaya çarpma) navigasyonu erken devam ettiriyor mu?
+  **Madde 8 (2026-10-14):** `GuidanceConfig.crossingDoubleTapGuard`: duraklamanın
+  ilk N sn'sinde çift dokunuş duraklamayı bitirmez, "son duyuruyu tekrarla"ya
+  düşer (kullanıcı duraklamada olduğunu duyar); tek dokunuş (dinleme/SOS),
+  uzun basış (SOS), "geçtim" ve konum çıkışı etkilenmez (testle kilitli).
+  **Varsayılan 0 = koruma yok (eski davranış)**; değer KULLANICI KARARI.
 - [ ] **Faz 6:** Uygulamanın "ön planda mı" tespiti (`AppLifecycleState.resumed`):
   Hızlı Ayarlar karosu, gözlük ve kilitli ekrandan başlatmada doğru cevap
   veriyor mu (izin yokken yedek akış bunun üstüne kurulu).
