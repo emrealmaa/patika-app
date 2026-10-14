@@ -90,6 +90,13 @@ class SimulatedBleService with GlassesEventStreams implements PatikaBleService {
   void injectGesture(GlassesGesture gesture) =>
       dispatchGlassesMessage(GestureMessage(gesture));
 
+  /// Simüle gözlüğün SoftAP adı (sahte; parola da sahte).
+  static const simulatedWifi = GlassesWifiCredentials('Patika-SIM-0001', 'simulasyon-0001');
+
+  /// Gözlüğün SoftAP bilgisini göndermesini taklit eder (taslak `wifi` mesajı).
+  void injectWifiCredentials([GlassesWifiCredentials credentials = simulatedWifi]) =>
+      dispatchGlassesMessage(WifiCredentialsMessage(credentials));
+
   void setBattery(int percent) {
     _battery = percent.clamp(0, 100);
     if (_state == BleConnectionState.connected) {

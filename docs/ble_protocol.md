@@ -43,6 +43,7 @@ Gözlük **peripheral**, telefon **central**.
 | `gst` | `g`: `nod2` | IMU jesti (çift baş sallama) | `{"t":"gst","g":"nod2"}` |
 | `batt` | `v`: 0–100 (int) | Bağlanınca bir kez, sonra her %1 değişimde | `{"t":"batt","v":76}` |
 | `hb` | `seq` (int, ops.) | **Her 2 saniyede bir**, bağlı olduğu sürece | `{"t":"hb","seq":1532}` |
+| `wifi` | `ssid` (str, 1–32 bayt), `pass` (str, 8–63, ops.) | **TASLAK, firmware'de doğrulanacak.** SoftAP açılınca (bkz. §7) | `{"t":"wifi","ssid":"Patika-1A2B","pass":"..."}` |
 
 `intent` değerleri Python tarafındaki `intent_classifier.py` ile aynıdır:
 `ARA`, `MESAJ`, `SAAT`, `OKU`, `GECIS_MODU`, `NAVİGASYON`, `BİLİNMİYOR`.
@@ -138,7 +139,7 @@ Sonuçlar:
 - Gerçek UUID'ler (firmware ile birlikte).
 - Engel earcon'u (§5): firmware'de doğrulama, zon susturma mesajı biçimi, eşik değerleri.
 - `frm` başlat/durdur mesajının biçimi ve Wi-Fi bilgisinin (SSID/parola,
-  IP) nasıl paylaşılacağı (§7). Firmware'de netleşecek.
+  IP) paylaşımı (§7; taslak `wifi` mesajı §2.1). Firmware'de netleşecek.
 - Gözlük pil yüzdesinin nasıl hesaplanacağı (voltaj eğrisi) firmware'e ait.
 - Protokol sürümü alanı (`"v"`) şimdilik yok. İlk kırıcı değişiklikte
   bağlanınca `{"t":"hello","v":2}` eklenmesi öneriliyor.
@@ -159,8 +160,22 @@ netleşecek.**
   komutudur. `{"t":"frm","on":true}` SoftAP'ı ve akışı açar, `on:false`
   kapatır. SoftAP bilgisinin (SSID/parola veya sabit adres) BLE üzerinden mi
   yoksa sabit mi paylaşılacağı açık.
-- **Telefon tarafı risk:** Android, internetsiz bir Wi-Fi'ye bağlanırken
-  mobil veriyi bırakabilir; Routes/Places gibi internet isteyen çağrılar bu
-  yüzden kırılabilir. Uygulamaya özel ağ bağlama (`WifiNetworkSpecifier`)
-  ile akış SoftAP'tan, diğer istekler mobil veriden gitmelidir. Cihazda
-  doğrulanacak (bkz. CLAUDE.md "Bekleyen telefon testleri").
+- **SoftAP bilgisi (taslak `wifi` mesajı, §2.1):** Gözlük SoftAP'ı açınca
+  SSID ve (varsa) WPA2 parolasını BLE olay karakteristiğinden `wifi`
+  mesajıyla gönderir. Uygulama bilgiyi saklar ama **kendiliğinden
+  bağlanmaz**; bağlantı kamera akışı istenince kurulur (sistem onay penceresi
+  beklenmedik anda açılmasın). Kurala uymayan mesaj (boş/uzun SSID, 8–63
+  dışı parola) atlanır. Parola günlüğe ve geçmişe yazılmaz. Sabit SSID/parola
+  mı yoksa her açılışta üretilen mi olacağı firmware'de netleşecek; mesaj 244
+  bayta sığmalı. Uygulama: `lib/ble/glasses_protocol.dart` (`WifiCredentialsMessage`).
+- **Telefon tarafı:** Android, internetsiz bir Wi-Fi'ye normal bağlanınca
+  mobil veriyi bırakabilir; Routes/Places gibi internet isteyen çağrılar
+  kırılırdı. Bu yüzden telefon SoftAP'a **uygulamaya özel** bağlanır
+  (`ConnectivityManager.requestNetwork` + `WifiNetworkSpecifier`, API 29+,
+  `android/.../GlassesNetwork.kt`, kanal `patika/glasses_wifi`): sistemin
+  varsayılan ağı değişmez, diğer tüm istekler mobil veriden gider.
+  `bindProcessToNetwork` kullanılmaz. Gözlüğe giden istekler (MJPEG,
+  WebSocket) native tarafta bu ağın `Network` nesnesi üzerinden yapılır.
+  Android ilk bağlanmada bir onay penceresi gösterir; öncesinde uygulama
+  sesle yönlendirir. Android 10 altında özellik yoktur ve bu söylenir.
+  Cihazda doğrulanacak (bkz. CLAUDE.md "Bekleyen telefon testleri").

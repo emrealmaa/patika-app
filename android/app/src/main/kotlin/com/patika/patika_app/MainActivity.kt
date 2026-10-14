@@ -89,6 +89,7 @@ class MainActivity : FlutterActivity() {
         AudioModeProbe(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         BatteryProbe(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         EmergencyContactsStorage(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
+        GlassesNetwork.get(applicationContext).attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCH_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

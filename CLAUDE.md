@@ -146,7 +146,21 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   akış SoftAP'tan, diğer istekler mobil veriden gitmeli. **Samsung One UI'da
   (Galaxy S24 FE) doğrulanacak**; One UI'ın "ağ zayıfsa mobil veriye geç"
   (akıllı ağ değiştirici) davranışı ve internetsiz Wi-Fi uyarısı da
-  bakılacak. Henüz kod yok, gözlük Wi-Fi'ı hazır olunca.
+  bakılacak. **Kod yazıldı (Madde 1, `GlassesNetwork.kt`,
+  `lib/glasses_wifi/`), cihazda hiç denenmedi.** Gözlük yokken ikinci bir
+  telefonun internetsiz hotspot'u ile denenebilir: Test Modu > "Gözlük
+  kamerası Wi-Fi bağlantısı" (gerçek modda SSID/parola şimdilik yalnızca
+  BLE `wifi` mesajından gelir). Bakılacaklar: (a) bağlıyken
+  navigasyon (Routes/Places) ve Gemini mobil veriden çalışıyor mu;
+  (b) One UI akıllı ağ değiştirici / "internetsiz Wi-Fi" uyarısı akışı
+  bozuyor mu, varsayılan ağ gerçekten değişmiyor mu; (c) sistem onay
+  penceresi TalkBack ile kullanılabiliyor mu, sesli yönlendirme pencereden
+  önce bitiyor mu; (d) reddedince ve "ağ bulunamadı" ile kapanınca
+  `onUnavailable` geliyor mu (`userDeclined`); (e) gözlük kapanınca
+  `onLost` ve geri açılınca onaysız `onAvailable` (otomatik yeniden
+  bağlanma) geliyor mu; (f) Android 13+ yakındaki cihazlar izni penceresi
+  ve Android 10-12'de ek izin (konum) gerekip gerekmediği; (g) Wi-Fi
+  kapalıyken "Wi-Fi kapalı" duyurusu.
 
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - konum, ekran kilitli ve cepteyken:**
   ekran kilitli, telefon cepte, **gözlük uzun basışıyla** tetiklenen SOS'ta

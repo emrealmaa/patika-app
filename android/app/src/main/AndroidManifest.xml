@@ -33,6 +33,15 @@
          modunda Bluetooth izni istenmediği için gerekli; gözlüğün Wi-Fi SoftAP
          kamera akışına bağlanırken de kullanılacak. -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <!-- Gözlük SoftAP'ına uygulamaya özel bağlantı (GlassesNetwork.kt,
+         WifiNetworkSpecifier). Wi-Fi açık mı (ACCESS_WIFI_STATE) ve ağ isteği
+         (CHANGE_WIFI_STATE) normal izinlerdir, onay penceresi yok. Android 13+
+         yakındaki Wi-Fi cihazları izni çalışma zamanında, ilk bağlanmada sesli
+         açıklamayla istenir; konum için KULLANILMAZ (neverForLocation). -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application

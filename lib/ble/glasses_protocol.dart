@@ -50,6 +50,33 @@ class HeartbeatMessage extends GlassesMessage {
   const HeartbeatMessage([this.seq]);
 }
 
+/// Gözlüğün Wi-Fi SoftAP bilgisi (kamera akışı için, bkz. ble_protocol.md §7).
+/// **TASLAK, firmware'de doğrulanacak.** Parola günlüğe/geçmişe yazılmaz.
+class GlassesWifiCredentials {
+  final String ssid;
+
+  /// Açık (parolasız) SoftAP'ta null.
+  final String? passphrase;
+
+  const GlassesWifiCredentials(this.ssid, [this.passphrase]);
+
+  @override
+  bool operator ==(Object other) =>
+      other is GlassesWifiCredentials && other.ssid == ssid && other.passphrase == passphrase;
+
+  @override
+  int get hashCode => Object.hash(ssid, passphrase);
+
+  /// Parola bilerek gösterilmez.
+  @override
+  String toString() => 'GlassesWifiCredentials($ssid)';
+}
+
+class WifiCredentialsMessage extends GlassesMessage {
+  final GlassesWifiCredentials credentials;
+  const WifiCredentialsMessage(this.credentials);
+}
+
 /// Gözlük <-> telefon BLE mesaj formatı (bkz. docs/ble_protocol.md).
 ///
 /// Her BLE bildirimi/yazması tek bir UTF-8 JSON nesnesi; `"t"` alanı mesaj
@@ -89,6 +116,8 @@ abstract final class GlassesProtocol {
       case 'hb':
         final seq = json['seq'];
         return HeartbeatMessage(seq is int ? seq : null);
+      case 'wifi':
+        return _wifi(json);
       case null:
         // İlk taslaktaki "t"siz format ({"intent": ..., "entity": ...})
         // geriye dönük uyumluluk için hâlâ komut sayılıyor.
@@ -105,6 +134,17 @@ abstract final class GlassesProtocol {
       intent is String ? intent : 'BİLİNMİYOR',
       entity is String ? entity : null,
     ));
+  }
+
+  /// `{"t":"wifi","ssid":"Patika-1A2B","pass":"..."}` (taslak). SSID 1-32
+  /// bayt; parola varsa WPA2 kuralı 8-63 karakter. Kurala uymayan mesaj
+  /// atlanır (sistem ağ isteği zaten reddederdi).
+  static WifiCredentialsMessage? _wifi(Map<String, dynamic> json) {
+    final ssid = json['ssid'];
+    final pass = json['pass'];
+    if (ssid is! String || ssid.isEmpty || utf8.encode(ssid).length > 32) return null;
+    if (pass != null && (pass is! String || pass.length < 8 || pass.length > 63)) return null;
+    return WifiCredentialsMessage(GlassesWifiCredentials(ssid, pass as String?));
   }
 
   static T? _byWire<T>(List<T> values, Object? wire, String Function(T) wireOf) {

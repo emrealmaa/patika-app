@@ -26,6 +26,10 @@ abstract class PatikaBleService {
   /// Gözlüğün "hayattayım" sinyali (bkz. GlassesProtocol.heartbeatInterval).
   Stream<void> get heartbeats;
 
+  /// Gözlüğün Wi-Fi SoftAP bilgisi (taslak `wifi` mesajı, bkz.
+  /// `lib/glasses_wifi/`). Parola içerir: günlüğe yazılmaz.
+  Stream<GlassesWifiCredentials> get wifiCredentials;
+
   /// Taramada bulunan cihazların adı/id'si (bağlanmadan önce listelemek için).
   Stream<List<DiscoveredDevice>> get discoveredDevices;
 
@@ -53,7 +57,9 @@ mixin GlassesEventStreams {
   final _gestureController = StreamController<GlassesGesture>.broadcast();
   final _batteryController = StreamController<int>.broadcast();
   final _heartbeatController = StreamController<void>.broadcast();
+  final _wifiController = StreamController<GlassesWifiCredentials>.broadcast();
 
+  Stream<GlassesWifiCredentials> get wifiCredentials => _wifiController.stream;
   Stream<BleCommand> get commands => _commandController.stream;
   Stream<GlassesButton> get buttonEvents => _buttonController.stream;
   Stream<GlassesGesture> get gestureEvents => _gestureController.stream;
@@ -73,6 +79,8 @@ mixin GlassesEventStreams {
         _batteryController.add(percent);
       case HeartbeatMessage():
         _heartbeatController.add(null);
+      case WifiCredentialsMessage(:final credentials):
+        _wifiController.add(credentials);
     }
   }
 
@@ -82,5 +90,6 @@ mixin GlassesEventStreams {
     _gestureController.close();
     _batteryController.close();
     _heartbeatController.close();
+    _wifiController.close();
   }
 }

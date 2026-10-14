@@ -9,6 +9,7 @@ import '../ble/glasses_protocol.dart';
 import '../battery/phone_battery.dart';
 import '../ble/simulated_ble_service.dart';
 import '../commands/log_entry.dart';
+import '../glasses_wifi/glasses_wifi_service.dart';
 import '../l10n/strings_tr.dart';
 import '../navigation/guidance_speech.dart';
 import '../navigation/navigation_session.dart';
@@ -148,6 +149,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
           _IncomingCallSimulationSection(simulator: callSim, ringing: state.ringingCall),
         ],
         const SizedBox(height: 24),
+        _GlassesWifiSection(state: state),
+        const SizedBox(height: 24),
         _PhoneBatterySimulationSection(state: state),
         const SizedBox(height: 24),
         _NavigationSimulationSection(state: state),
@@ -260,6 +263,106 @@ class _GlassesSimulationSectionState extends State<_GlassesSimulationSection> {
           onChanged: (v) => setState(() => _sim.setReachable(!v)),
         ),
       ],
+    );
+  }
+}
+
+/// Gözlük kamerası Wi-Fi bağlantısı (uygulamaya özel ağ). Gözlük simülasyondayken
+/// ağ bilgisi, onay reddi ve kopma/geri gelme taklit edilir; gerçek modda
+/// "bağlan" gerçek sistem onay penceresini açar; gözlük yokken SSID/parola elle
+/// girilebilir (ör. ikinci bir telefonun internetsiz hotspot'u).
+class _GlassesWifiSection extends StatefulWidget {
+  final AppState state;
+
+  const _GlassesWifiSection({required this.state});
+
+  @override
+  State<_GlassesWifiSection> createState() => _GlassesWifiSectionState();
+}
+
+class _GlassesWifiSectionState extends State<_GlassesWifiSection> {
+  final _ssid = TextEditingController();
+  final _pass = TextEditingController();
+
+  @override
+  void dispose() {
+    _ssid.dispose();
+    _pass.dispose();
+    super.dispose();
+  }
+
+  /// Elle girilen bilgi varsa onu kullanır, sonra bağlanır.
+  void _connect() {
+    final ssid = _ssid.text.trim();
+    if (ssid.isNotEmpty) {
+      final pass = _pass.text;
+      widget.state.glassesWifi
+          .updateCredentials(GlassesWifiCredentials(ssid, pass.isEmpty ? null : pass));
+    }
+    widget.state.glassesWifi.connect();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final wifi = state.glassesWifi;
+    final sim = state.wifiSimulator;
+    final bleSim = state.simulator;
+    return ValueListenableBuilder<GlassesWifiStatus>(
+      valueListenable: wifi.status,
+      builder: (context, status, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            container: true,
+            child: Text(Tr.testGlassesWifi, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Semantics(container: true, child: const Text(Tr.testGlassesWifiHint)),
+          const SizedBox(height: 8),
+          Semantics(
+            container: true,
+            liveRegion: true,
+            child: Text(Tr.testGlassesWifiState(Tr.glassesWifiStateName(status.state.name))),
+          ),
+          const SizedBox(height: 8),
+          if (bleSim != null) ...[
+            OutlinedButton(
+              onPressed: bleSim.injectWifiCredentials,
+              child: const Text(Tr.testGlassesWifiSendCredentials),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (bleSim == null) ...[
+            TextField(
+              controller: _ssid,
+              decoration: const InputDecoration(labelText: Tr.testGlassesWifiSsid),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _pass,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: Tr.testGlassesWifiPass),
+            ),
+            const SizedBox(height: 8),
+          ],
+          OutlinedButton(onPressed: _connect, child: const Text(Tr.testGlassesWifiConnect)),
+          const SizedBox(height: 8),
+          OutlinedButton(
+              onPressed: wifi.disconnect, child: const Text(Tr.testGlassesWifiDisconnect)),
+          if (sim != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => sim.declineNext = true,
+              child: const Text(Tr.testGlassesWifiDecline),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: sim.drop, child: const Text(Tr.testGlassesWifiDrop)),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: sim.restore, child: const Text(Tr.testGlassesWifiRestore)),
+          ],
+        ],
+      ),
     );
   }
 }

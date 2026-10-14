@@ -69,9 +69,19 @@ göre veriliyor.
   Kamera MJPEG (HTTP), ses ve kontrol WebSocket ile akar. Tespit ve karar
   mantığının **tamamı telefonda** çalışır. Henüz kodlanmadı; `frm`
   (akışı başlat/durdur) taslak (ble_protocol.md §7).
-- **Ağ riski:** SoftAP internetsizdir. Routes/Places gibi çağrıların mobil
-  veriden gitmesi için uygulamaya özel ağ bağlama (`WifiNetworkSpecifier`)
-  gerekecek; cihazda doğrulanacak.
+- **Ağ riski:** SoftAP internetsizdir. Telefon ona **uygulamaya özel**
+  bağlanır (`GlassesWifiController` -> `GlassesWifiService`, gerçek:
+  `GlassesNetwork.kt`, `WifiNetworkSpecifier`, kanal `patika/glasses_wifi`):
+  varsayılan ağ değişmez, Routes/Places/Gemini mobil veriden gider.
+  `bindProcessToNetwork` yok (testle kilitli); `lib/navigation/` gözlük ağı
+  kodunu hiç görmez (testle kilitli). SSID/parola gözlükten taslak BLE
+  `wifi` mesajıyla gelir; bağlantı yalnızca açıkça istenince kurulur.
+  Durumlar: `idle`, `requesting`, `connected`, `lost`, `unavailable`
+  (+ neden: Android 10 altı, Wi-Fi kapalı, izin, hata), `userDeclined`.
+  Her sonuç söylenir; kopma `high` öncelikte; SOS araması sürerken duyuru
+  bekletilir. Android 13+ yakındaki Wi-Fi cihazları izni (`neverForLocation`)
+  ilk bağlanmada sesli açıklamayla istenir. Simülasyon (Test Modu):
+  `SimulatedGlassesWifiService`. Cihazda doğrulanacak.
 
 ## İlkeler
 
@@ -138,6 +148,7 @@ geriler, uygulama çökmez.
 | Rehber | İlk ARA / MESAJ / NUMARA'da |
 | Bluetooth (+ API ≤30 konum) | Gözlük taraması / bağlanma |
 | Arama, SMS (yalnızca `direct`) | İlk doğrudan arama / SMS'te |
+| Yakındaki Wi-Fi cihazları (Android 13+, `neverForLocation`) | İlk gözlük kamerası Wi-Fi bağlantısında |
 
 Testlerde izin kontrolleri enjekte edilir (`AppState`'in
 `ensureCallPermission` / `ensureSmsPermission` parametreleri), gerçek

@@ -44,6 +44,9 @@ import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'commands/voice_intent_classifier.dart';
 import 'contacts/alias_store.dart';
+import 'glasses_wifi/glasses_wifi_controller.dart';
+import 'glasses_wifi/glasses_wifi_service.dart';
+import 'glasses_wifi/simulated_glasses_wifi_service.dart';
 import 'l10n/strings_tr.dart';
 import 'l10n/turkish_suffix.dart';
 import 'navigation/app_identity.dart';
@@ -125,6 +128,20 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// Yalnızca `direct` derlemesinde gönderir; `play`'de "desteklenmiyor" der.
   late final SosController sos;
   late final EmergencyContactStore emergencyContacts;
+
+  /// Gözlük kamerası Wi-Fi'ı (SoftAP, uygulamaya özel ağ): internet istekleri
+  /// varsayılan ağdan (mobil veri) gitmeye devam eder. Bkz. `lib/glasses_wifi/`.
+  late final GlassesWifiController glassesWifi;
+  final GlassesWifiService Function(bool simulated) _glassesWifiFactory;
+
+  static GlassesWifiService _defaultGlassesWifi(bool simulated) =>
+      simulated ? SimulatedGlassesWifiService() : MethodChannelGlassesWifiService();
+
+  /// Test Modu: Wi-Fi simülasyonu (gözlük simülasyondayken dolu).
+  SimulatedGlassesWifiService? get wifiSimulator {
+    final s = glassesWifi.service;
+    return s is SimulatedGlassesWifiService ? s : null;
+  }
 
   /// Test Modu'nun navigasyon simülasyonu için: yalnızca simülasyon
   /// oturumları bunu kullanır, gerçek konum akmaz.
@@ -220,7 +237,9 @@ class AppState extends ChangeNotifier implements ControlActions {
     bool autoStart = true,
     bool? simulated,
     PatikaBleService Function()? realBleFactory,
+    GlassesWifiService Function(bool simulated)? glassesWifiFactory,
   })  : _realBleFactory = realBleFactory,
+        _glassesWifiFactory = glassesWifiFactory ?? _defaultGlassesWifi,
         settings = settings ?? SettingsStore(),
         _speech = speech ?? FlutterTtsOutput(),
         _background = background ?? BackgroundService(),
@@ -384,6 +403,18 @@ class AppState extends ChangeNotifier implements ControlActions {
     sos.status.addListener(notifyListeners);
     // SOS bitince (arama sürmüyorsa) bekleyen pil uyarıları söylenir.
     sos.status.addListener(_flushBattery);
+
+    isSimulated = simulated ?? defaultSimulated();
+    // Gözlük kamerası Wi-Fi'ı (SoftAP): gözlük simülasyondaysa ağı da simüle.
+    // SOS araması sürerken duyurusu bekletilir (arama sırasında konuşma yok).
+    glassesWifi = GlassesWifiController(
+      feedback: feedback,
+      service: _glassesWifiFactory(isSimulated),
+      ensurePermission: () =>
+          permissions.ensure(Permission.nearbyWifiDevices, Tr.glassesWifiPermissionWhy),
+      holdSpeech: () => sos.callInProgress,
+    );
+    sos.status.addListener(glassesWifi.flushHeld);
     voice.onSosSpeech = _onSosSpeech;
 
     // Pil uyarıları (Faz 7b): yalnızca uyarır, hiçbir şeyi durdurmaz.
@@ -401,7 +432,6 @@ class AppState extends ChangeNotifier implements ControlActions {
     this.loudMessagesNotice = loudMessagesNotice ?? SharedPrefsLoudMessagesNotice();
     _messageSub = this.incomingMessages.messages.listen(_onIncomingMessage);
 
-    isSimulated = simulated ?? defaultSimulated();
     _attach(isSimulated ? SimulatedBleService() : _realBle());
     if (autoStart) start();
   }
@@ -497,7 +527,8 @@ class AppState extends ChangeNotifier implements ControlActions {
         notifyListeners();
       }))
       ..add(service.buttonEvents.listen(_onButton))
-      ..add(service.gestureEvents.listen(_onGesture));
+      ..add(service.gestureEvents.listen(_onGesture))
+      ..add(service.wifiCredentials.listen(glassesWifi.updateCredentials));
   }
 
   Future<void> _detach() async {
@@ -825,6 +856,12 @@ class AppState extends ChangeNotifier implements ControlActions {
     await _detach();
 
     isSimulated = simulated;
+    final oldWifi = glassesWifi.service;
+    await oldWifi.disconnect();
+    glassesWifi
+      ..credentials = null
+      ..useService(_glassesWifiFactory(simulated));
+    oldWifi.dispose();
     devices = [];
     _clearGlassesBattery();
     connectionState = BleConnectionState.disconnected;
@@ -858,6 +895,9 @@ class AppState extends ChangeNotifier implements ControlActions {
   void dispose() {
     _batteryTimer?.cancel();
     sos.status.removeListener(_flushBattery);
+    sos.status.removeListener(glassesWifi.flushHeld);
+    glassesWifi.service.dispose();
+    glassesWifi.dispose();
     sos.status.removeListener(notifyListeners);
     sos.dispose();
     voice.dispose();

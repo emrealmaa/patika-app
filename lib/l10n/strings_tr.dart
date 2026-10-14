@@ -758,6 +758,54 @@ abstract final class Tr {
   static String sosHist112Confirmed(bool placed) =>
       placed ? '112 çift dokunuşla onaylandı ve arandı' : '112 onaylandı ama aranamadı';
 
+  // --- Gözlük kamerası: Wi-Fi bağlantısı ---------------------------------------
+  // Bilgi kipi, emir yok. test/glasses_wifi_test.dart bu bölümü yasaklı
+  // kelimeler için tarar. Ağ adı ve parola hiçbir zaman söylenmez.
+  static const glassesCameraConnecting = 'Gözlük kamerasına bağlanılıyor';
+  static const glassesCameraApprovalHint =
+      'Telefon şimdi gözlük ağı için bir onay penceresi gösterecek. '
+      'Pencerede gözlüğün adı ve bir Bağlan düğmesi var.';
+  static const glassesCameraConnected = 'Gözlük kamerası bağlandı';
+  static const glassesCameraLost = 'Gözlük kamerası bağlantısı koptu';
+  static const glassesCameraClosed = 'Gözlük kamerası bağlantısı kapatıldı';
+  static const glassesCameraDeclined =
+      'Gözlük ağına bağlanılmadı. Onay penceresi kapandı ya da gözlük ağı bulunamadı. '
+      'Bağlantı yeniden denenebilir.';
+  static const glassesCameraWifiOff =
+      'Telefonun Wi-Fi\'ı kapalı, gözlük kamerasına bağlanılamıyor';
+  static const glassesCameraUnsupported =
+      'Bu telefonda gözlük kamerasına bağlanılamıyor, Android 10 ya da üstü gerekiyor';
+  static const glassesCameraError = 'Gözlük kamerasına bağlanılamadı';
+  static const glassesCameraNoCredentials = 'Gözlük ağ bilgisini henüz göndermedi';
+  static const glassesCameraPermissionDenied =
+      'İzin verilmediği için gözlük kamerasına bağlanılamıyor';
+  static const glassesWifiPermissionWhy =
+      'Gözlük kamerasına bağlanabilmem için yakındaki cihazlar iznini isteyeceğim. '
+      'Bu izin konumunuzu kullanmaz.';
+
+  // --- Test Modu: gözlük kamerası Wi-Fi'ı --------------------------------------
+  static const testGlassesWifi = 'Gözlük kamerası Wi-Fi bağlantısı';
+  static const testGlassesWifiHint =
+      'Gözlük ağına uygulamaya özel bağlantı. İnternet istekleri mobil veriden sürer.';
+  static const testGlassesWifiSendCredentials = 'Gözlük ağ bilgisini göndersin';
+  static const testGlassesWifiConnect = 'Gözlük ağına bağlan';
+  static const testGlassesWifiSsid = 'Ağ adı (gözlük yokken elle)';
+  static const testGlassesWifiPass = 'Ağ parolası (boşsa parolasız)';
+  static const testGlassesWifiDisconnect = 'Gözlük ağı bağlantısını kapat';
+  static const testGlassesWifiDecline = 'Sonraki denemede onay reddedilsin';
+  static const testGlassesWifiDrop = 'Bağlantı kopsun';
+  static const testGlassesWifiRestore = 'Bağlantı geri gelsin';
+  static String testGlassesWifiState(String state) => 'Wi-Fi durumu: $state';
+  static String glassesWifiStateName(String name) => switch (name) {
+        'idle' => 'bağlı değil',
+        'requesting' => 'bağlanılıyor',
+        'connected' => 'bağlı',
+        'lost' => 'koptu',
+        'unavailable' => 'kullanılamıyor',
+        'userDeclined' => 'onaylanmadı',
+        _ => name,
+      };
+
   // --- Arayüz: ortak bileşenler ------------------------------------------------
   static const detailShow = 'Ayrıntıyı göster';
   static const detailHide = 'Ayrıntıyı gizle';
