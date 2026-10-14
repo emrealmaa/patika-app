@@ -44,6 +44,9 @@ import 'commands/sent_messages.dart';
 import 'commands/url_opener.dart';
 import 'commands/voice_intent_classifier.dart';
 import 'contacts/alias_store.dart';
+import 'camera/camera_config.dart';
+import 'camera/mjpeg_frame_source.dart';
+import 'camera/mjpeg_transport.dart';
 import 'glasses_wifi/glasses_wifi_controller.dart';
 import 'glasses_wifi/glasses_wifi_service.dart';
 import 'glasses_wifi/simulated_glasses_wifi_service.dart';
@@ -138,6 +141,15 @@ class AppState extends ChangeNotifier implements ControlActions {
       simulated ? SimulatedGlassesWifiService() : MethodChannelGlassesWifiService();
 
   /// Test Modu: Wi-Fi simülasyonu (gözlük simülasyondayken dolu).
+  /// Gözlük kamerası (Madde 2): `frm` + gözlük ağı + MJPEG. Yalnızca
+  /// açıkça başlatılınca çalışır; tespit/karar mantığı henüz yok.
+  late final MjpegFrameSource camera;
+
+  /// Simülasyonda MJPEG baytları buradan gelir (Test Modu "akış donsun").
+  late final SimulatedMjpegTransport cameraSimTransport = SimulatedMjpegTransport(
+    networkUp: () => glassesWifi.status.value.state == GlassesWifiState.connected,
+  );
+
   SimulatedGlassesWifiService? get wifiSimulator {
     final s = glassesWifi.service;
     return s is SimulatedGlassesWifiService ? s : null;
@@ -415,6 +427,15 @@ class AppState extends ChangeNotifier implements ControlActions {
       holdSpeech: () => sos.callInProgress,
     );
     sos.status.addListener(glassesWifi.flushHeld);
+    camera = MjpegFrameSource(
+      config: const CameraConfig(),
+      sendFrm: (on) => bleService.setCameraStream(on),
+      wifi: glassesWifi,
+      transport: () => isSimulated ? cameraSimTransport : const NativeMjpegTransport(),
+      feedback: feedback,
+      holdSpeech: () => sos.callInProgress,
+    );
+    sos.status.addListener(camera.flushHeld);
     voice.onSosSpeech = _onSosSpeech;
 
     // Pil uyarıları (Faz 7b): yalnızca uyarır, hiçbir şeyi durdurmaz.
@@ -853,6 +874,8 @@ class AppState extends ChangeNotifier implements ControlActions {
   /// otomatik bağlanma denenir.
   Future<void> toggleMode(bool simulated) async {
     if (simulated == isSimulated) return;
+    // Kamera önce: `frm off` hâlâ bağlı olan eski gözlüğe gitsin.
+    await camera.stop();
     await _detach();
 
     isSimulated = simulated;
@@ -896,6 +919,8 @@ class AppState extends ChangeNotifier implements ControlActions {
     _batteryTimer?.cancel();
     sos.status.removeListener(_flushBattery);
     sos.status.removeListener(glassesWifi.flushHeld);
+    sos.status.removeListener(camera.flushHeld);
+    camera.dispose();
     glassesWifi.service.dispose();
     glassesWifi.dispose();
     sos.status.removeListener(notifyListeners);

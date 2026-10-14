@@ -8,6 +8,7 @@ import '../app_state.dart';
 import '../ble/glasses_protocol.dart';
 import '../battery/phone_battery.dart';
 import '../ble/simulated_ble_service.dart';
+import '../camera/frame_source.dart';
 import '../commands/log_entry.dart';
 import '../glasses_wifi/glasses_wifi_service.dart';
 import '../l10n/strings_tr.dart';
@@ -150,6 +151,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
         ],
         const SizedBox(height: 24),
         _GlassesWifiSection(state: state),
+        const SizedBox(height: 24),
+        _CameraStreamSection(state: state),
         const SizedBox(height: 24),
         _PhoneBatterySimulationSection(state: state),
         const SizedBox(height: 24),
@@ -361,6 +364,58 @@ class _GlassesWifiSectionState extends State<_GlassesWifiSection> {
             const SizedBox(height: 8),
             OutlinedButton(onPressed: sim.restore, child: const Text(Tr.testGlassesWifiRestore)),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Gözlük kamerası akışı (Madde 2): `frm on` -> Wi-Fi -> MJPEG -> kareler.
+/// Simülasyonda sentetik kareler gerçek MJPEG baytı olarak üretilir; sayaçlar
+/// teslim edilen, atılan (tazelik/kare hızı) ve bozuk kareleri gösterir.
+class _CameraStreamSection extends StatelessWidget {
+  final AppState state;
+
+  const _CameraStreamSection({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = state.camera;
+    final sim = state.isSimulated ? state.cameraSimTransport : null;
+    return ValueListenableBuilder<FrameSourceState>(
+      valueListenable: camera.state,
+      builder: (context, cameraState, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            container: true,
+            child: Text(Tr.testCameraTitle, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          StreamBuilder<Object?>(
+            stream: camera.frames,
+            builder: (context, _) => Semantics(
+              container: true,
+              child: Text(Tr.testCameraStats(
+                Tr.cameraStateName(cameraState.name),
+                camera.delivered,
+                camera.latest.dropped + camera.throttled,
+                camera.parseErrors,
+              )),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(onPressed: camera.start, child: const Text(Tr.testCameraStart)),
+          const SizedBox(height: 8),
+          OutlinedButton(onPressed: camera.stop, child: const Text(Tr.testCameraStop)),
+          if (sim != null)
+            StatefulBuilder(
+              builder: (context, setLocal) => SwitchListTile(
+                title: const Text(Tr.testCameraStall),
+                value: sim.stalled,
+                onChanged: (v) => setLocal(() => sim.stalled = v),
+              ),
+            ),
         ],
       ),
     );

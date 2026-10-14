@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Düz HTTP (şifresiz) YALNIZCA gözlüğün Wi-Fi SoftAP adresine: MJPEG kamera
+     akışı (GlassesMjpegStream.kt). Diğer her adres için Android'in varsayılanı
+     (yalnızca HTTPS) geçerli. Adres firmware'de netleşecek (CameraConfig). -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.4.1</domain>
+    </domain-config>
+</network-security-config>

@@ -161,6 +161,16 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   bağlanma) geliyor mu; (f) Android 13+ yakındaki cihazlar izni penceresi
   ve Android 10-12'de ek izin (konum) gerekip gerekmediği; (g) Wi-Fi
   kapalıyken "Wi-Fi kapalı" duyurusu.
+- [ ] **Madde 2 - gözlük kamerası MJPEG akışı (gerçek ESP32 gerekir):**
+  `lib/camera/`, `GlassesMjpegStream.kt` yalnızca simülasyonla sınandı.
+  Ölçülecekler: uçtan uca gecikme (çekim -> `GlassesFrame.receivedAt`),
+  kare kaybı ve bozuk kare oranı 2,4 GHz'de (Z19; Test Modu sayaçları:
+  kare/atılan/bozuk), 400 ms tazelik ve 10 kare/sn sınırının gerçek akışla
+  uyumu, native okumanın ana iş parçacığında birikme yapıp yapmadığı,
+  düz HTTP'nin yalnızca 192.168.4.1'e açık olduğu (başka adres engelli),
+  ekran kilitliyken akışın sürmesi ve pil/ısınma etkisi (telefon ve
+  gözlük), gözlük kapanınca "koptu" + geri açılınca akışın kendiliğinden
+  dönmesi, `frm` mesajının MTU 20 baytta sığmaması (22 bayt).
 
 - [ ] **Faz 7 (SOS, YÜKSEK ÖNCELİK) - konum, ekran kilitli ve cepteyken:**
   ekran kilitli, telefon cepte, **gözlük uzun basışıyla** tetiklenen SOS'ta

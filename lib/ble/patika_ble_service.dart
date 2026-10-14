@@ -38,6 +38,10 @@ abstract class PatikaBleService {
   Future<void> connect(String deviceId);
   Future<void> disconnect();
 
+  /// Kamera akışını başlat/durdur (taslak `frm`, kontrol karakteristiği).
+  /// Bağlı değilse false; gönderildiyse true (gözlüğün uyduğu doğrulanmaz).
+  Future<bool> setCameraStream(bool on);
+
   void dispose();
 }
 

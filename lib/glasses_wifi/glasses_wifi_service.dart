@@ -68,7 +68,12 @@ class GlassesWifiSupport {
   /// Android 13+: NEARBY_WIFI_DEVICES çalışma zamanı izni gerekir.
   final bool needsNearbyPermission;
 
-  const GlassesWifiSupport({required this.supported, required this.needsNearbyPermission});
+  /// Desteklenmemesinin nedeni eski Android mı (yoksa platformda kanal yok:
+  /// ör. iOS, bu özellik orada yazılmadı).
+  final bool oldAndroid;
+
+  const GlassesWifiSupport(
+      {required this.supported, required this.needsNearbyPermission, this.oldAndroid = false});
 }
 
 /// Gözlüğün Wi-Fi SoftAP'ına uygulamaya özel bağlantı. Gerçek uygulama
@@ -151,6 +156,7 @@ class MethodChannelGlassesWifiService implements GlassesWifiService {
       return GlassesWifiSupport(
         supported: map?['supported'] ?? false,
         needsNearbyPermission: map?['nearbyPermission'] ?? false,
+        oldAndroid: map?['supported'] == false,
       );
     } catch (e) {
       debugPrint('[GlassesWifi] destek sorgulanamadı: $e');

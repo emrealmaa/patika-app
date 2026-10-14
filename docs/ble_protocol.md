@@ -168,6 +168,26 @@ netleşecek.**
   dışı parola) atlanır. Parola günlüğe ve geçmişe yazılmaz. Sabit SSID/parola
   mı yoksa her açılışta üretilen mi olacağı firmware'de netleşecek; mesaj 244
   bayta sığmalı. Uygulama: `lib/ble/glasses_protocol.dart` (`WifiCredentialsMessage`).
+- **Akış (uygulama tarafı, taslak):** `frm on` (BLE) -> gözlük `wifi`
+  gönderir -> telefon uygulamaya özel ağa bağlanır -> `GET
+  http://192.168.4.1:81/stream` (`multipart/x-mixed-replace; boundary=...`,
+  parça başına `Content-Type: image/jpeg` ve tercihen `Content-Length`).
+  Adres ESP32 SoftAP/kamera örneğinin varsayılanı, firmware'de netleşecek
+  (`--dart-define=PATIKA_GLASSES_STREAM_URL`; düz HTTP yalnızca
+  192.168.4.1'e açık, `network_security_config.xml`). `Content-Length`
+  yoksa kare SOI..EOI arasından alınır. Bozuk/yarım kare atlanır. Telefon en
+  fazla 10 kare/sn işler, 400 ms'den eski kare tüketiciye verilmez
+  (`CameraConfig`). Durdurmada `frm off`. Uygulama: `lib/camera/`,
+  `GlassesMjpegStream.kt`.
+- **`frm` boyutu:** `{"t":"frm","on":false}` 22 bayttır: MTU pazarlığı
+  başarısız olursa (20 bayt yük) sığmaz. Firmware ile daha kısa biçim
+  (ör. `{"t":"frm","on":0}`) ya da MTU zorunluluğu kararlaştırılmalı.
+- **Kare hızı/çözünürlük ve ısınma/pil:** telefon tarafında ayarlanabilir
+  (`CameraConfig.maxFps`, `resolution`); gözlüğe nasıl iletileceği ve
+  gözlüğün ısınma/pil durumunu bildirip bildirmeyeceği açık.
+- **WebSocket (ses/kontrol): yazılmadı.** Dart'ın WebSocket istemcisi
+  gözlük ağını seçemez; native istemci için yeni bağımlılık (ör. OkHttp)
+  gerekir ve paket onayı bekliyor (`lib/camera/glasses_control_socket.dart`).
 - **Telefon tarafı:** Android, internetsiz bir Wi-Fi'ye normal bağlanınca
   mobil veriyi bırakabilir; Routes/Places gibi internet isteyen çağrılar
   kırılırdı. Bu yüzden telefon SoftAP'a **uygulamaya özel** bağlanır

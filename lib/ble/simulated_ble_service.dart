@@ -97,6 +97,22 @@ class SimulatedBleService with GlassesEventStreams implements PatikaBleService {
   void injectWifiCredentials([GlassesWifiCredentials credentials = simulatedWifi]) =>
       dispatchGlassesMessage(WifiCredentialsMessage(credentials));
 
+  /// Son `frm` komutu (Test Modu göstergesi ve testler; null = hiç gelmedi).
+  bool? cameraStreamOn;
+
+  /// Gerçek gözlüğün `frm on` cevabının taklidi: SoftAP'ı "açar" ve ağ
+  /// bilgisini gönderir. Bağlı değilken gönderilemez (gerçekteki gibi).
+  @override
+  Future<bool> setCameraStream(bool on) async {
+    if (_state != BleConnectionState.connected) return false;
+    cameraStreamOn = on;
+    if (on) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (_state == BleConnectionState.connected) injectWifiCredentials();
+    }
+    return true;
+  }
+
   void setBattery(int percent) {
     _battery = percent.clamp(0, 100);
     if (_state == BleConnectionState.connected) {

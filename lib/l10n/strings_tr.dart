@@ -775,6 +775,8 @@ abstract final class Tr {
       'Telefonun Wi-Fi\'ı kapalı, gözlük kamerasına bağlanılamıyor';
   static const glassesCameraUnsupported =
       'Bu telefonda gözlük kamerasına bağlanılamıyor, Android 10 ya da üstü gerekiyor';
+  static const glassesCameraUnsupportedPlatform =
+      'Bu telefonda gözlük kamerasına bağlanılamıyor';
   static const glassesCameraError = 'Gözlük kamerasına bağlanılamadı';
   static const glassesCameraNoCredentials = 'Gözlük ağ bilgisini henüz göndermedi';
   static const glassesCameraPermissionDenied =
@@ -782,6 +784,18 @@ abstract final class Tr {
   static const glassesWifiPermissionWhy =
       'Gözlük kamerasına bağlanabilmem için yakındaki cihazlar iznini isteyeceğim. '
       'Bu izin konumunuzu kullanmaz.';
+
+  // --- Gözlük kamerası: görüntü akışı ------------------------------------------
+  // Bilgi kipi. Ağ kopmasını Wi-Fi bölümü söyler; burada yalnızca akışın kendisi.
+  // test/camera_stream_test.dart bu bölümü yasaklı kelimeler için tarar.
+  static const cameraStarting = 'Gözlük kamerası başlatılıyor';
+  static const cameraStreaming = 'Gözlük kamerası görüntüsü geliyor';
+  static const cameraStopped = 'Gözlük kamerası kapatıldı';
+  static const cameraNoGlasses = 'Gözlük bağlı değil, gözlük kamerası başlatılamıyor';
+  static const cameraNoCredentials =
+      'Gözlük ağ bilgisini göndermedi, gözlük kamerası başlatılamadı';
+  static const cameraStalled = 'Gözlük kamerasından görüntü gelmiyor';
+  static const cameraResumed = 'Gözlük kamerası görüntüsü geri geldi';
 
   // --- Test Modu: gözlük kamerası Wi-Fi'ı --------------------------------------
   static const testGlassesWifi = 'Gözlük kamerası Wi-Fi bağlantısı';
@@ -796,6 +810,20 @@ abstract final class Tr {
   static const testGlassesWifiDrop = 'Bağlantı kopsun';
   static const testGlassesWifiRestore = 'Bağlantı geri gelsin';
   static String testGlassesWifiState(String state) => 'Wi-Fi durumu: $state';
+  static const testCameraTitle = 'Gözlük kamerası akışı';
+  static const testCameraStart = 'Kamera akışını başlat';
+  static const testCameraStop = 'Kamera akışını durdur';
+  static const testCameraStall = 'Akış donsun (kare gelmesin)';
+  static String testCameraStats(String state, int frames, int dropped, int errors) =>
+      'Akış: $state. Kare: $frames, atılan: $dropped, bozuk: $errors';
+  static String cameraStateName(String name) => switch (name) {
+        'stopped' => 'durdu',
+        'starting' => 'başlıyor',
+        'streaming' => 'geliyor',
+        'interrupted' => 'kesildi',
+        'failed' => 'başlatılamadı',
+        _ => name,
+      };
   static String glassesWifiStateName(String name) => switch (name) {
         'idle' => 'bağlı değil',
         'requesting' => 'bağlanılıyor',

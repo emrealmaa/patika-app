@@ -190,7 +190,8 @@ void main() {
         late SimulatedGlassesWifiService sim;
         final h = Harness(
           glassesWifiFactory: (_) => sim = SimulatedGlassesWifiService(
-            supportResult: const GlassesWifiSupport(supported: false, needsNearbyPermission: false),
+            supportResult: const GlassesWifiSupport(
+                supported: false, needsNearbyPermission: false, oldAndroid: true),
           ),
         );
         h.app.simulator!.injectWifiCredentials();

@@ -31,10 +31,8 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   /// Gözlük -> telefon (notify): komut, buton, jest, pil, heartbeat.
   static final fble.Uuid _eventCharacteristicUuid =
       fble.Uuid.parse('0000ff11-0000-1000-8000-00805f9b34fb');
-  /// Telefon -> gözlük (write without response). Şu an gönderilen mesaj yok
-  /// (titreşim motoru kalktı); Wi-Fi akışı başlat/durdur taslağı (`frm`,
-  /// bkz. docs/ble_protocol.md) için ayrılı.
-  // ignore: unused_field
+  /// Telefon -> gözlük (write without response): kamera akışı başlat/durdur
+  /// (taslak `frm`, bkz. docs/ble_protocol.md).
   static final fble.Uuid _controlCharacteristicUuid =
       fble.Uuid.parse('0000ff12-0000-1000-8000-00805f9b34fb');
   /// 247 bayt MTU -> 244 bayt yük; en uzun JSON mesaj buna sığmalı.
@@ -54,6 +52,9 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   StreamSubscription<fble.ConnectionStateUpdate>? _connectionSub;
   StreamSubscription<List<int>>? _valueSub;
   final List<DiscoveredDevice> _found = [];
+
+  /// Bağlı gözlüğün kimliği (kontrol karakteristiğine yazmak için).
+  String? _connectedId;
 
   @override
   Stream<BleConnectionState> get connectionState => _connectionController.stream;
@@ -150,6 +151,7 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
             _onConnected(deviceId);
             break;
           case fble.DeviceConnectionState.disconnected:
+            _connectedId = null;
             _connectionController.add(BleConnectionState.disconnected);
             break;
           case fble.DeviceConnectionState.connecting:
@@ -172,6 +174,7 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
       // MTU pazarlığı başarısız olsa da bağlantı sürer; mesajlar kısa.
       debugPrint('[BLE] MTU istenemedi: $e');
     }
+    _connectedId = deviceId;
     _subscribeToEventCharacteristic(deviceId);
   }
 
@@ -204,7 +207,24 @@ class RealBleService with GlassesEventStreams implements PatikaBleService {
   }
 
   @override
+  Future<bool> setCameraStream(bool on) async {
+    final id = _connectedId;
+    if (id == null) return false;
+    try {
+      await _ble.writeCharacteristicWithoutResponse(
+        _characteristic(id, _controlCharacteristicUuid),
+        value: GlassesProtocol.encodeFrm(on),
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[BLE] frm yazılamadı: ${e.runtimeType}');
+      return false;
+    }
+  }
+
+  @override
   Future<void> disconnect() async {
+    _connectedId = null;
     await _valueSub?.cancel();
     _valueSub = null;
     // Bağlantıyı kesmenin yolu bu: connectToDevice()'ın stream'ini iptal

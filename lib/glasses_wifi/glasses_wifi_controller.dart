@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../accessibility/announcement_queue.dart';
 import '../accessibility/feedback_hub.dart';
+import '../accessibility/held_announcer.dart';
 import '../ble/glasses_protocol.dart';
 import '../l10n/strings_tr.dart';
 import 'glasses_wifi_service.dart';
@@ -23,9 +24,9 @@ class GlassesWifiController {
   /// (`PermissionExplainer`). Yalnızca cihaz gerektiriyorsa çağrılır.
   final Future<bool> Function() _ensurePermission;
 
-  /// SOS araması gibi konuşulmaması gereken anlar: duyuru bekletilir,
+  /// SOS araması gibi konuşulmaması gereken anlarda duyuru bekletilir,
   /// [flushHeld] ile sonra söylenir (bkz. SOS "arama sırasında konuşma yok").
-  final bool Function() _holdSpeech;
+  final HeldAnnouncer _announcer;
 
   /// Konuşmanın (onay penceresi öncesi yönlendirme) en fazla bekleneceği süre.
   static const speechTimeout = Duration(seconds: 12);
@@ -37,7 +38,11 @@ class GlassesWifiController {
   final status = ValueNotifier<GlassesWifiStatus>(GlassesWifiStatus.idle);
 
   /// Gözlüğün son gönderdiği ağ bilgisi (parola içerir, günlüğe yazılmaz).
-  GlassesWifiCredentials? credentials;
+  /// Kamera akışı `frm on` sonrası bunun gelmesini bekler.
+  final credentialsNotifier = ValueNotifier<GlassesWifiCredentials?>(null);
+
+  GlassesWifiCredentials? get credentials => credentialsNotifier.value;
+  set credentials(GlassesWifiCredentials? value) => credentialsNotifier.value = value;
 
   /// Bu oturumda bir kez bağlanıldıysa onay penceresi yönlendirmesi tekrar
   /// söylenmez (her bağlanmada aynı uzun cümle spam olurdu).
@@ -45,8 +50,6 @@ class GlassesWifiController {
 
   /// Kullanıcı kapattığında "idle" duyurulur; native'in kendi "idle"ı değil.
   bool _closing = false;
-
-  _Held? _held;
 
   GlassesWifiController({
     required FeedbackHub feedback,
@@ -56,11 +59,9 @@ class GlassesWifiController {
   })  : _feedback = feedback,
         _service = service,
         _ensurePermission = ensurePermission,
-        _holdSpeech = holdSpeech ?? _never {
+        _announcer = HeldAnnouncer(feedback, hold: holdSpeech) {
     _listen();
   }
-
-  static bool _never() => false;
 
   GlassesWifiService get service => _service;
 
@@ -90,10 +91,10 @@ class GlassesWifiController {
     }
     final support = await _service.support();
     if (!support.supported) {
-      debugPrint('[GlassesWifi] Android 10+ gerekiyor, özellik kapalı');
+      debugPrint('[GlassesWifi] desteklenmiyor (eski Android: ${support.oldAndroid})');
       _setStatus(const GlassesWifiStatus(
           GlassesWifiState.unavailable, GlassesWifiUnavailableReason.unsupported));
-      _speak(Tr.glassesCameraUnsupported);
+      _speak(support.oldAndroid ? Tr.glassesCameraUnsupported : Tr.glassesCameraUnsupportedPlatform);
       return;
     }
     if (support.needsNearbyPermission && !await _ensurePermission()) {
@@ -112,10 +113,11 @@ class GlassesWifiController {
     await _service.connect(creds);
   }
 
-  /// Bağlantıyı bilerek kapatır ("kapatıldı" denir).
-  Future<void> disconnect() async {
+  /// Bağlantıyı bilerek kapatır. [announce]: "kapatıldı" denir (kamera akışı
+  /// kendi "kapatıldı"sını söylediğinde false: aynı şey iki kez söylenmez).
+  Future<void> disconnect({bool announce = true}) async {
     if (status.value.state == GlassesWifiState.idle) return;
-    _closing = true;
+    _closing = announce;
     await _service.disconnect();
   }
 
@@ -150,45 +152,21 @@ class GlassesWifiController {
         GlassesWifiUnavailableReason.error || null => Tr.glassesCameraError,
       };
 
+
   void _setStatus(GlassesWifiStatus value) => status.value = value;
 
-  void _speak(String text) => _signalOrHold(null, text, AnnouncementPriority.normal);
+  void _speak(String text) => _announcer.announce(text);
 
   void _signal(FeedbackEvent event, String text,
           {AnnouncementPriority priority = AnnouncementPriority.normal}) =>
-      _signalOrHold(event, text, priority);
-
-  void _signalOrHold(FeedbackEvent? event, String text, AnnouncementPriority priority) {
-    if (_holdSpeech()) {
-      // Yalnızca en son durum anlamlı: eski bekleyen atılır.
-      _held = _Held(event, text, priority);
-      return;
-    }
-    // Kuyruğun 3 sn birleştirmesi kapalı: durum tekrarları zaten [_onStatus]'ta
-    // eleniyor. Açık olsaydı hızlı "koptu -> bağlandı" dönüşünde ikinci
-    // "bağlandı" yutulur, kullanıcının duyduğu son şey "koptu" kalırdı.
-    if (event != null) _feedback.signal(event);
-    _feedback.say(text, priority: priority, dedupe: false);
-  }
+      _announcer.announce(text, event: event, priority: priority);
 
   /// Konuşma yasağı bitince bekleyen son duyuruyu söyler.
-  void flushHeld() {
-    final held = _held;
-    if (held == null || _holdSpeech()) return;
-    _held = null;
-    _signalOrHold(held.event, held.text, held.priority);
-  }
+  void flushHeld() => _announcer.flush();
 
   void dispose() {
     _sub?.cancel();
     status.dispose();
+    credentialsNotifier.dispose();
   }
-}
-
-class _Held {
-  final FeedbackEvent? event;
-  final String text;
-  final AnnouncementPriority priority;
-
-  const _Held(this.event, this.text, this.priority);
 }

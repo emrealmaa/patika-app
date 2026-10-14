@@ -82,6 +82,17 @@ göre veriliyor.
   bekletilir. Android 13+ yakındaki Wi-Fi cihazları izni (`neverForLocation`)
   ilk bağlanmada sesli açıklamayla istenir. Simülasyon (Test Modu):
   `SimulatedGlassesWifiService`. Cihazda doğrulanacak.
+- **Kamera akışı (`lib/camera/`):** `FrameSource` arayüzü (durum, kare
+  akışı, `LatestFrame` tazelik kutusu). `MjpegFrameSource`: `frm on` ->
+  ağ bilgisi -> `GlassesWifiController.connect` -> MJPEG (native
+  `GlassesMjpegStream.kt`, kanal `patika/glasses_mjpeg`, istek gözlük
+  ağının `Network` nesnesiyle) -> `MjpegParser` (saf mantık) -> kareler.
+  Ağ koparsa akış durur, gelince yeniden açılır; ağ açıkken kare gelmezse
+  bir kez "görüntü gelmiyor". Yavaş tüketici yalnızca en yeni taze kareyi
+  alır (400 ms, `CameraConfig`). Simülasyon: `SimulatedMjpegTransport`
+  (sentetik kareler gerçek MJPEG baytı olarak) ve `SimulatedFrameSource`.
+  Tespit/karar mantığı bu katmanda yok. Arka plan servisi süreci tuttuğu
+  sürece akış ekran kilitliyken de sürer. WebSocket yazılmadı (paket onayı).
 
 ## İlkeler
 
