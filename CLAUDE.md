@@ -290,7 +290,13 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   olabilir** (`GuidanceConfig.crossingMaxPause`): süre dolunca navigasyon
   kullanıcı hâlâ kavşaktayken konuşmaya başlar. Gerçek kavşaklarda (uzun
   ışık döngüleri) ayarlanacak; uzatmak, hatırlatma cümlesine çevirmek ya da
-  ışık süresine göre değişken yapmak seçenekler.
+  ışık süresine göre değişken yapmak seçenekler. **Madde 7 (2026-10-14):**
+  üçü de `GuidanceConfig`'te bayrak: (a) `crossingMaxPause`, (b)
+  `crossingTimeoutAction: CrossingTimeoutAction.remind` (devam etmez,
+  `crossingMaxReminders` kez bilgi kipinde hatırlatır - `Tr.navCrossingReminder`
+  - sonra devam), (c) `crossingSignalTiming` (arayüz; veri kaynağı yok).
+  **Varsayılan değişmedi** (`resume`, 90 sn). Hangisinin varsayılan olacağı
+  saha verisiyle KULLANICI KARARI (bitiş raporunda soruldu).
 - [ ] **Faz 6:** Yön teyidinin gerçek yürüyüşte doğruluğu (konum geçmişinden
   hesaplanan hareket yönü; 15 m ya da doğruluğun 2 katı yürünmüş, doğruluk
   < 10 m, ~0,7 m/s hız eşiği, ilk 100 m); yanlış "rotanın tersi"/"yan"

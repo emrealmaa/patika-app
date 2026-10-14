@@ -105,6 +105,7 @@ void main() {
         const CrossingPoint(),
         const CrossingResumed(),
         const CrossingTimedOut(),
+        const CrossingReminder(),
         for (final v in DirectionVerdict.values) DirectionInfo(v),
         const NearDestination(50),
         const NearDestination(1500),

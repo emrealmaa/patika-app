@@ -544,6 +544,10 @@ abstract final class Tr {
       'ya da gözlüğe çift dokunun';
   static const navCrossingResumed = 'Navigasyon devam ediyor';
   static const navCrossingTimedOut = 'Süre doldu, navigasyon devam ediyor';
+  // Madde 7 hatırlatma kipi: navigasyon devam ETMEZ, yalnızca bilgi verir.
+  static const navCrossingReminder =
+      'Navigasyon geçiş noktasında duraklatılmış durumda. Karşıya ulaşınca '
+      '"geçtim" demek ya da gözlüğe çift dokunmak yeterli';
 
   static String navNearDestination(String distance) => 'Hedefe $distance kaldı';
   static const navArrived = 'Hedef çevresindesiniz';

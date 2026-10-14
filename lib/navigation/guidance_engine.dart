@@ -42,6 +42,13 @@ class CrossingTimedOut extends GuidanceEvent {
   const CrossingTimedOut();
 }
 
+/// Hatırlatma kipinde ([CrossingTimeoutAction.remind]) üst süre doldu:
+/// navigasyon DEVAM ETMEZ, duraklamada olduğu bilgi kipinde hatırlatılır
+/// (kullanıcı kırmızı ışıkta hâlâ kavşakta olabilir).
+class CrossingReminder extends GuidanceEvent {
+  const CrossingReminder();
+}
+
 /// Yürüme yönünün rotayla ilişkisi (bkz. [DirectionInfo]).
 enum DirectionVerdict {
   /// Hareket yönü rotanın yönüyle uyumlu.
@@ -98,6 +105,27 @@ class PositionFix {
 
 /// Eşikler tek yerde: gerçek kullanıcı ve gerçek GPS ile ayarlanacak
 /// (bkz. CLAUDE.md "Bekleyen telefon testleri"), şimdilik varsayım.
+/// Karşıya geçiş duraklamasının üst süresi dolunca ne olur (Madde 7).
+/// **Varsayılan [resume]** (eski davranış); hangisinin varsayılan olacağı
+/// saha verisiyle kullanıcı kararı.
+enum CrossingTimeoutAction {
+  /// Navigasyon kendiliğinden devam eder ve bunu söyler ([CrossingTimedOut]).
+  resume,
+
+  /// Devam etmez; [GuidanceConfig.crossingMaxReminders] kez hatırlatır
+  /// ([CrossingReminder]), sonra yine de devam eder (sonsuza dek susmasın).
+  remind,
+}
+
+/// Seçenek (c): geçişe özgü üst süre (ör. trafik ışığı döngüsünden). **Veri
+/// kaynağı yok**, yalnızca arayüz: null dönerse [GuidanceConfig.crossingMaxPause].
+abstract class CrossingSignalTiming {
+  const CrossingSignalTiming();
+
+  /// [step]: rotadaki geçiş adımı (dışarıdan duraklatıldıysa null).
+  Duration? maxPauseFor(int? step);
+}
+
 class GuidanceConfig {
   /// Dönüşten bu kadar önce ilk, bu kadar önce ikinci duyuru (metre).
   final double farApproach;
@@ -129,6 +157,18 @@ class GuidanceConfig {
   /// "geçtim") devam ettirilmezse navigasyon kendiliğinden devam eder.
   /// Uzun bir kırmızı ışıkta bile sonsuza dek susmasın.
   final Duration crossingMaxPause;
+
+  /// Üst süre dolunca: devam (varsayılan) ya da hatırlatma. Seçenek (a)
+  /// için [crossingMaxPause] uzatılır; (b) [CrossingTimeoutAction.remind];
+  /// (c) [crossingSignalTiming].
+  final CrossingTimeoutAction crossingTimeoutAction;
+
+  /// Hatırlatma kipinde en fazla bu kadar hatırlatma (her biri
+  /// [crossingMaxPause] arayla), sonra devam.
+  final int crossingMaxReminders;
+
+  /// Geçişe özgü üst süre kaynağı (yoksa null: sabit [crossingMaxPause]).
+  final CrossingSignalTiming? crossingSignalTiming;
 
   /// Yön teyidi (bkz. CLAUDE.md Faz 6 kararları, madde 4). Tek satırla
   /// kapatılır: `directionCheck: false`. Aşağıdakiler varsayım, gerçek
@@ -165,6 +205,9 @@ class GuidanceConfig {
     this.staleAfter = const Duration(seconds: 15),
     this.crossingResumeBeyond = 25,
     this.crossingMaxPause = const Duration(seconds: 90),
+    this.crossingTimeoutAction = CrossingTimeoutAction.resume,
+    this.crossingMaxReminders = 3,
+    this.crossingSignalTiming,
     this.directionCheck = true,
     this.directionMinWalk = 15,
     this.directionMaxAccuracy = 10,
@@ -218,6 +261,7 @@ class GuidanceEngine {
   // Duraklama: rotadaki bir geçiş adımı yüzünden ([_pausedStep] dolu) ya da
   // dışarıdan ([pauseForCrossing], adım yok). [_pausedAt] üst süre için.
   bool _paused = false;
+  int _reminders = 0;
   int? _pausedStep;
   DateTime? _pausedAt;
   final Set<int> _crossingDone = {};
@@ -340,7 +384,7 @@ class GuidanceEngine {
   /// "konum belirsiz" - sessizlik "her şey yolunda" ile karışmasın.
   List<GuidanceEvent> tick(DateTime now) {
     if (_finished) return const [];
-    if (_paused) return _pauseTimedOut(now) ? _resumeAfterTimeout() : const [];
+    if (_paused) return _pauseTimedOut(now) ? _onPauseTimeout(now) : const [];
     final last = _lastFixTime;
     if (_gpsWeak || last == null) return const [];
     if (now.difference(last) < config.staleAfter) return const [];
@@ -382,6 +426,7 @@ class GuidanceEngine {
     _paused = true;
     _pausedStep = step;
     _pausedAt = at ?? _lastFixTime;
+    _reminders = 0;
   }
 
   void _clearPause() {
@@ -392,11 +437,24 @@ class GuidanceEngine {
 
   bool _pauseTimedOut(DateTime now) {
     final since = _pausedAt;
-    return _paused && since != null && now.difference(since) >= config.crossingMaxPause;
+    if (!_paused || since == null) return false;
+    final limit = config.crossingSignalTiming?.maxPauseFor(_pausedStep) ?? config.crossingMaxPause;
+    return now.difference(since) >= limit;
   }
 
   /// Üst süre doldu: ilerleme zıplatılmaz (kullanıcı hâlâ geçişin öncesinde
   /// olabilir), yalnızca duraklama biter.
+  /// Hatırlatma kipinde: hak varsa hatırlat ve süreyi yeniden başlat.
+  List<GuidanceEvent> _onPauseTimeout(DateTime now) {
+    if (config.crossingTimeoutAction == CrossingTimeoutAction.remind &&
+        _reminders < config.crossingMaxReminders) {
+      _reminders++;
+      _pausedAt = now;
+      return const [CrossingReminder()];
+    }
+    return _resumeAfterTimeout();
+  }
+
   List<GuidanceEvent> _resumeAfterTimeout() {
     final step = _pausedStep;
     _clearPause();

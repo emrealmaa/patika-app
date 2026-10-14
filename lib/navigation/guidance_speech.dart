@@ -51,6 +51,7 @@ String describeEvent(GuidanceEvent event) => switch (event) {
       CrossingPoint() => Tr.navCrossingPoint,
       CrossingResumed() => Tr.navCrossingResumed,
       CrossingTimedOut() => Tr.navCrossingTimedOut,
+      CrossingReminder() => Tr.navCrossingReminder,
       DirectionInfo e => switch (e.verdict) {
           DirectionVerdict.along => Tr.navDirectionAlong,
           DirectionVerdict.opposite => Tr.navDirectionOpposite,
