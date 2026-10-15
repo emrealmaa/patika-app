@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
+import '../accessibility/speech_output.dart';
 import '../l10n/strings_tr.dart';
 import '../platform/app_version.dart';
 import '../settings/settings.dart';
@@ -34,6 +35,10 @@ class SettingsScreen extends StatelessWidget {
   final TestModeAccess? testMode;
   final AppVersionSource? version;
 
+  /// Telefondaki Türkçe sesler; verilirse "Konuşma sesi" seçimi gösterilir
+  /// (yalnızca iOS: Android'de motorun varsayılan sesi kalır).
+  final Future<VoiceReport> Function()? loadVoices;
+
   const SettingsScreen({
     super.key,
     required this.store,
@@ -41,6 +46,7 @@ class SettingsScreen extends StatelessWidget {
     required this.onStartTutorial,
     this.testMode,
     this.version,
+    this.loadVoices,
   });
 
   Settings get _s => store.value;
@@ -85,6 +91,17 @@ class SettingsScreen extends StatelessWidget {
               feedback.say(Tr.settingChanged(Tr.pitch, next.pitchName));
             },
           ),
+          if (loadVoices != null)
+            _VoiceChoice(
+              load: loadVoices!,
+              value: s.voiceId,
+              onChanged: (id, label) {
+                _update(s.copyWith(voiceId: id));
+                // Önizleme yeni sesle konuşur (FlutterTtsOutput.speak son
+                // ayarın uygulanmasını bekler).
+                feedback.say(Tr.settingChanged(Tr.voice, label));
+              },
+            ),
           _Choice<Verbosity>(
             title: Tr.verbosity,
             value: s.verbosity,
@@ -317,6 +334,47 @@ class _Section extends StatelessWidget {
 /// Başlık + (varsa) açıklama + radyo seçenekleri. Seçim durumu radyo
 /// düğmesinin kendisiyle ve TalkBack'in "seçili" bilgisiyle anlatılıyor,
 /// renkle değil.
+/// "Konuşma sesi": otomatik + telefondaki Türkçe sesler. Türkçe ses yoksa
+/// hiç gösterilmez. Seçili ses telefondan silinmişse "Otomatik" seçili
+/// görünür (konuşma motoru da otomatiğe düşer).
+class _VoiceChoice extends StatefulWidget {
+  final Future<VoiceReport> Function() load;
+  final String value;
+  final void Function(String id, String label) onChanged;
+
+  const _VoiceChoice({required this.load, required this.value, required this.onChanged});
+
+  @override
+  State<_VoiceChoice> createState() => _VoiceChoiceState();
+}
+
+class _VoiceChoiceState extends State<_VoiceChoice> {
+  late final Future<VoiceReport> _report = widget.load();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<VoiceReport>(
+      future: _report,
+      builder: (context, snap) {
+        final voices = snap.data?.voices ?? const <VoiceInfo>[];
+        if (voices.isEmpty) return const SizedBox.shrink();
+        final options = <(String, String, String?)>[
+          ('', Tr.voiceAuto, Tr.voiceAutoHint),
+          for (final v in voices) (v.id, Tr.voiceLabel(v.name, v.quality), null),
+        ];
+        final labels = {for (final (id, label, _) in options) id: label};
+        return _Choice<String>(
+          title: Tr.voice,
+          hint: Tr.voiceHint,
+          value: labels.containsKey(widget.value) ? widget.value : '',
+          options: options,
+          onChanged: (id) => widget.onChanged(id, labels[id]!),
+        );
+      },
+    );
+  }
+}
+
 class _Choice<T> extends StatelessWidget {
   final String title;
   final String? hint;

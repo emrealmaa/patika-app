@@ -45,11 +45,19 @@ class FakeSpeechOutput implements SpeechOutput {
     finishCurrent();
   }
 
+  String? voiceId;
+
   @override
-  Future<void> configure({required double rate, required double pitch}) async {
+  Future<void> configure({required double rate, required double pitch, String voiceId = ''}) async {
     this.rate = rate;
     this.pitch = pitch;
+    this.voiceId = voiceId;
   }
+
+  VoiceReport report = const VoiceReport();
+
+  @override
+  Future<VoiceReport> voiceReport() async => report;
 }
 
 /// Konuşma tanıma: test "kullanıcı şunu söyledi" ([say]) ya da hata/sessizlik

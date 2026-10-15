@@ -177,8 +177,11 @@ class _RecordingSpeech implements SpeechOutput {
   Future<void> stop() => _inner.stop();
 
   @override
-  Future<void> configure({required double rate, required double pitch}) =>
-      _inner.configure(rate: rate, pitch: pitch);
+  Future<void> configure({required double rate, required double pitch, String voiceId = ''}) =>
+      _inner.configure(rate: rate, pitch: pitch, voiceId: voiceId);
+
+  @override
+  Future<VoiceReport> voiceReport() => _inner.voiceReport();
 }
 
 class _SilentEarcons implements EarconPlayer {

@@ -30,6 +30,14 @@ void main() {
           reason: 'sesli ayar komutları 112 ayarını değiştiremez');
     });
 
+    test('konuşma sesi: varsayılan otomatik, kayıt gidiş-dönüşü, bozuk alan otomatik', () {
+      expect(const Settings().voiceId, '');
+      final cem = const Settings().copyWith(voiceId: 'com.apple.voice.enhanced.tr-TR.Cem');
+      expect(Settings.fromJson(cem.toJson()).voiceId, cem.voiceId);
+      expect(Settings.fromJson({'voiceId': 3}).voiceId, '');
+      expect(cem == const Settings(), isFalse);
+    });
+
     test('sınırlar dışına çıkılamaz', () {
       const s = Settings();
       expect(s.copyWith(silenceTimeoutSeconds: 0).silenceTimeoutSeconds, 1);

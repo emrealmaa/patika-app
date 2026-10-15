@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -144,6 +146,7 @@ class _HomePageState extends State<HomePage> {
         onStartTutorial: _appState.startTutorial,
         testMode: _testMode,
         version: _appVersion,
+        loadVoices: Platform.isIOS ? _appState.voiceReport : null,
       ),
       // Gizli sekme EN SONDA: üç sekmenin sırası ve "Sekme N/M" etiketleri
       // açılışta değişmez, sekme belirince TalkBack odağı kaymaz.

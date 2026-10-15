@@ -401,6 +401,17 @@ abstract final class Tr {
   static const settingsFeedback = 'Bildirimler';
   static const speechRate = 'Konuşma hızı';
   static const pitch = 'Ses tonu';
+  static const voice = 'Konuşma sesi';
+  static const voiceHint =
+      'Daha doğal ses için iPhone Ayarlar, Erişilebilirlik, Okunan İçerik, Sesler, '
+      'Türkçe bölümünden Gelişmiş ya da Premium bir ses indirin';
+  static const voiceAuto = 'Otomatik';
+  static const voiceAutoHint = 'Telefondaki en kaliteli Türkçe ses';
+  static String voiceLabel(String name, String quality) => switch (quality) {
+        'premium' => '$name, Premium',
+        'enhanced' => '$name, Gelişmiş',
+        _ => '$name, Standart',
+      };
   static const silenceTimeout = 'Sessizlik süresi';
   static const silenceTimeoutHint =
       'Konuşmanız bittikten sonra bu kadar sessizlik olunca dinleme biter.';
@@ -715,6 +726,18 @@ abstract final class Tr {
   static const testPhoneCharging = 'Telefon şarjda';
   static const testPhoneBatteryReal = 'Gerçek pil değerini kullan';
   static String testPhoneBatteryPercent(int percent) => '$testPhoneBattery: %$percent';
+
+  // --- Test Modu: konuşma sesleri ----------------------------------------------
+  static const testVoicesTitle = 'Konuşma sesleri';
+  static const testVoicesRefresh = 'Ses listesini yenile';
+  static const testVoicesNone = 'Telefonda Türkçe ses bulunamadı';
+  static const testVoicesDefault = 'Seçilen ses: motorun varsayılanı';
+  static String testVoicesSelected(String name, String quality) =>
+      'Seçilen ses: $name${quality.isEmpty ? '' : ' ($quality)'}';
+  static String testVoicesTotal(int turkish, int total) =>
+      '$turkish Türkçe ses, toplam $total ses';
+  static String testVoiceRow(String name, String locale, String quality, bool selected) =>
+      '$name, $locale${quality.isEmpty ? '' : ', $quality'}${selected ? ', seçili' : ''}';
 
   // --- Acil durum geçmişi (Faz 7) ---------------------------------------------
   // İşlem geçmişine yazılan satırlar: YALNIZCA isim ve sonuç durumu. Telefon

@@ -4,6 +4,7 @@ import '../accessibility/announcement_queue.dart';
 import '../accessibility/earcons.dart';
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
+import '../accessibility/speech_output.dart';
 import '../app_state.dart';
 import '../ble/glasses_protocol.dart';
 import '../battery/phone_battery.dart';
@@ -158,6 +159,8 @@ class _TestModeScreenState extends State<TestModeScreen> {
         ),
         const SizedBox(height: 24),
         _FeedbackTestSection(feedback: state.feedback),
+        const SizedBox(height: 24),
+        _VoiceListSection(state: state),
         const SizedBox(height: 24),
         Semantics(
           header: true,
@@ -325,6 +328,65 @@ class _PhoneBatterySimulationSectionState extends State<_PhoneBatterySimulationS
             _state.pollPhoneBattery();
           },
           child: const Text(Tr.testPhoneBatteryReal),
+        ),
+      ],
+    );
+  }
+}
+
+/// Telefondaki Türkçe TTS sesleri ve seçilen ses: iOS'ta gelişmiş ses
+/// seçiminin (`pickBestVoice`) cihazda neyi bulduğunu görmek için.
+class _VoiceListSection extends StatefulWidget {
+  final AppState state;
+
+  const _VoiceListSection({required this.state});
+
+  @override
+  State<_VoiceListSection> createState() => _VoiceListSectionState();
+}
+
+class _VoiceListSectionState extends State<_VoiceListSection> {
+  late Future<VoiceReport> _report = widget.state.voiceReport();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          container: true,
+          child: Text(Tr.testVoicesTitle, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        const SizedBox(height: 8),
+        FutureBuilder<VoiceReport>(
+          future: _report,
+          builder: (context, snap) {
+            final r = snap.data;
+            if (r == null) return const SizedBox.shrink();
+            final sel = r.selected;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(sel == null ? Tr.testVoicesDefault : Tr.testVoicesSelected(sel.name, sel.quality)),
+                Text(Tr.testVoicesTotal(r.voices.length, r.totalVoices)),
+                if (r.voices.isEmpty) const Text(Tr.testVoicesNone),
+                for (final v in r.voices)
+                  Text(Tr.testVoiceRow(
+                    v.name,
+                    v.locale,
+                    v.quality,
+                    sel != null && sel.name == v.name && sel.locale == v.locale && sel.quality == v.quality,
+                  )),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => setState(() => _report = widget.state.voiceReport()),
+          icon: const Icon(Icons.refresh),
+          label: const Text(Tr.testVoicesRefresh),
         ),
       ],
     );

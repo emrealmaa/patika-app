@@ -68,6 +68,11 @@ class Settings {
   /// açılır; açılırken sesli uyarı verilir.
   final bool emergencyCall112;
 
+  /// Konuşma sesi ([VoiceInfo.id]); '' = otomatik (en kaliteli Türkçe ses).
+  /// Yalnızca iOS'ta seçilebilir. Seçilen ses telefondan silinirse
+  /// otomatiğe düşülür.
+  final String voiceId;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -79,6 +84,7 @@ class Settings {
     this.readMessagesAloud = true,
     this.notificationsMuted = false,
     this.emergencyCall112 = false,
+    this.voiceId = '',
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -103,6 +109,7 @@ class Settings {
     bool? readMessagesAloud,
     bool? notificationsMuted,
     bool? emergencyCall112,
+    String? voiceId,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -116,6 +123,7 @@ class Settings {
       readMessagesAloud: readMessagesAloud ?? this.readMessagesAloud,
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
+      voiceId: voiceId ?? this.voiceId,
     );
   }
 
@@ -147,6 +155,7 @@ class Settings {
         'readMessagesAloud': readMessagesAloud,
         'notificationsMuted': notificationsMuted,
         'emergencyCall112': emergencyCall112,
+        'voiceId': voiceId,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -175,6 +184,7 @@ class Settings {
       emergencyCall112: json['emergencyCall112'] is bool
           ? json['emergencyCall112'] as bool
           : d.emergencyCall112,
+      voiceId: json['voiceId'] is String ? json['voiceId'] as String : d.voiceId,
     );
   }
 
@@ -190,12 +200,13 @@ class Settings {
       other.nodToListen == nodToListen &&
       other.readMessagesAloud == readMessagesAloud &&
       other.notificationsMuted == notificationsMuted &&
-      other.emergencyCall112 == emergencyCall112;
+      other.emergencyCall112 == emergencyCall112 &&
+      other.voiceId == voiceId;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud, notificationsMuted, emergencyCall112);
+      readMessagesAloud, notificationsMuted, emergencyCall112, voiceId);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }
