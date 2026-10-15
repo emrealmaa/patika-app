@@ -121,6 +121,11 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
         </intent>
+        <!-- MESAJ: WhatsApp sohbetini metin dolu açmak (whatsapp://send). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="whatsapp"/>
+        </intent>
         <!-- speech_to_text'in cihazdaki konuşma tanıma motorunu bulabilmesi için. -->
         <intent>
             <action android:name="android.speech.RecognitionService"/>

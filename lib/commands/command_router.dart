@@ -95,7 +95,7 @@ class CommandRouter {
         case PatikaIntent.ara:
           return await _call.handle(command.entity);
         case PatikaIntent.mesaj:
-          return await _message.handle(command.entity);
+          return await _message.handle(command.entity, app: command.messageApp);
         case PatikaIntent.navigasyon:
           return await _navigation.handle(command.entity);
         case PatikaIntent.saat:

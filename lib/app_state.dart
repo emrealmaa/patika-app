@@ -310,6 +310,7 @@ class AppState extends ChangeNotifier implements ControlActions {
         direct: directActions,
         ensureSmsPermission: ensureSms,
         sent: sentMessages,
+        defaultApp: () => this.settings.value.messageApp,
       ),
       lastMessage: LastMessageHandler(sentMessages),
       messageHistory: MessageHistoryHandler(_messageLog),

@@ -158,8 +158,8 @@ abstract final class Tr {
         '${listed.join(', ')}. Hangisi?';
   }
   static String dialogConfirmCall(String nameAccusative) => '$nameAccusative arayayım mı?';
-  static String dialogConfirmMessage(String nameDative, String body) =>
-      '$nameDative şu mesaj: $body. Göndereyim mi?';
+  static String dialogConfirmMessage(String nameDative, String body, {bool whatsapp = false}) =>
+      '${whatsapp ? "WhatsApp'tan " : ''}$nameDative şu mesaj: $body. Göndereyim mi?';
   static const dialogYesNoHint = 'Evet ya da hayır deyin.';
   static const dialogChoiceHint = 'Birinci, ikinci ya da soyadını söyleyin.';
   static const dialogReviewHint =
@@ -202,6 +202,11 @@ abstract final class Tr {
   static const smsFailed = 'Mesaj uygulaması açılamadı';
   static String smsOpened(String name) => '$name için mesaj ekranı açıldı';
   static const smsOpenedDetail = 'Mesajınızı yazıp gönder tuşuna basın.';
+  static const whatsappFailed = 'WhatsApp açılamadı';
+  static const whatsappFailedDetail = 'Telefonda WhatsApp yüklü olmayabilir.';
+  static String whatsappOpened(String name) => '$name için WhatsApp sohbeti açıldı';
+  static String whatsappReady(String name) => '$name için WhatsApp mesajı hazır';
+  static const whatsappReadyDetail = "Göndermek için WhatsApp'taki gönder tuşuna basın.";
   static const mapsFailed = 'Harita uygulaması açılamadı';
   static String navStarted(String dest) => '$dest için yürüyüş yönlendirmesi başladı';
   static const navStartedDetail = 'Yönlendirme harita uygulamasında açıldı.';
@@ -401,6 +406,13 @@ abstract final class Tr {
   static const settingsFeedback = 'Bildirimler';
   static const speechRate = 'Konuşma hızı';
   static const pitch = 'Ses tonu';
+  static const messageApp = 'Mesaj uygulaması';
+  static const messageAppHint =
+      "Mesaj gönder dediğinizde kullanılır. Komutta WhatsApp derseniz her zaman WhatsApp'tan gider.";
+  static const messageAppSms = 'SMS';
+  static const messageAppWhatsapp = 'WhatsApp';
+  static const messageAppWhatsappHint =
+      'WhatsApp mesajı sizin yerinize gönderilemez, gönder tuşuna sizin basmanız gerekir.';
   static const voice = 'Konuşma sesi';
   static const voiceHint =
       'Daha doğal ses için iPhone Ayarlar, Erişilebilirlik, Okunan İçerik, Sesler, '

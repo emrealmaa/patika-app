@@ -1,4 +1,5 @@
 import '../commands/intent.dart';
+import '../commands/message_app.dart';
 
 /// Gözlükten (gerçek BLE) ya da test modundan (simülasyon) gelen, henüz
 /// işlenmemiş ham komut. Python tarafındaki `siniflandir()` çıktısının
@@ -7,7 +8,11 @@ class BleCommand {
   final PatikaIntent intent;
   final String? entity;
 
-  const BleCommand({required this.intent, this.entity});
+  /// MESAJ: komutta "WhatsApp" geçtiyse [MessageApp.whatsapp]; null ise
+  /// Ayarlar'daki varsayılan uygulama. Gözlükten gelen komutta hep null.
+  final MessageApp? messageApp;
+
+  const BleCommand({required this.intent, this.entity, this.messageApp});
 
   factory BleCommand.fromWire(String intentRaw, String? entity) {
     return BleCommand(
@@ -17,5 +22,6 @@ class BleCommand {
   }
 
   @override
-  String toString() => 'BleCommand(intent: $intent, entity: $entity)';
+  String toString() => 'BleCommand(intent: $intent, entity: $entity'
+      '${messageApp == null ? '' : ', app: ${messageApp!.name}'})';
 }

@@ -13,10 +13,13 @@ import 'recipient_flow.dart';
 class MessageFlow extends RecipientFlow {
   final Future<ActionResult> Function(ContactEntry contact, String body) _send;
 
+  /// Geri okumada "WhatsApp'tan" denir; kullanıcı nereden gideceğini bilsin.
+  final bool whatsapp;
+
   String? _body;
   bool _reviewing = false;
 
-  MessageFlow(super.spoken, super.contacts, this._send);
+  MessageFlow(super.spoken, super.contacts, this._send, {this.whatsapp = false});
 
   @override
   PatikaIntent get intent => PatikaIntent.mesaj;
@@ -28,7 +31,8 @@ class MessageFlow extends RecipientFlow {
   String notFoundPrompt(String spoken) =>
       Tr.dialogNotFound(RecipientFlow.acc(spoken), Tr.dialogWhoToMessage);
 
-  String get _reviewPrompt => Tr.dialogConfirmMessage(RecipientFlow.dat(contact!.displayName), _body!);
+  String get _reviewPrompt =>
+      Tr.dialogConfirmMessage(RecipientFlow.dat(contact!.displayName), _body!, whatsapp: whatsapp);
 
   AskStep _askBody() {
     _reviewing = false;

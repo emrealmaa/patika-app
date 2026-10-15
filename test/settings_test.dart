@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:patika_app/commands/handlers/settings_handler.dart';
+import 'package:patika_app/commands/message_app.dart';
 import 'package:patika_app/settings/settings.dart';
 import 'package:patika_app/settings/settings_store.dart';
 
@@ -36,6 +37,13 @@ void main() {
       expect(Settings.fromJson(cem.toJson()).voiceId, cem.voiceId);
       expect(Settings.fromJson({'voiceId': 3}).voiceId, '');
       expect(cem == const Settings(), isFalse);
+    });
+
+    test('mesaj uygulaması: varsayılan SMS, kayıt gidiş-dönüşü, bozuk alan SMS', () {
+      expect(const Settings().messageApp, MessageApp.sms);
+      final wa = const Settings().copyWith(messageApp: MessageApp.whatsapp);
+      expect(Settings.fromJson(wa.toJson()).messageApp, MessageApp.whatsapp);
+      expect(Settings.fromJson({'messageApp': 'telgraf'}).messageApp, MessageApp.sms);
     });
 
     test('sınırlar dışına çıkılamaz', () {

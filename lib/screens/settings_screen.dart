@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../accessibility/feedback_hub.dart';
 import '../accessibility/haptic_patterns.dart';
 import '../accessibility/speech_output.dart';
+import '../commands/message_app.dart';
 import '../l10n/strings_tr.dart';
 import '../platform/app_version.dart';
 import '../settings/settings.dart';
@@ -133,6 +134,16 @@ class SettingsScreen extends StatelessWidget {
             contextLabel: Tr.nodToListen,
             summary: Tr.nodToListenSummary,
             details: Tr.nodToListenDetails,
+          ),
+          _Choice<MessageApp>(
+            title: Tr.messageApp,
+            hint: Tr.messageAppHint,
+            value: s.messageApp,
+            options: const [
+              (MessageApp.sms, Tr.messageAppSms, null),
+              (MessageApp.whatsapp, Tr.messageAppWhatsapp, Tr.messageAppWhatsappHint),
+            ],
+            onChanged: (v) => _update(s.copyWith(messageApp: v)),
           ),
           AnahtarSatiri(
             title: Tr.readMessagesAloud,

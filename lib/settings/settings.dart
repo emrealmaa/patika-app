@@ -1,3 +1,4 @@
+import '../commands/message_app.dart';
 import '../l10n/strings_tr.dart';
 
 enum Verbosity { short, long }
@@ -73,6 +74,10 @@ class Settings {
   /// otomatiğe düşülür.
   final String voiceId;
 
+  /// Düz "mesaj gönder" komutunun gittiği uygulama. Komutta "WhatsApp"
+  /// geçerse bu ayara bakılmaz. Varsayılan SMS.
+  final MessageApp messageApp;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -85,6 +90,7 @@ class Settings {
     this.notificationsMuted = false,
     this.emergencyCall112 = false,
     this.voiceId = '',
+    this.messageApp = MessageApp.sms,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -110,6 +116,7 @@ class Settings {
     bool? notificationsMuted,
     bool? emergencyCall112,
     String? voiceId,
+    MessageApp? messageApp,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -124,6 +131,7 @@ class Settings {
       notificationsMuted: notificationsMuted ?? this.notificationsMuted,
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
       voiceId: voiceId ?? this.voiceId,
+      messageApp: messageApp ?? this.messageApp,
     );
   }
 
@@ -156,6 +164,7 @@ class Settings {
         'notificationsMuted': notificationsMuted,
         'emergencyCall112': emergencyCall112,
         'voiceId': voiceId,
+        'messageApp': messageApp.name,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -185,6 +194,7 @@ class Settings {
           ? json['emergencyCall112'] as bool
           : d.emergencyCall112,
       voiceId: json['voiceId'] is String ? json['voiceId'] as String : d.voiceId,
+      messageApp: readEnum('messageApp', MessageApp.values, d.messageApp),
     );
   }
 
@@ -201,12 +211,13 @@ class Settings {
       other.readMessagesAloud == readMessagesAloud &&
       other.notificationsMuted == notificationsMuted &&
       other.emergencyCall112 == emergencyCall112 &&
-      other.voiceId == voiceId;
+      other.voiceId == voiceId &&
+      other.messageApp == messageApp;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
-      readMessagesAloud, notificationsMuted, emergencyCall112, voiceId);
+      readMessagesAloud, notificationsMuted, emergencyCall112, voiceId, messageApp);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }
