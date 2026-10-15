@@ -4,6 +4,7 @@ import '../ble/ble_command.dart';
 import '../settings/message_apps.dart';
 import '../settings/settings.dart';
 import 'intent.dart';
+import 'message_app.dart';
 import 'intent_lexicon.dart';
 
 /// Telefon mikrofonundan gelen serbest metni (örn. "Ahmet'i arar mısın")
@@ -78,7 +79,35 @@ BleCommand classifyVoiceCommand(String text) {
   final emergency = _emergencyContactCommand(lowered, source);
   if (emergency != null) return BleCommand.fromWire('ACIL_KİŞİ', emergency);
 
-  return _classifyByKeywords(lowered, source);
+  return _classifyWithMessageApp(lowered, source);
+}
+
+/// "WhatsApp" ve STT'nin yazımları: "WhatsApp'tan", "whats app", "vatsap",
+/// "votsap", iOS'ta "Whatsatan" ("p" düşmüş). "wats/vats/wots/vots + a" ile
+/// başlayan Türkçe kelime yok; kalıp bu yüzden geniş tutuldu.
+final _whatsapp = RegExp(r"(?<!\p{L})(?:wh?|v)[ao]ts\s?a\p{L}*(?:'\p{L}*)?", unicode: true);
+
+/// Cümlede WhatsApp geçiyorsa: önce WhatsApp sözü ATILARAK sınıflandırılır;
+/// MESAJ çıkarsa WhatsApp'tan gider. Başka bir niyet çıkarsa ("WhatsApp'tan
+/// Ayşe'yi ara") o niyet aynen döner (WhatsApp araması yok, normal arama).
+/// Hiçbir niyet çıkmazsa ("WhatsApp at Ayşe'ye") WhatsApp sözü "mesaj"
+/// sayılır. Değiştirmeler uzunluğu korur: entity indeksleri kaymasın.
+BleCommand _classifyWithMessageApp(String lowered, String source) {
+  if (!_whatsapp.hasMatch(lowered)) return _classifyByKeywords(lowered, source);
+
+  String replace(String text, String Function(int length) by) =>
+      text.replaceAllMapped(_whatsapp, (m) => by(m.end - m.start));
+  String blank(int n) => ' ' * n;
+  // "mesaj" (5) kısa sözlerde ("vatsap", 6) sığar; uzunluk korunur.
+  String asMessage(int n) => 'mesaj'.padRight(n);
+
+  final (l1, s1) = (replace(lowered, blank), replace(source, blank));
+  var command = _classifyByKeywords(l1, s1);
+  if (command.intent == PatikaIntent.bilinmiyor) {
+    command = _classifyByKeywords(replace(lowered, asMessage), replace(source, asMessage));
+  }
+  if (command.intent != PatikaIntent.mesaj) return command;
+  return BleCommand(intent: command.intent, entity: command.entity, messageApp: MessageApp.whatsapp);
 }
 
 // Türkçe harfleri de kapsayan kelime sınırları (Dart'ta \b sadece ASCII).

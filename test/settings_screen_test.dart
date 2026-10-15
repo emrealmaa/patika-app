@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:patika_app/accessibility/speech_output.dart';
 import 'package:patika_app/commands/voice_intent_classifier.dart';
 import 'package:patika_app/l10n/strings_tr.dart';
 import 'package:patika_app/screens/settings_screen.dart';
@@ -65,7 +66,7 @@ void main() {
   });
 
   group('Ayarlar', () {
-    Future<Harness> pump(WidgetTester tester) async {
+    Future<Harness> pump(WidgetTester tester, {Future<VoiceReport> Function()? loadVoices}) async {
       tester.view.physicalSize = const Size(1080, 16000);
       tester.view.devicePixelRatio = 2.625;
       addTearDown(tester.view.reset);
@@ -78,11 +79,64 @@ void main() {
             store: h.settings,
             feedback: h.app.feedback,
             onStartTutorial: () {},
+            loadVoices: loadVoices,
           ),
         ),
       ));
+      await tester.pump();
       return h;
     }
+
+    group('konuşma sesi', () {
+      const report = VoiceReport(voices: [
+        VoiceInfo(name: 'Yelda', locale: 'tr-TR', quality: 'enhanced', identifier: 'yelda'),
+        VoiceInfo(name: 'Cem', locale: 'tr-TR', quality: 'default', identifier: 'cem'),
+      ]);
+
+      testWidgets('ses listesi verilmezse (Android) seçim görünmez', (tester) async {
+        await pump(tester);
+        expect(find.text(Tr.voice), findsNothing);
+      });
+
+      testWidgets('Türkçe ses yoksa seçim görünmez', (tester) async {
+        await pump(tester, loadVoices: () async => const VoiceReport());
+        expect(find.text(Tr.voice), findsNothing);
+      });
+
+      testWidgets('otomatik + sesler; seçince kaydedilir ve yeni sesle önizlenir', (tester) async {
+        final h = await pump(tester, loadVoices: () async => report);
+        expect(find.text(Tr.voice), findsOneWidget);
+        expect(find.text(Tr.voiceAuto), findsOneWidget);
+        expect(find.text('Yelda, Gelişmiş'), findsOneWidget);
+        await tester.tap(find.text('Cem, Standart'));
+        await tester.pump();
+        expect(h.settings.value.voiceId, 'cem');
+        expect(h.tts.spoken.last, Tr.settingChanged(Tr.voice, 'Cem, Standart'));
+        expect(h.tts.voiceId, 'cem');
+      });
+
+      testWidgets('kayıtlı ses telefonda yoksa Otomatik seçili görünür', (tester) async {
+        final h = Harness();
+        addTearDown(h.dispose);
+        h.settings.update(h.settings.value.copyWith(voiceId: 'silinmis'));
+        tester.view.physicalSize = const Size(1080, 16000);
+        tester.view.devicePixelRatio = 2.625;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: SettingsScreen(
+              store: h.settings,
+              feedback: h.app.feedback,
+              onStartTutorial: () {},
+              loadVoices: () async => report,
+            ),
+          ),
+        ));
+        await tester.pump();
+        expect(tester.widget<RadioGroup<String>>(find.byType(RadioGroup<String>)).groupValue, '');
+      });
+    });
 
     testWidgets('112 ceza uyarısı özette görünür (ayrıntıya saklanmaz)', (tester) async {
       await pump(tester);

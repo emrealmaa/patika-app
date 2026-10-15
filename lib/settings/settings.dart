@@ -81,6 +81,15 @@ class Settings {
   /// arıyor" denir. Rehberdeki kişilerde her zaman ad okunur.
   final bool readUnknownCallerNumber;
 
+  /// Konuşma sesi ([VoiceInfo.id]); '' = otomatik (en kaliteli Türkçe ses).
+  /// Yalnızca iOS'ta seçilebilir. Seçilen ses telefondan silinirse
+  /// otomatiğe düşülür.
+  final String voiceId;
+
+  /// Düz "mesaj gönder" komutunun gittiği uygulama. Komutta "WhatsApp"
+  /// geçerse bu ayara bakılmaz. Varsayılan SMS.
+  final MessageApp messageApp;
+
   const Settings({
     this.speechRateLevel = 2,
     this.pitchLevel = 1,
@@ -94,6 +103,8 @@ class Settings {
     this.emergencyCall112 = false,
     this.messageApps = MessageApp.defaults,
     this.readUnknownCallerNumber = true,
+    this.voiceId = '',
+    this.messageApp = MessageApp.sms,
   });
 
   double get speechRate => speechRates[speechRateLevel];
@@ -120,6 +131,8 @@ class Settings {
     bool? emergencyCall112,
     Set<MessageApp>? messageApps,
     bool? readUnknownCallerNumber,
+    String? voiceId,
+    MessageApp? messageApp,
   }) {
     return Settings(
       speechRateLevel: _clamp(speechRateLevel ?? this.speechRateLevel, speechRates.length),
@@ -135,6 +148,8 @@ class Settings {
       emergencyCall112: emergencyCall112 ?? this.emergencyCall112,
       messageApps: messageApps ?? this.messageApps,
       readUnknownCallerNumber: readUnknownCallerNumber ?? this.readUnknownCallerNumber,
+      voiceId: voiceId ?? this.voiceId,
+      messageApp: messageApp ?? this.messageApp,
     );
   }
 
@@ -168,6 +183,8 @@ class Settings {
         'emergencyCall112': emergencyCall112,
         'messageApps': [for (final a in MessageApp.values) if (messageApps.contains(a)) a.name],
         'readUnknownCallerNumber': readUnknownCallerNumber,
+        'voiceId': voiceId,
+        'messageApp': messageApp.name,
       };
 
   /// Bozuk/eski/eksik alanlar sessizce varsayılana düşer - kayıtlı ayar
@@ -206,6 +223,8 @@ class Settings {
       readUnknownCallerNumber: json['readUnknownCallerNumber'] is bool
           ? json['readUnknownCallerNumber'] as bool
           : d.readUnknownCallerNumber,
+      voiceId: json['voiceId'] is String ? json['voiceId'] as String : d.voiceId,
+      messageApp: readEnum('messageApp', const [MessageApp.sms, MessageApp.whatsapp], d.messageApp),
     );
   }
 
@@ -223,13 +242,16 @@ class Settings {
       other.notificationsMuted == notificationsMuted &&
       other.emergencyCall112 == emergencyCall112 &&
       setEquals(other.messageApps, messageApps) &&
-      other.readUnknownCallerNumber == readUnknownCallerNumber;
+      other.readUnknownCallerNumber == readUnknownCallerNumber &&
+      other.voiceId == voiceId &&
+      other.messageApp == messageApp;
 
   @override
   int get hashCode => Object.hash(speechRateLevel, pitchLevel,
       silenceTimeoutSeconds, verbosity, hapticLevel, feedbackMode, nodToListen,
       readMessagesAloud, notificationsMuted, emergencyCall112,
-      Object.hashAllUnordered(messageApps), readUnknownCallerNumber);
+      Object.hashAllUnordered(messageApps), readUnknownCallerNumber, voiceId,
+      messageApp);
 
   static int _clamp(int level, int count) => level.clamp(0, count - 1);
 }

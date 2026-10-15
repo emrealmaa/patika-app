@@ -373,6 +373,7 @@ class AppState extends ChangeNotifier implements ControlActions {
         direct: directActions,
         ensureSmsPermission: ensureSms,
         sent: sentMessages,
+        defaultApp: () => this.settings.value.messageApp,
       ),
       lastMessage: LastMessageHandler(sentMessages),
       messageHistory: MessageHistoryHandler(_messageLog),
@@ -565,7 +566,7 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   void _applySettings() {
     final s = settings.value;
-    _speech.configure(rate: s.speechRate, pitch: s.pitch);
+    _speech.configure(rate: s.speechRate, pitch: s.pitch, voiceId: s.voiceId);
     notifyListeners();
   }
 
@@ -645,6 +646,9 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   /// Telefon pilini okur ve uyarıları değerlendirir (30 sn'lik zamanlayıcı ve
   /// testler çağırır). Okunamazsa sessiz kalır, uydurma değer söylenmez.
+  /// Test Modu: telefondaki Türkçe TTS sesleri ve seçilen ses.
+  Future<VoiceReport> voiceReport() => _speech.voiceReport();
+
   Future<void> pollPhoneBattery() async {
     final reading = await phoneBatteryTest.read();
     if (reading == null) {

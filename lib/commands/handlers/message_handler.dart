@@ -8,6 +8,7 @@ import '../../voice/dialog_manager.dart';
 import '../../voice/dialogs/message_flow.dart';
 import '../action_result.dart';
 import '../contact_resolver.dart';
+import '../message_app.dart';
 import '../sent_messages.dart';
 import '../url_opener.dart';
 import 'contact_lookup.dart';
@@ -22,6 +23,9 @@ import 'contact_lookup.dart';
 ///   parçalar operatöre ulaşınca "gönderildi" der.
 /// - "play" türünde ya da izin yoksa: SMS uygulaması metin DOLU açılır,
 ///   gönder tuşuna kullanıcı basar.
+/// - WhatsApp'ta (komutta "WhatsApp" ya da Ayarlar'da varsayılan): sohbet
+///   metin dolu açılır, gönder tuşuna her zaman kullanıcı basar (WhatsApp
+///   uygulamaların kendi adına göndermesine izin vermez).
 class MessageHandler {
   final ContactResolver _contacts;
   final DialogManager? _dialogs;
@@ -29,6 +33,7 @@ class MessageHandler {
   final DirectActions _direct;
   final Future<bool> Function() _ensureSmsPermission;
   final SentMessageLog _sent;
+  final MessageApp Function() _defaultApp;
 
   MessageHandler({
     ContactResolver? contacts,
@@ -37,32 +42,39 @@ class MessageHandler {
     DirectActions direct = const NoDirectActions(),
     Future<bool> Function()? ensureSmsPermission,
     SentMessageLog? sent,
-  })  : _contacts = contacts ?? ContactResolver(),
+    MessageApp Function()? defaultApp,
+  })  : _defaultApp = defaultApp ?? (() => MessageApp.sms),
+        _contacts = contacts ?? ContactResolver(),
         _dialogs = dialogs,
         _openUrl = openUrl ?? defaultOpenUrl,
         _direct = direct,
         _ensureSmsPermission = ensureSmsPermission ?? (() async => false),
         _sent = sent ?? SentMessageLog();
 
-  Future<ActionResult> handle(String? entity) async {
+  /// [app]: komutta açıkça söylenen uygulama; null ise Ayarlar'daki.
+  Future<ActionResult> handle(String? entity, {MessageApp? app}) async {
+    final chosen = app ?? _defaultApp();
+    Future<ActionResult> sendWith(ContactEntry c, String? body) => send(c, body, app: chosen);
     final dialogs = _dialogs;
     if (dialogs != null) {
-      unawaited(dialogs.start(MessageFlow(entity, _contacts, send)));
+      unawaited(dialogs.start(MessageFlow(entity, _contacts, sendWith,
+          whatsapp: chosen == MessageApp.whatsapp)));
       return ActionResult.handedOff('Mesaj diyaloğu başladı');
     }
 
     if (entity == null) return ActionResult.fail(Tr.messageNoTarget);
     final (contact, failure) = await lookupContact(_contacts, entity);
     if (contact == null) return failure!;
-    return send(contact, null);
+    return sendWith(contact, null);
   }
 
   /// Mesajı gönderir: mümkünse doğrudan, değilse SMS ekranını metin dolu
   /// açarak.
-  Future<ActionResult> send(ContactEntry contact, String? body) async {
+  Future<ActionResult> send(ContactEntry contact, String? body, {MessageApp app = MessageApp.sms}) async {
     if (contact.phones.isEmpty) {
       return ActionResult.fail(Tr.contactNoNumber(contact.displayName));
     }
+    if (app == MessageApp.whatsapp) return _sendWhatsapp(contact, body);
     final number = contact.phones.first.replaceAll(RegExp(r'[^\d+]'), '');
     final name = contact.displayName;
 
@@ -100,5 +112,21 @@ class MessageHandler {
       Tr.smsReady(name),
       detail: permissionDenied ? Tr.directPermissionFallback : Tr.smsReadyDetail,
     );
+  }
+
+  /// WhatsApp sohbetini metin dolu açar; gönderip göndermediğini bilemeyiz.
+  Future<ActionResult> _sendWhatsapp(ContactEntry contact, String? body) async {
+    final name = contact.displayName;
+    final phone = whatsappNumber(contact.phones.first);
+    if (phone == null) return ActionResult.fail(Tr.contactNoNumber(name));
+    final uri = Uri.parse(body == null || body.isEmpty
+        ? 'whatsapp://send?phone=$phone'
+        : 'whatsapp://send?phone=$phone&text=${Uri.encodeComponent(body)}');
+    if (!await _openUrl(uri)) {
+      return ActionResult.fail(Tr.whatsappFailed, detail: Tr.whatsappFailedDetail);
+    }
+    if (body == null) return ActionResult.ok(Tr.whatsappOpened(name), detail: Tr.smsOpenedDetail);
+    _sent.last = SentMessage(name, body, confirmedSent: false);
+    return ActionResult.ok(Tr.whatsappReady(name), detail: Tr.whatsappReadyDetail);
   }
 }

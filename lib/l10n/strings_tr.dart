@@ -176,8 +176,8 @@ abstract final class Tr {
         '${listed.join(', ')}. Hangisi?';
   }
   static String dialogConfirmCall(String nameAccusative) => '$nameAccusative arayayım mı?';
-  static String dialogConfirmMessage(String nameDative, String body) =>
-      '$nameDative şu mesaj: $body. Göndereyim mi?';
+  static String dialogConfirmMessage(String nameDative, String body, {bool whatsapp = false}) =>
+      '${whatsapp ? "WhatsApp'tan " : ''}$nameDative şu mesaj: $body. Göndereyim mi?';
   static const dialogYesNoHint = 'Evet ya da hayır deyin.';
   static const dialogChoiceHint = 'Birinci, ikinci ya da soyadını söyleyin.';
   static const dialogReviewHint =
@@ -220,6 +220,11 @@ abstract final class Tr {
   static const smsFailed = 'Mesaj uygulaması açılamadı';
   static String smsOpened(String name) => '$name için mesaj ekranı açıldı';
   static const smsOpenedDetail = 'Mesajınızı yazıp gönder tuşuna basın.';
+  static const whatsappFailed = 'WhatsApp açılamadı';
+  static const whatsappFailedDetail = 'Telefonda WhatsApp yüklü olmayabilir.';
+  static String whatsappOpened(String name) => '$name için WhatsApp sohbeti açıldı';
+  static String whatsappReady(String name) => '$name için WhatsApp mesajı hazır';
+  static const whatsappReadyDetail = "Göndermek için WhatsApp'taki gönder tuşuna basın.";
   static const mapsFailed = 'Harita uygulaması açılamadı';
   static String navStarted(String dest) => '$dest için yürüyüş yönlendirmesi başladı';
   static const navStartedDetail = 'Yönlendirme harita uygulamasında açıldı.';
@@ -474,6 +479,24 @@ abstract final class Tr {
   static const settingsFeedback = 'Bildirimler';
   static const speechRate = 'Konuşma hızı';
   static const pitch = 'Ses tonu';
+  static const messageApp = 'Mesaj uygulaması';
+  static const messageAppHint =
+      "Mesaj gönder dediğinizde kullanılır. Komutta WhatsApp derseniz her zaman WhatsApp'tan gider.";
+  static const messageAppSms = 'SMS';
+  static const messageAppWhatsapp = 'WhatsApp';
+  static const messageAppWhatsappHint =
+      'WhatsApp mesajı sizin yerinize gönderilemez, gönder tuşuna sizin basmanız gerekir.';
+  static const voice = 'Konuşma sesi';
+  static const voiceHint =
+      'Daha doğal ses için iPhone Ayarlar, Erişilebilirlik, Okunan İçerik, Sesler, '
+      'Türkçe bölümünden Gelişmiş ya da Premium bir ses indirin';
+  static const voiceAuto = 'Otomatik';
+  static const voiceAutoHint = 'Telefondaki en kaliteli Türkçe ses';
+  static String voiceLabel(String name, String quality) => switch (quality) {
+        'premium' => '$name, Premium',
+        'enhanced' => '$name, Gelişmiş',
+        _ => '$name, Standart',
+      };
   static const silenceTimeout = 'Sessizlik süresi';
   static const silenceTimeoutHint =
       'Konuşmanız bittikten sonra bu kadar sessizlik olunca dinleme biter.';
@@ -792,6 +815,18 @@ abstract final class Tr {
   static const testPhoneCharging = 'Telefon şarjda';
   static const testPhoneBatteryReal = 'Gerçek pil değerini kullan';
   static String testPhoneBatteryPercent(int percent) => '$testPhoneBattery: %$percent';
+
+  // --- Test Modu: konuşma sesleri ----------------------------------------------
+  static const testVoicesTitle = 'Konuşma sesleri';
+  static const testVoicesRefresh = 'Ses listesini yenile';
+  static const testVoicesNone = 'Telefonda Türkçe ses bulunamadı';
+  static const testVoicesDefault = 'Seçilen ses: motorun varsayılanı';
+  static String testVoicesSelected(String name, String quality) =>
+      'Seçilen ses: $name${quality.isEmpty ? '' : ' ($quality)'}';
+  static String testVoicesTotal(int turkish, int total) =>
+      '$turkish Türkçe ses, toplam $total ses';
+  static String testVoiceRow(String name, String locale, String quality, bool selected) =>
+      '$name, $locale${quality.isEmpty ? '' : ', $quality'}${selected ? ', seçili' : ''}';
 
   // --- Acil durum geçmişi (Faz 7) ---------------------------------------------
   // İşlem geçmişine yazılan satırlar: YALNIZCA isim ve sonuç durumu. Telefon
