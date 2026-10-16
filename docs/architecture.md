@@ -48,7 +48,7 @@ göre veriliyor.
 | **HapticPatterns** | `lib/accessibility/haptic_patterns.dart` | Ritimle ayrışan 10 desen, yalnızca telefonda (`PhoneHaptics`): gözlükte titreşim motoru yok. Park sensörü mantığındaki engel aralığı yalnızca telefon simülasyonudur; gerçek engel uyarısı gözlükte yerel earcon'dur (bkz. ble_protocol.md §5, firmware'de doğrulanacak). |
 | **Earcon** | `lib/accessibility/earcons.dart` | 4 kısa ses. Dosyalar `tool/generate_earcons.dart` ile üretiliyor. |
 | **PermissionExplainer** | `lib/permissions/permission_explainer.dart` | "Önce sesli açıkla, sonra sor": izin penceresinden önce neden gerektiği TTS ile söylenir. |
-| **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü. Ayarlar sesle de değişir (AYAR niyeti). |
+| **Settings** | `lib/settings/` | Konuşma hızı ve tonu, sessizlik süresi (1–6 sn), ayrıntı, titreşim şiddeti, bildirim türü; `messageApps` (okunacak gelen mesaj uygulamaları, `message_apps.dart`), `messageApp` (giden mesaj: SMS/WhatsApp), `readUnknownCallerNumber`, `voiceId` (konuşma sesi, yalnızca iOS'ta etkili). Ayarlar sesle de değişir (AYAR niyeti). |
 | **Tr** | `lib/l10n/strings_tr.dart` | Kullanıcıya giden tüm Türkçe metinler. |
 | **SentMessageLog** | `lib/commands/sent_messages.dart` | "Gönderdiğim son mesajı oku". Yalnızca bellekte. `play` türünde gönderim doğrulanamadığı için "hazırlanan son mesaj" denir. |
 | **DirectActions** | `lib/platform/direct_actions.dart`, `android/.../DirectActions.kt` | Onaydan sonra doğrudan arama (`TelecomManager.placeCall` - ekran başlatmaz, kilitli ekranda da çalışır) ve SMS (tüm parçalar operatöre ulaşınca "gönderildi"). Yalnızca `direct` derleme türünde; `play` türünde arama/SMS ekranı açılır. |
@@ -61,14 +61,15 @@ göre veriliyor.
 | **IncomingMessages / IncomingMessageLog** | `lib/platform/incoming_messages.dart`, `lib/commands/incoming_message_log.dart` | Bildirimden yakalanan mesajlar (Faz 4b, gerçek yakalama: `PatikaNotificationListener.kt`). Hangi uygulamaların okunacağı `Settings.messageApps` (Madde 4, sabit beyaz liste `MessageApp`; native `KNOWN_PACKAGES`, kanal metodu `setWatchedApps`; Dart da ayrıca süzer). `AppState._onIncomingMessage` her mesajı (susturulmuş olsa bile) günlüğe ekler; ayar açıksa içeriği okur (ilk kez `LoudMessagesNotice` ile bir kerelik gizlilik uyarısı), kapalıysa yalnızca göndereni söyler. MESAJLARIM/SON_BİLDİRİMLER niyetleri (`MessageHistoryHandler`) aynı günlüğü sırasıyla "okunmamışları oku" ve "son 20'nin göndereni" için okur; AYAR'daki `notificationsMuted` yalnızca duyuruyu susturur, günlüğü değil. |
 | **Pil + Durum (Faz 7b)** | `lib/battery/`, `android/.../BatteryProbe.kt`, `lib/commands/handlers/status_handler.dart` | Telefon pili 30 sn'de bir yoklanır (kanal `patika/battery`, sticky `ACTION_BATTERY_CHANGED`, izin yok); gözlük pili `batt` mesajından. `BatteryMonitor` eşikleri (telefon 30/15/5, gözlük 20/10/5, +5 histerezis), %5'te 5 dk'da bir yalnızca titreşim. SOS/arama/karşıya geçiş sırasında uyarı ertelenir. Şarj olayları `low` öncelik, titreşimsiz. **Yalnızca uyarır, hiçbir şeyi durdurmaz.** DURUM niyeti ("durum", "pil ne kadar"): gözlük + iki pil + navigasyon özeti. |
 
-## Gözlük kanalları (planlanan)
+## Gözlük kanalları
 
 - **BLE:** kontrol, buton, jest, pil, ToF, heartbeat (bkz.
   [ble_protocol.md](ble_protocol.md)). Gözlükte titreşim motoru yok.
 - **Wi-Fi SoftAP:** gözlük kendi erişim noktasını açar, telefon bağlanır.
   Kamera MJPEG (HTTP), ses ve kontrol WebSocket ile akar. Tespit ve karar
-  mantığının **tamamı telefonda** çalışır. Henüz kodlanmadı; `frm`
-  (akışı başlat/durdur) taslak (ble_protocol.md §7).
+  mantığının **tamamı telefonda** çalışır. Telefon tarafı yazıldı (aşağıda),
+  gerçek gözlükle denenmedi; `frm` (akışı başlat/durdur) taslak
+  (ble_protocol.md §7).
 - **Ağ riski:** SoftAP internetsizdir. Telefon ona **uygulamaya özel**
   bağlanır (`GlassesWifiController` -> `GlassesWifiService`, gerçek:
   `GlassesNetwork.kt`, `WifiNetworkSpecifier`, kanal `patika/glasses_wifi`):

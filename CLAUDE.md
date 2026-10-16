@@ -79,12 +79,31 @@ arama/SMS `play` gibi davranır ("bu sürümde gönderilemiyor");
   (cümleler kodda Türkçe, ayrı `tr` yerelleştirmesi yok); Eylem Düğmesi'ne
   atanınca soğuk açılışta ve uygulama açıkken dinlemenin başlaması.
 - [ ] `CXCallObserver`: giden aramanın çalarken ve bittikten sonra doğru
-  görülmesi (SOS iOS'ta arama yapmıyor; gelen arama işi yazılınca önemli).
+  görülmesi (SOS iOS'ta arama yapmıyor; gelen arama yalnızca Android'de
+  yazıldı, iOS'ta yalnızca durum bilgisi var).
 - [ ] TTS ile konuşma tanımanın aynı ses oturumunda çalışması (dinledikten
   sonra TTS'in kısık/ahizeden çıkması), BLE, arka planda çalışma.
 - [ ] Açılıştaki bildirim izni (`AppState.start`, simülatörde arayüz
   çizilmeden pencere geldi): sesli açıklamanın ve sistem penceresinin
   VoiceOver'la sırası.
+
+## Nerede kaldık (2026-10-16)
+
+**817 test, `flutter analyze` temiz.** `ios-support` dalı `main`'e tamamen
+birleşti (`1d06d58`, push edilmiş). 2026-10-14/15 işleri (hepsi kod + otomatik
+test; **telefonda doğrulanmadı**, bkz. "Bekleyen telefon testleri"):
+Madde 1 SoftAP'a uygulamaya özel ağ bağlama (`GlassesNetwork.kt`,
+`lib/glasses_wifi/`); Madde 2 gözlük kamerası görüntü kanalı (`lib/camera/`,
+`FrameSource`, MJPEG, `frm`); Madde 3 gerçek gelen arama algılama; Madde 3b pil
+optimizasyonu muafiyeti; Madde 4 birleşik `MessageApp` enum'u
+(`lib/settings/message_apps.dart`: SMS, WhatsApp, WhatsApp Business, Telegram,
+Signal); Madde 5 eğitimin SOS cümlesi derleme türüne göre; Madde 6 GATT
+UUID'leri tek yerde (`GlassesGattProfile`); Madde 7-8 geçiş zaman aşımı
+seçenekleri ve çift dokunuş koruması; Madde 9 barge-in yalnızca tasarım notu.
+Birleşmeyle gelen iOS dalı işleri: konuşma sesi seçimi (`Settings.voiceId`,
+yalnızca iOS'ta etkili) ve komutla ya da `Settings.messageApp` ile
+WhatsApp'tan mesaj. Cihaz deneme listesi:
+[docs/phone_test_checklist.md](docs/phone_test_checklist.md).
 
 ## Nerede kaldık (2026-10-07)
 
@@ -393,7 +412,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
    Faz 5 ve Faz 8 iptal edildi (aşağıda). Sırada yalnızca "Bekleyen telefon
    testleri".
 2. "Bekleyen telefon testleri" (yukarıda) - tarih henüz yok.
-3. **Telefon testi hâlâ bekliyor (2026-10-05), ilk oturumda bakılacaklar:**
+3. **Telefon testi hâlâ bekliyor (2026-10-05; tam liste
+   `docs/phone_test_checklist.md`), ilk oturumda bakılacaklar:**
    release'te gerçek BLE ile açılış (sahte gözlük yok); TalkBack ile sürüm
    satırına 7 dokunuş (gizli Test Modu); SOS'un ikinci numarayla uçtan uca
    denenmesi (asla gerçek 112 ile değil,
@@ -665,6 +685,14 @@ izleniyor (geri sayım + iptal varsayılanı GÖNDER, Faz 7 kararları madde 2).
    kapalıyken "bilinmeyen bir numara arıyor". Numara yalnızca arama ekranı
    bildiriminin başlığından gelir (`READ_CALL_LOG` yok), günlüğe yazılmaz.
 
+8. **Giden mesaj uygulaması:** `Settings.messageApp` (SMS ya da WhatsApp,
+   varsayılan SMS; Ayarlar > "Mesaj uygulaması"); komutta "WhatsApp'tan"
+   geçerse onu ezer. Aynı `MessageApp` enum'u gelen bildirim süzgecinde de
+   kullanılır (`messageApps`), giden tarafta yalnızca sms/whatsapp değeri
+   anlamlı. WhatsApp sohbeti metin dolu açar (`whatsapp://send`, numara
+   uluslararası biçime çevrilir); "gönderildi" denmez, gönder tuşuna kullanıcı
+   basar. "WhatsApp'tan ara" normal arama kalır.
+
 ## Faz planı
 
 Faz 1–7b yapıldı; faz planı **7b ile sona erer**. Faz 6 ve Faz 7a/7b ilk
@@ -727,6 +755,8 @@ kararları); firmware'de netleşecek.
    değil, telefondan sesle.
 3. **Kamera:** gözlük Wi-Fi SoftAP açar; MJPEG (HTTP) görüntü, WebSocket
    ses ve kontrol. Tespit ve karar mantığının tamamı telefonda. `frm`
-   taslağı: akışı başlat/durdur (`ble_protocol.md` §7). Henüz kodlanmadı.
+   taslağı: akışı başlat/durdur (`ble_protocol.md` §7). Telefon tarafı
+   yazıldı (Wi-Fi bağlama `lib/glasses_wifi/`, MJPEG `lib/camera/`; yalnızca
+   simülasyonla sınandı); WebSocket yazılmadı (OkHttp, firmware gelince).
 4. Antigravity artık kullanılmıyor; testleri ve dokümanı Claude Code
    yazıyor (bu repoda kalıntı yok; `patika` reposu ayrıca temizlenecek).

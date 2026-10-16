@@ -6,7 +6,8 @@ SOS'u tek elden yönetir. Birincil kullanıcı görme engelli bireylerdir; tasar
 **ekran görmeden kullanılabilir** olmaktır.
 
 > **Durum:** Android öncelikli. Gerçek gözlük yok; gözlük tarafı BLE simülasyonuyla test ediliyor.
-> iOS planlama aşamasında (kod yok). Rakamlar geliştirici ölçümüdür, hakemli çalışma değildir.
+> iOS dalı `main`'e birleşti (simülatörde ve sınırlı iPhone denemesiyle; kapsam ve eksikler CLAUDE.md "iOS"
+> bölümünde). Rakamlar geliştirici ölçümüdür, hakemli çalışma değildir.
 
 ## 1. Özellikler ve doğrulama düzeyi
 
@@ -16,8 +17,11 @@ SOS'u tek elden yönetir. Birincil kullanıcı görme engelli bireylerdir; tasar
 | Sesli komut (Türkçe), doğal ifade anlama | Birim testi (+ cihazda kısmen) | 38 cümlelik birim testi 19/38 (%50) → 38/38; telefonda yalnızca birkaç ifade denendi. **Kurallar bu cümlelerle geliştirildi, ayrı doğrulama kümesi yok**, genel doğruluk ölçülmedi |
 | Arama, mesaj, navigasyon yönlendirmesi | Cihazda doğrulandı | Yerel uygulamalar doğru açılıyor |
 | Kişi eşleştirme (ek almış isimler, bulanık eşleşme) | Birim testi | Eşik değerleri gerçek rehberde tam doğrulanmadı |
-| Gelen arama duyurusu | Simülasyon cihazda doğrulandı | Gerçek gelen arama ve ses modu tespiti **doğrulanmadı** |
-| Bildirim okuma (WhatsApp/SMS) | İzin akışı cihazda doğrulandı | Gerçek mesajla uçtan uca bekliyor |
+| Gelen arama duyurusu | Simülasyon cihazda doğrulandı; gerçek algılama yazıldı (`READ_PHONE_STATE`, `ANSWER_PHONE_CALLS`) | Gerçek gelen arama, arayan adı ve ses modu tespiti **cihazda doğrulanmadı** |
+| Bildirim okuma (SMS, WhatsApp, WhatsApp Business, Telegram, Signal; Ayarlar'dan seçilir) | İzin akışı cihazda doğrulandı | Gerçek mesajla uçtan uca ve uygulama süzgeci bekliyor |
+| Mesaj gönderme (SMS ya da WhatsApp) | Birim testi | WhatsApp sohbeti metin dolu açılır, gönder tuşuna kullanıcı basar |
+| Gözlük kamerası Wi-Fi kanalı (SoftAP'a uygulamaya özel bağlanma, MJPEG kare akışı) | Birim testi + simülasyon | Gerçek gözlük ve telefonda **hiç denenmedi**; WebSocket yazılmadı |
+| Pil optimizasyonu muafiyeti | Birim testi | Cihazda **denenmedi** |
 | Navigasyon (Google Routes/Places) | Birim testi | Gerçek yürüyüş, konum izni akışı, ekran kapalı senaryo bekliyor |
 | SOS (geri sayım, SMS + arama) | Birim testi | **İkinci numarayla gerçek gönderim denenmedi** |
 | Pil uyarıları | Birim testi | Cihazda gerçek eşik tetiklemesi bekliyor |
@@ -84,15 +88,15 @@ Ayrıntılar ve gerekçeler: `docs/UI_ERISILEBILIRLIK.md`.
 - **Animasyonlar** yalnızca süstür (`ExcludeSemantics`), yalnızca dinleme/tarama sırasında çalışır ve
   "Animasyonları kaldır" açıkken (`MediaQuery.disableAnimationsOf`) durur.
 - Bölüm başlıkları büyük harfe çevrilmez: Dart'ın `toUpperCase()`'i Türkçe "i"yi "İ" yerine "I" yapar.
-- **Bilinen sorun:** `play` türünde Ayarlar'daki "SOS nasıl çalışır?" kartı `direct` davranışını anlatıyor
-  (TODO.md madde 17).
+- **Bilinen sorun:** `play` türünde Ayarlar'daki "SOS nasıl çalışır?" kartı hâlâ `direct` davranışını anlatıyor
+  (sesli eğitim derleme türüne göre düzeltildi, kart değil).
 
 ## 7. Çalıştırma
 
 ```bash
 flutter pub get
 flutter run --flavor direct -d <cihaz-id>
-flutter analyze && flutter test   # 680 test
+flutter analyze && flutter test   # 817 test
 ```
 
 Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`
@@ -116,7 +120,8 @@ gerçek BLE ile açılır; simülasyon anahtarı yalnızca Test Modu'ndadır. **
 | iOS arka plan kısıtı ölçülmedi | iOS desteği için kanıt yok |
 
 Belgeler: `CLAUDE.md` (faz durumu, kararlar, bekleyen testler), `docs/architecture.md`, `docs/ble_protocol.md`,
-`docs/sos_phone_test_checklist.md` (SOS telefon deneme listesi), `docs/UI_ERISILEBILIRLIK.md` (arayüz ve erişilebilirlik).
+`docs/phone_test_checklist.md` (tüm telefon deneme listesi), `docs/sos_phone_test_checklist.md` (SOS ayrıntısı),
+`docs/barge_in_tasarim.md` (ertelenen sesle araya girme), `docs/UI_ERISILEBILIRLIK.md` (arayüz ve erişilebilirlik).
 Bu uygulama **acil durum servisi değildir**; SOS deneyseldir ve bastonun/kullanıcının kendi değerlendirmesinin yerini almaz.
 
 **Lisans:** henüz belirlenmedi.
