@@ -192,6 +192,20 @@ void main() {
       expect(const EmergencyNumber(debugTestNumber: testNumber).dialNumber, testNumber);
     });
 
+    test('release: PATIKA_SOS_TEST_NUMBER yok sayılır, numara sabit 112', () {
+      const number = EmergencyNumber(debugTestNumber: testNumber, release: true);
+      expect(number.dialNumber, EmergencyNumber.real);
+      expect(number.dialNumber, isNot(testNumber));
+      expect(number.canDial, isTrue);
+      // Test numarası hiç verilmese de release'te numara 112'dir.
+      expect(const EmergencyNumber(release: true).dialNumber, EmergencyNumber.real);
+    });
+
+    test('release dışı: release bayrağı false iken test numarası kullanılır', () {
+      expect(const EmergencyNumber(debugTestNumber: testNumber, release: false).dialNumber, testNumber);
+      expect(const EmergencyNumber(release: false).dialNumber, isNull);
+    });
+
     test('test numarası olarak "112" verilse bile yok sayılır', () {
       expect(const EmergencyNumber(debugTestNumber: '112').dialNumber, isNull);
       expect(const EmergencyNumber(debugTestNumber: '112').canDial, isFalse);

@@ -21,9 +21,12 @@ class EmergencyNumber {
   static const _testNumberDefine = String.fromEnvironment('PATIKA_SOS_TEST_NUMBER');
 
   final String? _testNumber;
+  final bool _release;
 
-  const EmergencyNumber({String? debugTestNumber})
-      : _testNumber = (kReleaseMode || debugTestNumber == real) ? null : debugTestNumber;
+  /// [release] yalnÄ±zca testler iÃ§indir (varsayÄ±lan: gerÃ§ek derleme tÃ¼rÃ¼).
+  const EmergencyNumber({String? debugTestNumber, bool release = kReleaseMode})
+      : _release = release,
+        _testNumber = (release || debugTestNumber == real) ? null : debugTestNumber;
 
   /// Uygulamadaki varsayılan: `dart-define` ile verilen test numarası (yoksa
   /// release dışında hiçbir şey aranmaz).
@@ -31,7 +34,7 @@ class EmergencyNumber {
       : this(debugTestNumber: _testNumberDefine == '' ? null : _testNumberDefine);
 
   /// Aranacak numara; aranamıyorsa (release dışı ve test numarası yok) null.
-  String? get dialNumber => kReleaseMode ? real : _testNumber;
+  String? get dialNumber => _release ? real : _testNumber;
 
   bool get canDial => dialNumber != null;
 }
