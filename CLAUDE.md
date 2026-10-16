@@ -89,7 +89,7 @@ arama/SMS `play` gibi davranır ("bu sürümde gönderilemiyor");
 
 ## Nerede kaldık (2026-10-16)
 
-**817 test, `flutter analyze` temiz.** `ios-support` dalı `main`'e tamamen
+**819 test, `flutter analyze` temiz.** `ios-support` dalı `main`'e tamamen
 birleşti (`1d06d58`, push edilmiş). 2026-10-14/15 işleri (hepsi kod + otomatik
 test; **telefonda doğrulanmadı**, bkz. "Bekleyen telefon testleri"):
 Madde 1 SoftAP'a uygulamaya özel ağ bağlama (`GlassesNetwork.kt`,

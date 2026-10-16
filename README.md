@@ -96,7 +96,7 @@ Ayrıntılar ve gerekçeler: `docs/UI_ERISILEBILIRLIK.md`.
 ```bash
 flutter pub get
 flutter run --flavor direct -d <cihaz-id>
-flutter analyze && flutter test   # 817 test
+flutter analyze && flutter test   # 819 test
 ```
 
 Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`
