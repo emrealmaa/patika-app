@@ -166,7 +166,8 @@ void main() {
           hasTapAction: true,
         ),
       );
-      expect(tester.getSize(button).height, greaterThanOrEqualTo(PatikaTokens.minTouchSecondary));
+      // Proje kuralı: ikincil düğme de en az 56 dp (sabit 48'e düşürülemez).
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(56));
 
       tester.semantics.tap(find.semantics.byLabel('Ayrıntıyı göster: SOS nasıl çalışır?'));
       await tester.pump();

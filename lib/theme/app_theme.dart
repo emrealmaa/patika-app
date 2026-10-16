@@ -97,8 +97,9 @@ class PatikaTokens {
   /// Her düğme ve satır en az bu yükseklikte.
   static const minTouch = 56.0;
 
-  /// İkincil düğmeler ("Ayrıntıyı göster") en az bu yükseklikte.
-  static const minTouchSecondary = 48.0;
+  /// İkincil düğmeler ("Ayrıntıyı göster") da proje kuralı gereği en az 56 dp
+  /// (CLAUDE.md); ayrı ad yalnızca okunabilirlik için.
+  static const minTouchSecondary = minTouch;
 
   // --- Yazı tipi ----------------------------------------------------------------
   /// `assets/fonts/` (OFL, `assets/fonts/OFL.txt`); 400-800 statik dosyalar.
