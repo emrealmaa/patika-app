@@ -28,6 +28,9 @@ Mimari: [docs/architecture.md](docs/architecture.md), gözlük protokolü:
 
 - Derleme: `flutter run --flavor play` ya da `--flavor direct` (flavor
   zorunlu). APK: `build/app/outputs/flutter-apk/app-<tür>-debug.apk`.
+- Release imzası `android/key.properties`'ten (örnek `key.properties.example`,
+  adımlar README §7); dosya yoksa debug anahtarına düşer ve uyarır. Gerçek
+  release anahtarı **henüz üretilmedi** (kullanıcı üretecek, depo dışında).
 - Test telefonu: Galaxy S24 FE (Android 16), adb seri `R5CY6018HZL`.
 - Emülatör `patika_api34` bilgisayarı zorluyor: **gerekirse önce kullanıcıya
   sor**, kendiliğinden başlatma. sdkmanager/avdmanager için

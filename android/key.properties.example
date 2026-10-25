@@ -1,0 +1,7 @@
+# Release imzası. Bu dosyayı android/key.properties adıyla kopyalayıp doldur.
+# key.properties ve anahtar dosyası (.jks) depoya GİRMEZ (.gitignore).
+# storeFile android/ klasörüne göre yoldur.
+storeFile=../../patika-release.jks
+storePassword=
+keyAlias=patika
+keyPassword=

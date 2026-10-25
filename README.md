@@ -104,6 +104,18 @@ dosyasını `dart_defines.json` adıyla kopyalayıp doldur, `flutter run --flavo
 ile ver (`dart_defines.json` `.gitignore`'da, depoya girmez). Google Cloud'da
 anahtarı paket adı ve imza SHA-1 ile yalnızca Routes ve Places API'lerine kısıtla, bütçe uyarısı koy.
 
+**Release imzası (`direct` APK dağıtımı):** anahtar bir kez üretilir ve **depo dışında, yedekli** saklanır
+(kaybolursa kullanıcılar uygulamayı silmeden güncelleyemez):
+
+```bash
+keytool -genkeypair -keystore ../patika-release.jks -alias patika -keyalg RSA -keysize 2048 -validity 10000
+```
+
+`android/key.properties.example` dosyasını `android/key.properties` adıyla kopyalayıp doldur (ikisi de
+`.gitignore`'da). Sonra `flutter build apk --flavor direct --release`. Dosya yoksa derleme debug anahtarıyla
+imzalar ve uyarır: böyle bir APK dağıtılmaz. Release SHA-1'i (`keytool -list -v -keystore ../patika-release.jks`)
+Google Cloud anahtar kısıtına ayrı satır olarak eklenir.
+
 **Test Modu** geliştirici aracıdır (gözlük, bildirim, arama simülasyonları). Gerçek kullanıcıya gizlidir;
 Ayarlar'daki sürüm satırına 7 kez dokunarak açılır, açıkken her açılışta
 düşük öncelikli bir duyuruyla "Test modu açık" söylenir (sırada 10 sn'den fazla beklerse atılır). Release derlemesi
