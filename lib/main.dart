@@ -147,6 +147,7 @@ class _HomePageState extends State<HomePage> {
         testMode: _testMode,
         version: _appVersion,
         loadVoices: Platform.isIOS ? _appState.voiceReport : null,
+        isDirect: _appState.isDirectBuild,
       ),
       // Gizli sekme EN SONDA: üç sekmenin sırası ve "Sekme N/M" etiketleri
       // açılışta değişmez, sekme belirince TalkBack odağı kaymaz.

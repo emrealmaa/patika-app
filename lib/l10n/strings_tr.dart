@@ -751,6 +751,16 @@ abstract final class Tr {
     'Hiçbir şey yapmazsanız mesaj acil kişilerinize gönderilir.',
     'Patika acil durum servisi değildir.',
   ];
+
+  /// `play` derlemesinin kartı: bu türde acil kişilere mesaj GİTMEZ (Faz 7
+  /// karar 1); kart da sesli eğitim gibi ([tutorialSosPlay]) yanıltmasın.
+  static const sosHowSummaryPlay = 'Bu sürümde acil kişilere mesaj gönderilemiyor.';
+  static const sosHowDetailsPlay = [
+    '"Yardım", "imdat" ya da "acil durum" dendiğinde veya gözlüğün düğmesine uzun '
+        'basıldığında bu söylenir; geri sayım başlamaz.',
+    'Acil durumda 112 ya da telefonun kendi acil durum özelliği kullanılabilir.',
+    'Patika acil durum servisi değildir.',
+  ];
   static const sosCall112EnabledWarning =
       'Dikkat: acil durumda 112 aranacak. Asılsız 112 araması idari para cezası '
       'gerektirebilir. Kapatmak için aynı düğmeye tekrar dokunun';

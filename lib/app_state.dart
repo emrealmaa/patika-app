@@ -942,6 +942,10 @@ class AppState extends ChangeNotifier implements ControlActions {
 
   bool get inPhoneCall => _inPhoneCall;
 
+  /// `direct` derlemesi mi (doğrudan arama/SMS ve SOS gönderimi var mı).
+  /// Ayarlar'daki "SOS nasıl çalışır?" kartı buna göre anlatır.
+  Future<bool> isDirectBuild() => _directActions.isAvailable();
+
   /// Pil optimizasyonu muafiyeti (Madde 3b): `direct`te sistem penceresi
   /// (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), `play`de ayar ekranı + sesli
   /// yönlendirme. Zaten muafsa sessiz. Eğitim sonunda ve Test Modu'ndan.

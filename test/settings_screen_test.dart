@@ -66,7 +66,11 @@ void main() {
   });
 
   group('Ayarlar', () {
-    Future<Harness> pump(WidgetTester tester, {Future<VoiceReport> Function()? loadVoices}) async {
+    Future<Harness> pump(
+      WidgetTester tester, {
+      Future<VoiceReport> Function()? loadVoices,
+      Future<bool> Function()? isDirect,
+    }) async {
       tester.view.physicalSize = const Size(1080, 16000);
       tester.view.devicePixelRatio = 2.625;
       addTearDown(tester.view.reset);
@@ -80,6 +84,7 @@ void main() {
             feedback: h.app.feedback,
             onStartTutorial: () {},
             loadVoices: loadVoices,
+            isDirect: isDirect,
           ),
         ),
       ));
@@ -165,8 +170,9 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('"SOS nasıl çalışır?" özet ve ayrıntıyı gösterir', (tester) async {
-      await pump(tester);
+    testWidgets('"SOS nasıl çalışır?" direct: özet ve ayrıntıyı gösterir', (tester) async {
+      await pump(tester, isDirect: () async => true);
+      await tester.pump();
       final summary = Tr.sosHowSummary(SosConfig.manualCountdown.inSeconds);
       expect(find.text(summary), findsOneWidget);
       await tester.tap(find.bySemanticsLabel('Ayrıntıyı göster: ${Tr.sosHowTitle}'));
@@ -174,6 +180,31 @@ void main() {
       for (final line in Tr.sosHowDetails) {
         expect(find.text(line), findsOneWidget);
       }
+    });
+
+    testWidgets('"SOS nasıl çalışır?" play: gönderim vaat edilmez', (tester) async {
+      await pump(tester, isDirect: () async => false);
+      await tester.pump();
+      expect(find.text(Tr.sosHowSummaryPlay), findsOneWidget);
+      expect(find.text(Tr.sosHowSummary(SosConfig.manualCountdown.inSeconds)), findsNothing);
+      await tester.tap(find.bySemanticsLabel('Ayrıntıyı göster: ${Tr.sosHowTitle}'));
+      await tester.pump();
+      for (final line in Tr.sosHowDetailsPlay) {
+        expect(find.text(line), findsOneWidget);
+      }
+      expect(find.text(Tr.sosHowDetails[3]), findsNothing);
+    });
+
+    testWidgets('"SOS nasıl çalışır?" tür bilinmiyorsa ya da sorulamazsa play metni', (tester) async {
+      await pump(tester);
+      await tester.pump();
+      expect(find.text(Tr.sosHowSummaryPlay), findsOneWidget);
+    });
+
+    testWidgets('"SOS nasıl çalışır?" tür sorusu hata verirse play metni', (tester) async {
+      await pump(tester, isDirect: () async => throw Exception('kanal yok'));
+      await tester.pump();
+      expect(find.text(Tr.sosHowSummaryPlay), findsOneWidget);
     });
   });
 
@@ -198,6 +229,13 @@ void main() {
     test('hiçbir şey yapılmazsa gönderilir: özet ve ayrıntı bunu söyler', () {
       expect(Tr.sosHowSummary(7), contains('iptal etmezseniz acil kişilerinize gönderilir'));
       expect(Tr.sosHowDetails, contains('Hiçbir şey yapmazsanız mesaj acil kişilerinize gönderilir.'));
+    });
+
+    test('play kartı gönderim vaat etmez, 112\'yi ve "servis değildir"i söyler', () {
+      final all = [Tr.sosHowSummaryPlay, ...Tr.sosHowDetailsPlay].join(' ');
+      expect(all, isNot(contains('gönderilir')));
+      expect(all, contains('112'));
+      expect(Tr.sosHowDetailsPlay, contains('Patika acil durum servisi değildir.'));
     });
   });
 }

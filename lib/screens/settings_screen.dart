@@ -41,6 +41,11 @@ class SettingsScreen extends StatelessWidget {
   /// (yalnızca iOS: Android'de motorun varsayılan sesi kalır).
   final Future<VoiceReport> Function()? loadVoices;
 
+  /// Derleme türü (`DirectActions.isAvailable`): "SOS nasıl çalışır?" kartı
+  /// buna göre anlatır. Verilmezse, sorulamazsa ya da cevap gelene dek
+  /// güvenli taraf: `play` metni (SOS'un gideceği vaat edilmez).
+  final Future<bool> Function()? isDirect;
+
   const SettingsScreen({
     super.key,
     required this.store,
@@ -49,6 +54,7 @@ class SettingsScreen extends StatelessWidget {
     this.testMode,
     this.version,
     this.loadVoices,
+    this.isDirect,
   });
 
   Settings get _s => store.value;
@@ -209,11 +215,7 @@ class SettingsScreen extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 12),
-        KisaOzetKart(
-          title: Tr.sosHowTitle,
-          summary: Tr.sosHowSummary(SosConfig.manualCountdown.inSeconds),
-          details: Tr.sosHowDetails,
-        ),
+        _SosHowCard(isDirect: isDirect),
         _Section(Tr.settingsFeedback, [
           _Choice<FeedbackMode>(
             title: Tr.feedbackMode,
@@ -361,6 +363,51 @@ class _Section extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "SOS nasıl çalışır?": `direct`te geri sayım + gönderim, `play`de (ve
+/// iOS'ta) "bu sürümde gönderilemiyor". Tür bilinene dek ve sorulamazsa
+/// `play` metni: yanlışlıkla güvence vermektense eksik anlatmak.
+class _SosHowCard extends StatefulWidget {
+  final Future<bool> Function()? isDirect;
+
+  const _SosHowCard({required this.isDirect});
+
+  @override
+  State<_SosHowCard> createState() => _SosHowCardState();
+}
+
+class _SosHowCardState extends State<_SosHowCard> {
+  late final Future<bool> _direct = _load();
+
+  Future<bool> _load() async {
+    final isDirect = widget.isDirect;
+    if (isDirect == null) return false;
+    try {
+      return await isDirect();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _direct,
+      builder: (context, snap) {
+        final direct = snap.data ?? false;
+        return KisaOzetKart(
+          // Tür değişince ayrıntı kapalı yeniden çizilsin (eski metin kalmasın).
+          key: ValueKey(direct),
+          title: Tr.sosHowTitle,
+          summary: direct
+              ? Tr.sosHowSummary(SosConfig.manualCountdown.inSeconds)
+              : Tr.sosHowSummaryPlay,
+          details: direct ? Tr.sosHowDetails : Tr.sosHowDetailsPlay,
+        );
+      },
     );
   }
 }
