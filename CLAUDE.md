@@ -190,7 +190,8 @@ birikiyor. Yeni yazılan her cihaza bağlı özellik buraya madde olarak eklenir
   düz HTTP'nin yalnızca 192.168.4.1'e açık olduğu (başka adres engelli),
   ekran kilitliyken akışın sürmesi ve pil/ısınma etkisi (telefon ve
   gözlük), gözlük kapanınca "koptu" + geri açılınca akışın kendiliğinden
-  dönmesi, `frm` mesajının MTU 20 baytta sığmaması (22 bayt).
+  dönmesi, `wifi` mesajının MTU 20 baytta gönderimi (`frm` 2026-10-25'te
+  `"on":1/0` ile 18 bayta indi, sığıyor).
   **WebSocket (ses/kontrol): OkHttp firmware gelince eklenecek** (kullanıcı
   kararı 2026-10-14); o zamana kadar `UnimplementedGlassesControlSocket`.
 

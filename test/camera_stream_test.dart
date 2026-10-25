@@ -182,12 +182,23 @@ void main() {
 
   group('frm (taslak)', () {
     test('kodlama ve çözme', () {
-      expect(utf8.decode(GlassesProtocol.encodeFrm(true)), '{"t":"frm","on":true}');
+      expect(utf8.decode(GlassesProtocol.encodeFrm(true)), '{"t":"frm","on":1}');
+      expect(utf8.decode(GlassesProtocol.encodeFrm(false)), '{"t":"frm","on":0}');
+      expect(GlassesProtocol.decodeFrm(GlassesProtocol.encodeFrm(true)), isTrue);
       expect(GlassesProtocol.decodeFrm(GlassesProtocol.encodeFrm(false)), isFalse);
+      expect(GlassesProtocol.decodeFrm(utf8.encode('{"t":"frm","on":true}')), isNull);
+      expect(GlassesProtocol.decodeFrm(utf8.encode('{"t":"frm","on":2}')), isNull);
       expect(GlassesProtocol.decodeFrm(utf8.encode('{"t":"hb"}')), isNull);
       expect(GlassesProtocol.decodeFrm(utf8.encode('bozuk')), isNull);
-      // 21-22 bayt: MTU pazarlığı başarısız olursa (20 bayt) sığmaz - belgede açık nokta.
-      expect(GlassesProtocol.encodeFrm(false).length, lessThanOrEqualTo(244));
+    });
+
+    // Telefon -> gözlük her yazma MTU pazarlığı başarısızken de (20 bayt)
+    // bölünmeden gitmeli (ble_protocol.md §2). Yeni yazma eklenince buraya.
+    test('telefonun her yazması 20 bayta sığar', () {
+      for (final on in [true, false]) {
+        expect(GlassesProtocol.encodeFrm(on).length, lessThanOrEqualTo(GlassesProtocol.minPayload),
+            reason: 'frm $on');
+      }
     });
   });
 

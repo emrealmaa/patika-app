@@ -61,7 +61,10 @@ Geriye dönük uyumluluk: `"t"` alanı olmayan ama `intent` içeren eski format
 | `t` | Alanlar | Anlamı | Örnek |
 |---|---|---|---|
 | ~~`hap`~~ | — | **Kaldırıldı** (gözlükte titreşim motoru yok, bkz. §4) | — |
-| `frm` | `on` (bool) | **TASLAK, firmware'de netleşecek.** Kamera akışını başlat/durdur (bkz. §7) | `{"t":"frm","on":true}` |
+| `frm` | `on` (1/0) | **TASLAK, firmware'de netleşecek.** Kamera akışını başlat/durdur (bkz. §7) | `{"t":"frm","on":1}` |
+
+Telefonun her yazması 20 bayta sığar (MTU pazarlığı başarısız olsa da
+bölünmez); `test/camera_stream_test.dart` kilitler.
 
 ## 3. Heartbeat ve bağlantı sağlığı
 
@@ -156,7 +159,7 @@ Firmware ekibiyle teyit edilecek liste; uygulamadaki tek kaynak
   eski biçim de kabul edilir (§2.1). `intent` değerleri `intent_classifier.py`
   ile aynı.
 - Diğer olaylar (§2.1): `btn`, `gst`, `batt`, `hb` (2 sn), taslak `wifi`.
-  Telefon -> gözlük (§2.2): taslak `frm` (22 bayt; MTU 20 baytta sığmaz, §7).
+  Telefon -> gözlük (§2.2): taslak `frm` (18 bayt, 20 bayta sığar, §7).
 - MTU 247 istenir (244 bayt yük); pazarlık başarısızsa 20 bayt.
 
 ## 6. Açık konular
@@ -182,7 +185,7 @@ netleşecek.**
 - **Karar mantığı telefonda:** Tespit ve karar mantığının tamamı telefonda
   çalışır; gözlük yalnızca kamera/ses/sensör kaynağıdır.
 - **`frm` (taslak):** Tek kare çekme komutu değil, **akışı başlat/durdur**
-  komutudur. `{"t":"frm","on":true}` SoftAP'ı ve akışı açar, `on:false`
+  komutudur. `{"t":"frm","on":1}` SoftAP'ı ve akışı açar, `"on":0`
   kapatır. SoftAP bilgisinin (SSID/parola veya sabit adres) BLE üzerinden mi
   yoksa sabit mi paylaşılacağı açık.
 - **SoftAP bilgisi (taslak `wifi` mesajı, §2.1):** Gözlük SoftAP'ı açınca
@@ -204,9 +207,11 @@ netleşecek.**
   fazla 10 kare/sn işler, 400 ms'den eski kare tüketiciye verilmez
   (`CameraConfig`). Durdurmada `frm off`. Uygulama: `lib/camera/`,
   `GlassesMjpegStream.kt`.
-- **`frm` boyutu:** `{"t":"frm","on":false}` 22 bayttır: MTU pazarlığı
-  başarısız olursa (20 bayt yük) sığmaz. Firmware ile daha kısa biçim
-  (ör. `{"t":"frm","on":0}`) ya da MTU zorunluluğu kararlaştırılmalı.
+- **`frm` boyutu (2026-10-25):** `on` bool yerine 1/0: `{"t":"frm","on":0}`
+  18 bayt, MTU pazarlığı başarısız olsa da (20 bayt yük) sığar. Eski
+  `false` biçimi 22 bayttı ve sığmıyordu. Gözlükten gelen `wifi` mesajı
+  (SSID + parola) 20 baytı aşar; MTU pazarlığı başarısızsa nasıl
+  gönderileceği (bölme ya da MTU zorunluluğu) firmware'de açık.
 - **Kare hızı/çözünürlük ve ısınma/pil:** telefon tarafında ayarlanabilir
   (`CameraConfig.maxFps`, `resolution`); gözlüğe nasıl iletileceği ve
   gözlüğün ısınma/pil durumunu bildirip bildirmeyeceği açık.

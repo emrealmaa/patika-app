@@ -89,9 +89,15 @@ abstract final class GlassesProtocol {
   /// Bu süre heartbeat gelmezse bağlantı kopmuş sayılır (3 aralık).
   static const heartbeatTimeout = Duration(seconds: 6);
 
+  /// MTU pazarlığı başarısız olursa (23) bir yazmanın yükü. Telefonun
+  /// gözlüğe yazdığı her mesaj buna sığar (ble_protocol.md §2).
+  static const minPayload = 20;
+
   /// Telefon -> gözlük: kamera akışını (SoftAP + MJPEG) başlat/durdur.
+  /// `on` 1/0 (bool değil): `{"t":"frm","on":0}` 18 bayt, `false` ile 22
+  /// bayt olur ve [minPayload]'a sığmazdı.
   /// **TASLAK, firmware'de netleşecek** (ble_protocol.md §2.2, §7).
-  static List<int> encodeFrm(bool on) => utf8.encode(jsonEncode({'t': 'frm', 'on': on}));
+  static List<int> encodeFrm(bool on) => utf8.encode(jsonEncode({'t': 'frm', 'on': on ? 1 : 0}));
 
   /// Telefon -> gözlük yazmasını çözer (simülasyon ve testler için); `frm`
   /// değilse ya da bozuksa null.
@@ -99,8 +105,7 @@ abstract final class GlassesProtocol {
     try {
       final json = jsonDecode(utf8.decode(bytes));
       if (json is! Map || json['t'] != 'frm') return null;
-      final on = json['on'];
-      return on is bool ? on : null;
+      return switch (json['on']) { 1 => true, 0 => false, _ => null };
     } catch (_) {
       return null;
     }

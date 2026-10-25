@@ -166,7 +166,7 @@ karşı çalıştığını görmek içindir.
 | nRF Connect'te `GlassesGattProfile`'daki servis/karakteristiklerle peripheral kur | Uygulama gerçek BLE taramasında bulur (Test Modu kapalı) | ☐ ☐ | D-rel | evet |
 | Bağlan, `hb` (2 sn) gönder | "Bağlı" ve sağlıklı; heartbeat kesilince 6 sn sonra "koptu" duyurulur, yeniden bağlanma dener | ☐ ☐ | D-rel | evet |
 | `btn`, `batt`, `wifi` JSON'ları gönder | Buton davranışı, gözlük pili ve eşikler; geçersiz JSON atlanır, çökme yok | ☐ ☐ | D-rel | evet |
-| `frm` yazma (22 bayt) | MTU 20'de sığmama davranışını gözle (protokol §7 açık sorusu) | ☐ ☐ | D-rel | evet |
+| `frm` yazma (18 bayt, `"on":1/0`) | Yazma MTU 20'de de bölünmeden ulaşıyor; uzun `wifi` mesajı MTU 20'de ne oluyor (protokol §7) | ☐ ☐ | D-rel | evet |
 
 ### D5. Hotspot ile SoftAP internet denemesi
 
@@ -189,7 +189,7 @@ yerine. Kod: `GlassesNetwork.kt` (`WifiNetworkSpecifier`).
 ## E. Gözlük / firmware gelince (yalnızca başlıklar)
 
 - Gerçek ESP32 MJPEG akışı: gecikme, kare kaybı/bozuk kare, 400 ms tazelik, 10 kare/sn, pil/ısınma, kapanınca "koptu".
-- `frm` mesajının MTU 20 baytta sığmaması (22 bayt) ve gerçek `wifi` mesajı.
+- Gerçek `wifi` mesajının MTU 20 baytta gönderimi (`frm` artık 18 bayt, sığıyor).
 - WebSocket ses/kontrol (OkHttp, firmware gelince).
 - Gerçek BLE UUID'leri ve `RealBleService` ile gerçek kopmalar.
 - Yerel earcon engel uyarısı ve zon susturma mesajı.
