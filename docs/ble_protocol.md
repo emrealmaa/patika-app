@@ -207,6 +207,17 @@ netleşecek.**
   fazla 10 kare/sn işler, 400 ms'den eski kare tüketiciye verilmez
   (`CameraConfig`). Durdurmada `frm off`. Uygulama: `lib/camera/`,
   `GlassesMjpegStream.kt`.
+- **Kare yakalama zaman damgası (firmware sözleşmesi, 2026-10-25):** Her
+  MJPEG parçasının başlığında karenin **yakalama zaman damgası**
+  bulunmalı. Gerekçe: telefondaki 400 ms tazelik bekçisi bugün yalnızca
+  karenin telefona ulaştıktan sonra ne kadar beklediğini ölçüyor
+  (`GlassesFrame.receivedAt`); yakalama → telefon (sensör + JPEG + Wi-Fi)
+  gecikmesi görünmüyor. Biçim önerisi `X-Timestamp`; ESP32 kamera örnek
+  sunucusunun bu başlığı gönderdiği bilgisi **DOĞRULANMADI**, firmware'de
+  teyit edilecek. Saat farkı için eşleme yolu (bağlanırken saat eşitleme ya
+  da gözlük açılışından beri ms + telefonda ofset tahmini) firmware ile
+  birlikte tanımlanacak. Python referansı: patika `docs/framesource_tasarim.md`,
+  NOTES.md "Açık problemler" (2026-10-22).
 - **`frm` boyutu (2026-10-25):** `on` bool yerine 1/0: `{"t":"frm","on":0}`
   18 bayt, MTU pazarlığı başarısız olsa da (20 bayt yük) sığar. Eski
   `false` biçimi 22 bayttı ve sığmıyordu. Gözlükten gelen `wifi` mesajı
