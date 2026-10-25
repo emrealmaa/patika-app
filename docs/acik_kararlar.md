@@ -14,6 +14,7 @@ varsayılanı, bir öneriyi ve kararın dayanacağı veri/kişiyi netleştirir.
 | 5 | OkHttp (gözlük WebSocket) | Ertelendi, firmware bekliyor |
 | 6 | Barge-in / Vosk | Ertelendi (Vosk eklenmeyecek kararı var) |
 | 7 | Play'de SOS "desteklenmiyor" | Karar verildi (Seçenek 2), Play başvurusu açık |
+| 8 | `flutter_reactive_ble` bakım durumu | Gözden geçirildi (2026-10-25), risk düşük |
 
 ---
 
@@ -155,3 +156,25 @@ kartı derleme türüne göre ayır (küçük iş, karar gerektirmez ama henüz 
 **Gereken veri/kişi:** Play politika incelemesi (güncel izin kısıtı metni), hukuki görüş
 (yanıltıcı güvence ve sorumluluk), dernek/kullanıcı dağıtım tercihi (`direct` APK ile
 yetinilir mi).
+
+**Güncelleme (2026-10-25):** Ayarlar'daki kart derleme türüne göre ayrıldı; yukarıdaki
+tutarsızlık kapandı.
+
+## 8. `flutter_reactive_ble` bakım durumu (TODO madde 8)
+
+**Sorun:** Lisans serbest (BSD-3) ama bakımı duran bir BLE kütüphanesi, gerçek gözlükle
+çıkacak sorunlarda tek başımıza kalmak demek.
+
+**Bulgular (2026-10-25, pub.dev + GitHub):** Yayıncı doğrulanmış `meethue.com` (Philips
+Hue). Son 7 ayda 4 sürüm: 5.4.1, 5.4.2, 5.5.0 (Swift Package Manager), 5.6.0 (~Eylül 2026:
+AGP 9, yerleşik Kotlin, Android SDK 37). Depo arşivlenmemiş, README'de bakım uyarısı yok.
+Birikmiş yük büyük: 139 açık konu, 26 açık PR.
+
+**Koddaki durum:** `^5.5.0`, kilitli sürüm 5.5.0. Projede AGP 8.11.1, Kotlin 2.2.20.
+
+**Öneri:** Risk düşük, paket değişmez. 5.6.0'a geçiş acil değil (AGP 9 / SDK 37'ye
+geçildiğinde birlikte); geçerken `flutter test` + gerçek BLE denemesi. Gerçek gözlükte bir
+hata çıkarsa önce açık konulara bakılır; arayüz `PatikaBleService` arkasında olduğundan
+gerekirse başka pakete geçiş tek dosyalık (`real_ble_service.dart`).
+
+**Gereken veri/kişi:** Gerçek BLE denemesi (TODO madde 9-10).
