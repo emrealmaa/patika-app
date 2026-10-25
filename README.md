@@ -88,15 +88,15 @@ Ayrıntılar ve gerekçeler: `docs/UI_ERISILEBILIRLIK.md`.
 - **Animasyonlar** yalnızca süstür (`ExcludeSemantics`), yalnızca dinleme/tarama sırasında çalışır ve
   "Animasyonları kaldır" açıkken (`MediaQuery.disableAnimationsOf`) durur.
 - Bölüm başlıkları büyük harfe çevrilmez: Dart'ın `toUpperCase()`'i Türkçe "i"yi "İ" yerine "I" yapar.
-- **Bilinen sorun:** `play` türünde Ayarlar'daki "SOS nasıl çalışır?" kartı hâlâ `direct` davranışını anlatıyor
-  (sesli eğitim derleme türüne göre düzeltildi, kart değil).
+- Ayarlar'daki "SOS nasıl çalışır?" kartı ve sesli eğitim derleme türüne göre anlatır; tür bilinemezse `play`
+  metni (gönderim vaat edilmez).
 
 ## 7. Çalıştırma
 
 ```bash
 flutter pub get
 flutter run --flavor direct -d <cihaz-id>
-flutter analyze && flutter test   # 819 test
+flutter analyze && flutter test   # 824 test
 ```
 
 Navigasyon için Google Routes/Places anahtarı gerekir. **Koda gömme, depoya ekleme.** `dart_defines.example.json`

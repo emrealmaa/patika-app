@@ -90,6 +90,17 @@ arama/SMS `play` gibi davranır ("bu sürümde gönderilemiyor");
   çizilmeden pencere geldi): sesli açıklamanın ve sistem penceresinin
   VoiceOver'la sırası.
 
+## Nerede kaldık (2026-10-25)
+
+**824 test, `flutter analyze` temiz.** Telefon gerektirmeyen işler bitti
+(`6a19d3a`..): Ayarlar'daki "SOS nasıl çalışır?" kartı derleme türüne göre;
+`frm` `"on":1/0` ile 18 bayt (20 bayta sığar, testle kilitli); release imzası
+`android/key.properties`'ten (gerçek anahtar henüz yok); `flutter_reactive_ble`
+bakım incelemesi (`docs/acik_kararlar.md` §8); `TODO.md` yalnızca açık işlere
+indirildi. Bu Windows makinesinde Flutter 3.41.9 var (macOS'ta 3.47):
+`flutter test` `pubspec.lock`'ta SDK paketlerini düşürür, **commit'lenmez**
+(`git checkout pubspec.lock`). Sırada yine telefon testleri.
+
 ## Nerede kaldık (2026-10-16)
 
 **819 test, `flutter analyze` temiz.** `ios-support` dalı `main`'e tamamen
